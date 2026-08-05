@@ -6,7 +6,7 @@ export function RequireOnboarding() {
   const { data: profile, isLoading } = useProfile();
 
   if (isLoading) return <FullScreenSpinner />;
-  if (profile && !profile.onboarded_at) return <Navigate to="/onboarding" replace />;
+  if (!profile || !profile.onboarded_at) return <Navigate to="/onboarding" replace />;
 
   return <Outlet />;
 }

@@ -58,9 +58,16 @@ export default function Onboarding() {
   const username = watch("username");
   const sharingEnabled = watch("sharingEnabled");
   const displayName = watch("displayName");
+  const fallbackDisplayName = user?.user_metadata?.display_name ?? user?.email?.split("@")[0] ?? "";
 
   React.useEffect(() => {
-    if (!profile) return;
+    if (!profile) {
+      reset((currentValues) => ({
+        ...currentValues,
+        displayName: currentValues.displayName || fallbackDisplayName,
+      }));
+      return;
+    }
     const nextValues: OnboardingValues = {
       displayName: profile.display_name ?? "",
       username: profile.username ?? "",
@@ -73,7 +80,7 @@ export default function Onboarding() {
     reset(nextValues);
     setJobTitlesInput(nextValues.primaryJobTitles.join(", "));
     setLocationsInput(nextValues.preferredLocations.join(", "));
-  }, [profile, reset]);
+  }, [fallbackDisplayName, profile, reset]);
 
   React.useEffect(() => {
     if (!username || username.length < 3) {

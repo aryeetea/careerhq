@@ -2,10 +2,14 @@ import { supabase } from "@/lib/supabase";
 import type { Profile, Settings, PrivacySettings } from "@/types/database";
 import { replaceFile, deleteFile } from "@/services/storage";
 
-export async function getProfile(userId: string): Promise<Profile> {
-  const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).single();
+function placeholderUsername(userId: string) {
+  return `user_${userId.replace(/-/g, "").slice(0, 12)}`;
+}
+
+export async function getProfile(userId: string): Promise<Profile | null> {
+  const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
   if (error) throw error;
-  return data as Profile;
+  return (data as Profile | null) ?? null;
 }
 
 export async function updateProfile(userId: string, patch: Partial<Profile>): Promise<Profile> {
@@ -16,7 +20,24 @@ export async function updateProfile(userId: string, patch: Partial<Profile>): Pr
 }
 
 export async function completeOnboarding(userId: string, patch: Partial<Profile>): Promise<Profile> {
-  return updateProfile(userId, { ...patch, onboarded_at: new Date().toISOString() });
+  const now = new Date().toISOString();
+  const { id: _omit, username, display_name, ...safePatch } = patch as Profile;
+  const { data, error } = await supabase
+    .from("profiles")
+    .upsert(
+      {
+        id: userId,
+        username: username ?? placeholderUsername(userId),
+        display_name: display_name ?? "You",
+        ...safePatch,
+        onboarded_at: now,
+      },
+      { onConflict: "id" }
+    )
+    .select("*")
+    .single();
+  if (error) throw error;
+  return data as Profile;
 }
 
 export async function isUsernameAvailable(username: string, excludeUserId?: string): Promise<boolean> {
@@ -38,10 +59,10 @@ export async function removeAvatar(userId: string, path: string | null): Promise
   return updateProfile(userId, { avatar_url: null });
 }
 
-export async function getSettings(userId: string): Promise<Settings> {
-  const { data, error } = await supabase.from("settings").select("*").eq("user_id", userId).single();
+export async function getSettings(userId: string): Promise<Settings | null> {
+  const { data, error } = await supabase.from("settings").select("*").eq("user_id", userId).maybeSingle();
   if (error) throw error;
-  return data as Settings;
+  return (data as Settings | null) ?? null;
 }
 
 export async function updateSettings(userId: string, patch: Partial<Settings>): Promise<Settings> {
@@ -50,10 +71,10 @@ export async function updateSettings(userId: string, patch: Partial<Settings>): 
   return data as Settings;
 }
 
-export async function getPrivacySettings(userId: string): Promise<PrivacySettings> {
-  const { data, error } = await supabase.from("privacy_settings").select("*").eq("user_id", userId).single();
+export async function getPrivacySettings(userId: string): Promise<PrivacySettings | null> {
+  const { data, error } = await supabase.from("privacy_settings").select("*").eq("user_id", userId).maybeSingle();
   if (error) throw error;
-  return data as PrivacySettings;
+  return (data as PrivacySettings | null) ?? null;
 }
 
 export async function updatePrivacySettings(userId: string, patch: Partial<PrivacySettings>): Promise<PrivacySettings> {
