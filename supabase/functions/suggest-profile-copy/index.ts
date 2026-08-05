@@ -1,11 +1,13 @@
 import { corsHeaders, json } from "../_shared/cors.ts";
 import { suggestProfileCopyRequestSchema, suggestProfileCopyResponseSchema } from "../_shared/schemas.ts";
 import {
+  AppError,
   enforceRateLimit,
   errorResponse,
   extractResumeText,
   getOpenAIClient,
   requireUser,
+  type ResumeRow,
 } from "../_shared/utils.ts";
 
 const MODEL = "gpt-5.6-terra";
@@ -75,11 +77,23 @@ async function createSuggestion(openai: ReturnType<typeof getOpenAIClient>, payl
 
   if (!response.ok) {
     const errorText = await response.text().catch(() => "");
+    // Log the real upstream failure server-side only — never forward OpenAI's
+    // raw error body to the browser.
     console.error("OpenAI profile copy suggestion failed", response.status, errorText || response.statusText);
-    throw new Error("The AI suggestion service is temporarily unavailable. Please try again in a moment.");
+    if (response.status === 429) {
+      throw new AppError("You've requested several suggestions. Try again in a moment.", 429, "rate_limited");
+    }
+    throw new AppError("AI suggestions aren't available right now. Please try again shortly.", 502, "upstream_error");
   }
 
-  return suggestProfileCopyResponseSchema.parse(JSON.parse(extractResponseText(await response.json())));
+  let parsedText: unknown;
+  try {
+    parsedText = JSON.parse(extractResponseText(await response.json()));
+  } catch (parseError) {
+    console.error("Couldn't parse OpenAI profile copy response as JSON", parseError);
+    throw new AppError("We couldn't create a suggestion from the current profile information.", 502, "validation_error");
+  }
+  return suggestProfileCopyResponseSchema.parse(parsedText);
 }
 
 Deno.serve(async (request) => {
@@ -115,8 +129,27 @@ Deno.serve(async (request) => {
         .limit(3),
     ]);
 
+    const profileRow = (profile ?? null) as Record<string, unknown> | null;
+    const goalRows = (goals ?? []) as Array<Record<string, unknown>>;
+    const resumeRows = (resumes ?? []) as ResumeRow[];
+    const hasContext = Boolean(
+      profileRow?.bio ||
+        profileRow?.career_goal ||
+        profileRow?.career_status ||
+        (Array.isArray(profileRow?.skills) && (profileRow!.skills as unknown[]).length > 0) ||
+        goalRows.length > 0 ||
+        resumeRows.some((resume) => Boolean(resume.extracted_text) || Boolean(resume.notes) || Boolean(resume.target_role)),
+    );
+    if (!hasContext) {
+      throw new AppError(
+        "Add a little more to your profile before asking Bloom for a suggestion.",
+        422,
+        "insufficient_context",
+      );
+    }
+
     const resumeEvidence = await Promise.all(
-      ((resumes ?? []) as Array<Record<string, unknown>>).map(async (resume) => {
+      resumeRows.map(async (resume) => {
         const extractedText = await extractResumeText(openai, adminClient, resume);
         return {
           id: resume.id,

@@ -51,7 +51,9 @@ export type AppErrorCode =
   | "not_found"
   | "rate_limited"
   | "upstream_error"
-  | "internal_error";
+  | "internal_error"
+  | "not_configured"
+  | "insufficient_context";
 
 export class AppError extends Error {
   status: number;
@@ -118,10 +120,16 @@ export async function enforceRateLimit(
   if (insertError) throw new AppError("Couldn't verify your rate limit right now.", 500, "internal_error");
 }
 
+// Deliberately does not reuse getEnv() here: getEnv()'s message includes the
+// literal variable name, which is an implementation detail we don't want
+// reaching the browser. A missing key is also a distinct, actionable state
+// for the client (config not done yet) rather than a generic 500.
 export function getOpenAIClient() {
-  return {
-    apiKey: getEnv("OPENAI_API_KEY"),
-  };
+  const apiKey = Deno.env.get("OPENAI_API_KEY");
+  if (!apiKey) {
+    throw new AppError("AI suggestions haven't been configured yet.", 500, "not_configured");
+  }
+  return { apiKey };
 }
 
 export interface CandidateEvidenceContext {

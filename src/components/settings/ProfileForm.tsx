@@ -20,6 +20,31 @@ import { useToast } from "@/components/shared/toast";
 import { initials } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryClient";
+import { EdgeFunctionError } from "@/lib/edgeFunctions";
+
+// Maps the Edge Function's error code to copy specific to this feature.
+// invokeEdgeFunction() already guarantees the message it attaches is
+// generic/safe by default, but this feature has its own exact wording per
+// failure mode, so we switch on `.code` rather than trusting `.message`.
+function describeSuggestError(err: unknown): string {
+  if (err instanceof EdgeFunctionError) {
+    switch (err.code) {
+      case "unauthenticated":
+        return "Your session expired. Please sign in again.";
+      case "rate_limited":
+        return "You've requested several suggestions. Try again in a moment.";
+      case "insufficient_context":
+        return "Add a little more to your profile before asking Bloom for a suggestion.";
+      case "validation_error":
+        return "We couldn't create a suggestion from the current profile information.";
+      case "not_configured":
+        return "AI suggestions haven't been configured yet.";
+      default:
+        return "AI suggestions aren't available right now. Please try again shortly.";
+    }
+  }
+  return "AI suggestions aren't available right now. Please try again shortly.";
+}
 
 export function ProfileForm() {
   const { user } = useAuth();
@@ -34,6 +59,15 @@ export function ProfileForm() {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [draftSuggestion, setDraftSuggestion] = React.useState<{ field: "bio" | "career_status"; suggestion: string; reason: string } | null>(null);
   const [saveState, setSaveState] = React.useState<"idle" | "saved">("idle");
+  // Tracks which field is generating, for the per-button "Thinking…" state.
+  const [pendingField, setPendingField] = React.useState<"bio" | "career_status" | null>(null);
+  // suggestProfileCopy.isPending only reflects reality after React commits the
+  // next render, which leaves a window where a fast double-click (or two
+  // triggers of the same handler) can both slip through before the button's
+  // `disabled` attribute updates. This ref is checked synchronously so a
+  // second click inside that window is a no-op instead of a second request —
+  // and a second toast if it fails.
+  const suggestGuardRef = React.useRef(false);
 
   const { register, handleSubmit, reset, setValue, watch, formState: { errors, isSubmitting, isDirty } } = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -94,11 +128,17 @@ export function ProfileForm() {
   }
 
   async function handleSuggest(field: "bio" | "career_status") {
+    if (suggestGuardRef.current) return;
+    suggestGuardRef.current = true;
+    setPendingField(field);
     try {
       const suggestion = await suggestProfileCopy.mutateAsync({ field });
       setDraftSuggestion(suggestion);
     } catch (err) {
-      push(err instanceof Error ? err.message : "Couldn't generate a suggestion right now.", "error");
+      push(describeSuggestError(err), "error");
+    } finally {
+      suggestGuardRef.current = false;
+      setPendingField(null);
     }
   }
 
@@ -183,10 +223,17 @@ export function ProfileForm() {
               variant="outline"
               size="sm"
               onClick={() => handleSuggest("bio")}
-              disabled={suggestProfileCopy.isPending}
+              disabled={pendingField !== null}
             >
-              {suggestProfileCopy.isPending && draftSuggestion?.field !== "bio" ? <LoaderCircle className="animate-spin" /> : <Sparkles />}
-              AI Suggest
+              {pendingField === "bio" ? (
+                <>
+                  <LoaderCircle className="animate-spin" /> Thinking…
+                </>
+              ) : (
+                <>
+                  <Sparkles /> AI Suggest
+                </>
+              )}
             </Button>
           }
         >
@@ -213,10 +260,17 @@ export function ProfileForm() {
               variant="outline"
               size="sm"
               onClick={() => handleSuggest("career_status")}
-              disabled={suggestProfileCopy.isPending}
+              disabled={pendingField !== null}
             >
-              {suggestProfileCopy.isPending && draftSuggestion?.field !== "career_status" ? <LoaderCircle className="animate-spin" /> : <Sparkles />}
-              AI Suggest
+              {pendingField === "career_status" ? (
+                <>
+                  <LoaderCircle className="animate-spin" /> Thinking…
+                </>
+              ) : (
+                <>
+                  <Sparkles /> AI Suggest
+                </>
+              )}
             </Button>
           }
         >
@@ -252,7 +306,7 @@ export function ProfileForm() {
         </ProfileFieldCard>
 
         {draftSuggestion && (
-          <div className="rounded-[1.6rem] border border-primary/20 bg-primary/5 p-4">
+          <div className="rounded-[1.6rem] border border-primary/20 bg-primary/5 p-4" aria-live="polite" role="status">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
                 <p className="text-sm font-semibold">
@@ -264,11 +318,26 @@ export function ProfileForm() {
                   Built from what you've already shared in Bloom, including your goals and {resumes.length > 0 ? "resume experience" : "profile details"}.
                 </p>
               </div>
-              <div className="flex shrink-0 gap-2">
-                <Button type="button" variant="ghost" size="sm" onClick={() => setDraftSuggestion(null)}>
-                  Keep mine
+              <div className="flex shrink-0 flex-wrap gap-2">
+                <Button type="button" variant="ghost" size="sm" onClick={() => setDraftSuggestion(null)} disabled={pendingField !== null}>
+                  Keep my original
                 </Button>
-                <Button type="button" size="sm" onClick={applySuggestion}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleSuggest(draftSuggestion.field)}
+                  disabled={pendingField !== null}
+                >
+                  {pendingField === draftSuggestion.field ? (
+                    <>
+                      <LoaderCircle className="animate-spin" /> Thinking…
+                    </>
+                  ) : (
+                    "Try another"
+                  )}
+                </Button>
+                <Button type="button" size="sm" onClick={applySuggestion} disabled={pendingField !== null}>
                   Use suggestion
                 </Button>
               </div>
