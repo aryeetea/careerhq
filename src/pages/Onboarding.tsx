@@ -212,7 +212,7 @@ export default function Onboarding() {
 
               <div className="grid gap-1.5">
                 <Label htmlFor="username">Username</Label>
-                <Input id="username" placeholder="aileen_j" {...register("username")} aria-invalid={!!errors.username} />
+                <Input id="username" placeholder="jane_doe" {...register("username")} aria-invalid={!!errors.username} />
                 {errors.username && <p className="text-xs text-destructive">{errors.username.message}</p>}
                 {!errors.username && usernameStatus === "checking" && <p className="text-xs text-muted-foreground">Checking…</p>}
                 {!errors.username && usernameStatus === "available" && <p className="text-xs text-success">Available</p>}

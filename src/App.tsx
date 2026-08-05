@@ -18,6 +18,7 @@ import SignIn from "@/pages/auth/SignIn";
 import SignUp from "@/pages/auth/SignUp";
 import ForgotPassword from "@/pages/auth/ForgotPassword";
 import ResetPassword from "@/pages/auth/ResetPassword";
+import JoinGroup from "@/pages/JoinGroup";
 
 // Route-level code splitting: everything past the marketing/auth pages is
 // lazy-loaded so first paint only ships what a signed-out visitor needs.
@@ -47,6 +48,7 @@ export default function App() {
                   <Routes>
                     <Route path="/" element={<Landing />} />
                     <Route path="/about" element={<About />} />
+                    <Route path="/join/group/:token" element={<JoinGroup />} />
 
                     <Route element={<GuestOnlyRoute />}>
                       <Route path="/login" element={<SignIn />} />

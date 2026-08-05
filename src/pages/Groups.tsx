@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Check, Plus, UsersRound, X } from "lucide-react";
+import { Check, Link2, Plus, UsersRound, X } from "lucide-react";
 import { TopBar } from "@/components/layout/TopBar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,15 +21,39 @@ export default function Groups() {
   const { push } = useToast();
   const [createOpen, setCreateOpen] = React.useState(false);
 
+  async function shareBloomInvite() {
+    const inviteUrl = `${window.location.origin}/signup`;
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: "Join me on Bloom",
+          text: "Come join me on Bloom so we can keep each other encouraged.",
+          url: inviteUrl,
+        });
+      } else {
+        await navigator.clipboard.writeText(inviteUrl);
+        push("Bloom invite link copied", "success");
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") return;
+      push("Couldn't share the invite link right now.", "error");
+    }
+  }
+
   return (
     <div className="flex flex-1 flex-col">
       <TopBar
         title="Groups"
         subtitle="Small, invite-only spaces to search alongside others"
         action={
-          <Button onClick={() => setCreateOpen(true)} size="sm" className="gap-1.5">
-            <Plus className="h-4 w-4" /> <span className="hidden sm:inline">New group</span>
-          </Button>
+          <>
+            <Button onClick={shareBloomInvite} size="sm" variant="outline" className="gap-1.5">
+              <Link2 className="h-4 w-4" /> <span className="hidden sm:inline">Invite to Bloom</span>
+            </Button>
+            <Button onClick={() => setCreateOpen(true)} size="sm" className="gap-1.5">
+              <Plus className="h-4 w-4" /> <span className="hidden sm:inline">New group</span>
+            </Button>
+          </>
         }
       />
       <div className="flex-1 overflow-y-auto px-4 pb-10 sm:px-8">

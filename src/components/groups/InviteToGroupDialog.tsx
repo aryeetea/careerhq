@@ -44,7 +44,7 @@ export function InviteToGroupDialog({ open, onOpenChange, groupId, existingMembe
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Invite friends</DialogTitle>
-          <DialogDescription>Only people you're already friends with can be invited to a group.</DialogDescription>
+          <DialogDescription>Invite existing friends here, or use a group join link to bring someone new into Bloom first.</DialogDescription>
         </DialogHeader>
         <div className="max-h-72 overflow-y-auto">
           {friends.length === 0 ? (
