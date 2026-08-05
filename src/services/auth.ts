@@ -12,7 +12,7 @@ function normalizeAuthError(error: unknown) {
     const normalized = message.toLowerCase();
 
     if (normalized.includes("rate limit") || normalized.includes("security purposes")) {
-      return new Error("You've requested a few links already. Give it a minute, then try again.");
+      return new Error("You've made a few requests already. Give it a minute, then try again.");
     }
 
     if (normalized.includes("invalid login credentials")) {
@@ -20,7 +20,19 @@ function normalizeAuthError(error: unknown) {
     }
 
     if (normalized.includes("email not confirmed")) {
-      return new Error("Check your inbox and verify your email before signing in with a password.");
+      return new Error("Check your inbox and verify your email before signing in.");
+    }
+
+    if (normalized.includes("user already registered") || normalized.includes("already registered")) {
+      return new Error("An account with that email already exists. Try signing in instead.");
+    }
+
+    if (
+      normalized.includes("password should be at least") ||
+      normalized.includes("password is too weak") ||
+      normalized.includes("should contain at least")
+    ) {
+      return new Error("Choose a stronger password — at least 8 characters.");
     }
 
     if (normalized.includes("signups not allowed") || normalized.includes("not found") || normalized.includes("user not found")) {
@@ -45,18 +57,23 @@ async function ensureActiveSession() {
   if (session) return session;
 
   const { data, error } = await supabase.auth.refreshSession();
-  if (error) {
-    throw normalizeAuthError(error);
-  }
-
-  if (!data.session) {
-    throw new Error("Your session has expired. Sign in again, then update your password.");
+  if (error || !data.session) {
+    throw new Error("This reset link has expired. Request a new one from the forgot password page.");
   }
 
   return data.session;
 }
 
-export async function signUp(email: string, password: string, displayName: string, redirectPath = "/login") {
+// Builds the /auth/callback URL used by both the signup confirmation email
+// and the password reset email. `next` is where AuthCallback should send the
+// user once the session from that link is established (it re-checks
+// onboarding status itself, so this is just "where they were headed," not a
+// guarantee of the final destination). Never used for passwordless sign-in.
+function authCallbackUrl(next: string): string {
+  return `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
+}
+
+export async function signUp(email: string, password: string, displayName: string, next = "/app") {
   assertSupabaseConfigured();
   try {
     const { data, error } = await supabase.auth.signUp({
@@ -64,7 +81,7 @@ export async function signUp(email: string, password: string, displayName: strin
       password,
       options: {
         data: { display_name: displayName },
-        emailRedirectTo: `${window.location.origin}${redirectPath}`,
+        emailRedirectTo: authCallbackUrl(next),
       },
     });
     if (error) throw error;
@@ -85,49 +102,6 @@ export async function signIn(email: string, password: string) {
   }
 }
 
-// Builds the /auth/callback URL the emailed magic link points to. `next` is
-// where AuthCallback should send the user once the session is established
-// (it re-checks onboarding status itself, so this is just "where they were
-// headed," not a guarantee of the final destination).
-function callbackUrl(next: string): string {
-  return `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
-}
-
-export async function requestSignInMagicLink(email: string, next = "/app") {
-  assertSupabaseConfigured();
-  try {
-    const { data, error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        shouldCreateUser: false,
-        emailRedirectTo: callbackUrl(next),
-      },
-    });
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    throw normalizeAuthError(error);
-  }
-}
-
-export async function requestSignUpMagicLink(email: string, displayName: string, next = "/onboarding") {
-  assertSupabaseConfigured();
-  try {
-    const { data, error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        shouldCreateUser: true,
-        emailRedirectTo: callbackUrl(next),
-        data: { display_name: displayName },
-      },
-    });
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    throw normalizeAuthError(error);
-  }
-}
-
 export async function signOut() {
   assertSupabaseConfigured();
   const { error } = await supabase.auth.signOut();
@@ -137,7 +111,7 @@ export async function signOut() {
 export async function requestPasswordReset(email: string) {
   assertSupabaseConfigured();
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${window.location.origin}/reset-password`,
+    redirectTo: authCallbackUrl("/reset-password"),
   });
   if (error) throw error;
 }
@@ -155,7 +129,11 @@ export async function updatePassword(newPassword: string) {
 
 export async function resendVerificationEmail(email: string) {
   assertSupabaseConfigured();
-  const { error } = await supabase.auth.resend({ type: "signup", email });
+  const { error } = await supabase.auth.resend({
+    type: "signup",
+    email,
+    options: { emailRedirectTo: authCallbackUrl("/app") },
+  });
   if (error) throw error;
 }
 

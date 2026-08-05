@@ -34,16 +34,21 @@ function parseAuthError(): ParsedAuthError {
 function describeFailure({ code, description }: ParsedAuthError): string {
   const haystack = `${code ?? ""} ${description ?? ""}`.toLowerCase();
   if (haystack.includes("expired")) {
-    return "This sign-in link has expired. Request a fresh one below.";
+    return "This link has expired. Request a new one below.";
   }
   if (haystack.includes("access_denied") || haystack.includes("invalid")) {
-    return "This sign-in link is invalid — it may have already been used. Request a new one below.";
+    return "This link is invalid — it may have already been used. Request a new one below.";
   }
-  return "We couldn't verify that sign-in link. It may have expired or already been used — request a new one below.";
+  return "We couldn't verify that link. It may have expired or already been used — request a new one below.";
 }
 
 type CallbackStatus = "verifying" | "error" | "timeout";
 
+// Landing page for two links only: the signup confirmation email from
+// signUp(), and the password reset email from requestPasswordReset(). Both
+// establish a session via the URL automatically (detectSessionInUrl); this
+// page just waits for that session to land, then forwards the user on to
+// `next`. Not used for passwordless/magic-link sign-in.
 export default function AuthCallback() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -51,6 +56,9 @@ export default function AuthCallback() {
   const [initialError] = React.useState<ParsedAuthError>(parseAuthError);
   const [status, setStatus] = React.useState<CallbackStatus>(initialError.code ? "error" : "verifying");
   const next = searchParams.get("next") || "/app";
+  const isRecovery = next.startsWith("/reset-password");
+  const retryHref = isRecovery ? "/forgot-password" : "/login";
+  const retryLabel = isRecovery ? "Request a new reset link" : "Back to sign in";
 
   // Safety net for a hung network request — never leave the user staring at
   // a spinner indefinitely.
@@ -75,10 +83,10 @@ export default function AuthCallback() {
 
   if (status === "verifying") {
     return (
-      <AuthLayout title="Signing you in" subtitle="Just a moment — confirming your secure link.">
+      <AuthLayout title="Confirming your link" subtitle="Just a moment — this only takes a second.">
         <div className="flex flex-col items-center gap-3 py-6 text-center" role="status" aria-live="polite">
           <LoaderCircle className="h-6 w-6 animate-spin text-primary motion-reduce:animate-none" aria-hidden="true" />
-          <p className="text-sm text-muted-foreground">This only takes a second.</p>
+          <p className="text-sm text-muted-foreground">Hang tight while we finish this up.</p>
         </div>
       </AuthLayout>
     );
@@ -92,15 +100,15 @@ export default function AuthCallback() {
             <Mail className="h-5 w-5" />
           </div>
           <AuthNotice variant="warning" className="w-full text-left">
-            Signing in is taking longer than expected. Check your connection — if it doesn't finish shortly, the link may need
-            a fresh request.
+            Confirming this link is taking longer than expected. Check your connection — if it doesn't finish shortly, the link
+            may need a fresh request.
           </AuthNotice>
           <div className="flex w-full flex-col gap-2 sm:flex-row">
             <Button type="button" variant="outline" className="flex-1" onClick={() => window.location.reload()}>
               Try again
             </Button>
             <Button asChild className="flex-1">
-              <Link to="/login">Back to sign in</Link>
+              <Link to={retryHref}>{retryLabel}</Link>
             </Button>
           </div>
         </div>
@@ -118,7 +126,7 @@ export default function AuthCallback() {
           {describeFailure(initialError)}
         </AuthNotice>
         <Button asChild size="lg" className="w-full">
-          <Link to="/login">Request a new sign-in link</Link>
+          <Link to={retryHref}>{retryLabel}</Link>
         </Button>
       </div>
     </AuthLayout>

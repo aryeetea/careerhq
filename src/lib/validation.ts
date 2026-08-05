@@ -22,17 +22,6 @@ export const signInSchema = z.object({
 });
 export type SignInValues = z.infer<typeof signInSchema>;
 
-export const magicLinkRequestSchema = z.object({
-  email: emailSchema,
-});
-export type MagicLinkRequestValues = z.infer<typeof magicLinkRequestSchema>;
-
-export const signUpMagicLinkRequestSchema = z.object({
-  displayName: z.string().trim().min(1, "Tell us what to call you").max(60),
-  email: emailSchema,
-});
-export type SignUpMagicLinkRequestValues = z.infer<typeof signUpMagicLinkRequestSchema>;
-
 export const forgotPasswordSchema = z.object({ email: emailSchema });
 export type ForgotPasswordValues = z.infer<typeof forgotPasswordSchema>;
 
