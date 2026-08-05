@@ -19,6 +19,14 @@ export function AmbientBackground() {
       style={{ animationPlayState: visible ? "running" : "paused" }}
     >
       <div
+        className="motion-safe:animate-stream absolute left-1/2 top-[18%] hidden h-[18rem] w-[42rem] -translate-x-1/2 rounded-full opacity-[0.16] blur-3xl sm:block dark:opacity-[0.1]"
+        style={{
+          background:
+            "linear-gradient(90deg, transparent 0%, hsl(var(--peach) / 0.18) 18%, hsl(var(--rose) / 0.16) 44%, hsl(var(--lavender) / 0.18) 72%, transparent 100%)",
+          animationPlayState: visible ? "running" : "paused",
+        }}
+      />
+      <div
         className="motion-safe:animate-drift-a absolute -left-[10%] -top-[15%] h-[55vmax] w-[55vmax] rounded-full opacity-[0.35] blur-3xl dark:opacity-[0.18]"
         style={{
           background: "radial-gradient(circle at 30% 30%, hsl(var(--peach) / 0.55), transparent 70%)",

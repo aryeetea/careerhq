@@ -113,6 +113,10 @@ export default {
           "0%, 100%": { transform: "translate(0, 0) scale(1)" },
           "50%": { transform: "translate(2%, 4%) scale(1.04)" },
         },
+        stream: {
+          "0%, 100%": { transform: "translate3d(-4%, 0, 0) rotate(-10deg) scaleX(1)" },
+          "50%": { transform: "translate3d(4%, -2%, 0) rotate(-6deg) scaleX(1.08)" },
+        },
         shimmer: {
           "0%": { backgroundPosition: "-200% 0" },
           "100%": { backgroundPosition: "200% 0" },
@@ -136,6 +140,7 @@ export default {
         "drift-a": "drift-a 22s ease-in-out infinite",
         "drift-b": "drift-b 26s ease-in-out infinite",
         "drift-c": "drift-c 30s ease-in-out infinite",
+        stream: "stream 18s ease-in-out infinite",
         shimmer: "shimmer 2.4s linear infinite",
         "gentle-pop": "gentle-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)",
         "ring-glow": "ring-glow 2.2s ease-in-out infinite",

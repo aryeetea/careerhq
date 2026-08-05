@@ -7,10 +7,35 @@ function normalizeAuthError(error: unknown) {
     "message" in error &&
     typeof (error as { message: string }).message === "string"
   ) {
-    const message = (error as { message: string }).message.toLowerCase();
-    if (message.includes("rate limit")) {
+    const message = (error as { message: string }).message;
+    const normalized = message.toLowerCase();
+
+    if (normalized.includes("rate limit") || normalized.includes("security purposes")) {
       return new Error("You've requested a few codes already. Give it a minute, then try again.");
     }
+
+    if (normalized.includes("invalid login credentials")) {
+      return new Error("That email and password combination didn't match.");
+    }
+
+    if (normalized.includes("email not confirmed")) {
+      return new Error("Check your inbox and verify your email before signing in with a password.");
+    }
+
+    if (
+      normalized.includes("otp") ||
+      normalized.includes("expired") ||
+      normalized.includes("token") ||
+      normalized.includes("verification code")
+    ) {
+      return new Error("That code is incorrect or expired. Request a new one and try again.");
+    }
+
+    if (normalized.includes("network") || normalized.includes("fetch")) {
+      return new Error("Bloom couldn't reach the server. Check your connection and try again.");
+    }
+
+    return new Error(message);
   }
 
   return error instanceof Error ? error : new Error("Something went wrong with authentication.");
