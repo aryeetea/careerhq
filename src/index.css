@@ -1,0 +1,292 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=JetBrains+Mono:wght@500&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* ---------------------------------------------------------------- */
+  /* Theme 1 (default): "Floral" — warm ivory, rose, sage, lavender    */
+  /* ---------------------------------------------------------------- */
+  :root {
+    --background: 36 42% 96%;
+    --foreground: 20 18% 17%;
+
+    --card: 30 45% 99%;
+    --card-foreground: 20 18% 17%;
+
+    --popover: 30 45% 99%;
+    --popover-foreground: 20 18% 17%;
+
+    --primary: 350 52% 60%;
+    --primary-foreground: 20 30% 99%;
+
+    --secondary: 140 22% 91%;
+    --secondary-foreground: 145 28% 22%;
+
+    --muted: 32 22% 93%;
+    --muted-foreground: 28 10% 42%;
+
+    --accent: 262 35% 93%;
+    --accent-foreground: 262 30% 34%;
+
+    --destructive: 6 62% 52%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 150 35% 36%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 36 78% 46%;
+    --warning-foreground: 0 0% 100%;
+
+    --border: 30 24% 87%;
+    --input: 30 24% 87%;
+    --ring: 350 52% 60%;
+
+    --rose: 350 58% 68%;
+    --rose-foreground: 350 45% 22%;
+    --sage: 150 26% 52%;
+    --sage-foreground: 0 0% 100%;
+    --lavender: 262 40% 72%;
+    --lavender-foreground: 0 0% 100%;
+    --gold: 38 78% 54%;
+    --gold-foreground: 30 40% 16%;
+    --peach: 20 82% 76%;
+    --peach-foreground: 20 45% 22%;
+    --sky: 205 55% 64%;
+    --sky-foreground: 0 0% 100%;
+
+    --shadow-color: 20 35% 25%;
+    --glass-bg: 30 45% 99%;
+    --glass-highlight: 0 0% 100%;
+    --glass-border: 30 30% 90%;
+
+    --radius: 1rem;
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* Theme 2: "Neutral" — clean, calm, desaturated                     */
+  /* ---------------------------------------------------------------- */
+  :root[data-theme="neutral"] {
+    --background: 40 14% 97%;
+    --foreground: 224 12% 16%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 224 12% 16%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 12% 16%;
+
+    --primary: 231 28% 40%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 14% 93%;
+    --secondary-foreground: 224 14% 22%;
+
+    --muted: 220 12% 94%;
+    --muted-foreground: 220 8% 44%;
+
+    --accent: 231 25% 94%;
+    --accent-foreground: 231 28% 32%;
+
+    --destructive: 6 55% 48%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 152 32% 34%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 36 65% 42%;
+    --warning-foreground: 0 0% 100%;
+
+    --border: 220 14% 88%;
+    --input: 220 14% 88%;
+    --ring: 231 28% 40%;
+
+    --rose: 350 30% 62%;
+    --rose-foreground: 0 0% 100%;
+    --sage: 152 18% 48%;
+    --sage-foreground: 0 0% 100%;
+    --lavender: 231 25% 62%;
+    --lavender-foreground: 0 0% 100%;
+    --gold: 38 45% 48%;
+    --gold-foreground: 0 0% 100%;
+    --peach: 20 35% 68%;
+    --peach-foreground: 20 30% 20%;
+    --sky: 205 35% 56%;
+    --sky-foreground: 0 0% 100%;
+
+    --shadow-color: 224 25% 20%;
+    --glass-bg: 0 0% 100%;
+    --glass-highlight: 0 0% 100%;
+    --glass-border: 220 16% 90%;
+
+    --radius: 0.85rem;
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* Theme 3: "Dark" — warm charcoal, not harsh black                  */
+  /* ---------------------------------------------------------------- */
+  .dark {
+    --background: 250 16% 9%;
+    --foreground: 30 20% 92%;
+
+    --card: 250 15% 12%;
+    --card-foreground: 30 20% 92%;
+
+    --popover: 250 16% 12%;
+    --popover-foreground: 30 20% 92%;
+
+    --primary: 350 62% 68%;
+    --primary-foreground: 250 20% 10%;
+
+    --secondary: 250 12% 18%;
+    --secondary-foreground: 30 18% 90%;
+
+    --muted: 250 12% 17%;
+    --muted-foreground: 30 10% 65%;
+
+    --accent: 262 30% 22%;
+    --accent-foreground: 262 55% 86%;
+
+    --destructive: 6 68% 62%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 150 35% 52%;
+    --success-foreground: 250 20% 10%;
+
+    --warning: 38 80% 60%;
+    --warning-foreground: 250 20% 10%;
+
+    --border: 250 12% 22%;
+    --input: 250 12% 22%;
+    --ring: 350 62% 68%;
+
+    --rose: 350 55% 66%;
+    --rose-foreground: 250 20% 10%;
+    --sage: 150 25% 52%;
+    --sage-foreground: 250 20% 10%;
+    --lavender: 262 45% 72%;
+    --lavender-foreground: 250 20% 10%;
+    --gold: 38 70% 60%;
+    --gold-foreground: 250 20% 10%;
+    --peach: 20 60% 68%;
+    --peach-foreground: 250 20% 10%;
+    --sky: 205 50% 62%;
+    --sky-foreground: 250 20% 10%;
+
+    --shadow-color: 250 40% 2%;
+    --glass-bg: 250 20% 14%;
+    --glass-highlight: 30 20% 92%;
+    --glass-border: 250 14% 26%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "cv11", "ss01";
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/20 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/35;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  /* Glass surfaces: used selectively (nav, dialogs, summary cards) —
+     never on forms, tables, or dense text content. */
+  .glass {
+    background: linear-gradient(
+      160deg,
+      hsl(var(--glass-bg) / 0.72),
+      hsl(var(--glass-bg) / 0.55)
+    );
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+    backdrop-filter: blur(20px) saturate(140%);
+    border: 1px solid hsl(var(--glass-border) / 0.6);
+    box-shadow: theme("boxShadow.glass");
+  }
+
+  .glass-subtle {
+    background: hsl(var(--glass-bg) / 0.65);
+    -webkit-backdrop-filter: blur(14px) saturate(130%);
+    backdrop-filter: blur(14px) saturate(130%);
+    border: 1px solid hsl(var(--glass-border) / 0.5);
+  }
+
+  .glass-strong {
+    background: linear-gradient(
+      160deg,
+      hsl(var(--glass-bg) / 0.9),
+      hsl(var(--glass-bg) / 0.78)
+    );
+    -webkit-backdrop-filter: blur(28px) saturate(150%);
+    backdrop-filter: blur(28px) saturate(150%);
+    border: 1px solid hsl(var(--glass-border) / 0.7);
+    box-shadow: theme("boxShadow.glass");
+  }
+
+  /* Gentle lift on hover — used on job cards, resume cards, friend cards. */
+  .hover-lift {
+    transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s ease-out, border-color 0.18s ease-out;
+  }
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: theme("boxShadow.lift");
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hover-lift:hover {
+      transform: none;
+    }
+  }
+
+  .shimmer-text {
+    background: linear-gradient(
+      100deg,
+      hsl(var(--foreground)) 40%,
+      hsl(var(--primary)) 50%,
+      hsl(var(--foreground)) 60%
+    );
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}

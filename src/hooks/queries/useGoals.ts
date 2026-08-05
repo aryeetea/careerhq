@@ -1,0 +1,74 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
+import { queryKeys } from "@/lib/queryClient";
+import * as goalsService from "@/services/goals";
+
+export function useGoals() {
+  const { user } = useAuth();
+  const userId = user?.id ?? "";
+  return useQuery({
+    queryKey: queryKeys.goals(userId),
+    queryFn: () => goalsService.listGoals(userId),
+    enabled: Boolean(userId),
+  });
+}
+
+function useInvalidateGoals() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return () => qc.invalidateQueries({ queryKey: queryKeys.goals(user?.id ?? "") });
+}
+
+export function useCreateGoal() {
+  const { user } = useAuth();
+  const invalidate = useInvalidateGoals();
+  return useMutation({
+    mutationFn: (input: goalsService.NewGoal) => goalsService.createGoal(user!.id, input),
+    onSuccess: invalidate,
+  });
+}
+
+export function useUpdateGoal() {
+  const invalidate = useInvalidateGoals();
+  return useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: Parameters<typeof goalsService.updateGoal>[1] }) =>
+      goalsService.updateGoal(id, patch),
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeleteGoal() {
+  const invalidate = useInvalidateGoals();
+  return useMutation({
+    mutationFn: (id: string) => goalsService.deleteGoal(id),
+    onSuccess: invalidate,
+  });
+}
+
+export function useJoinGoal() {
+  const { user } = useAuth();
+  const invalidate = useInvalidateGoals();
+  return useMutation({
+    mutationFn: (goalId: string) => goalsService.joinGoal(goalId, user!.id),
+    onSuccess: invalidate,
+  });
+}
+
+export function useLeaveGoal() {
+  const { user } = useAuth();
+  const invalidate = useInvalidateGoals();
+  return useMutation({
+    mutationFn: (goalId: string) => goalsService.leaveGoal(goalId, user!.id),
+    onSuccess: invalidate,
+  });
+}
+
+export function useUpdateGoalProgress() {
+  const { user } = useAuth();
+  const invalidate = useInvalidateGoals();
+  return useMutation({
+    mutationFn: ({ goalId, progressCount }: { goalId: string; progressCount: number }) =>
+      goalsService.updateGoalProgress(goalId, user!.id, progressCount),
+    onSuccess: invalidate,
+  });
+}
