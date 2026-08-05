@@ -1,0 +1,21 @@
+schemaname,table_name,blocks_read,write_tuples,blocks_write,activity_ratio
+auth,users,24,128,128,5.3:1 (Write-Heavy)
+auth,refresh_tokens,12,61,61,5.1:1 (Write-Heavy)
+auth,sessions,9,61,61,6.8:1 (Write-Heavy)
+auth,mfa_amr_claims,2,61,61,30.5:1 (Write-Heavy)
+auth,one_time_tokens,8,10,-0,Read-Only
+auth,identities,7,33,-0,Read-Only
+storage,objects,5,27,-0,Read-Only
+public,jobs,5,11,-0,Read-Only
+auth,schema_migrations,4,70,0.909090909090909,0.2:1 (Write-Heavy)
+storage,migrations,2,61,1,0.5:1 (Write-Heavy)
+public,ai_request_logs,2,35,-0,Read-Only
+storage,buckets,2,3,-0,Read-Only
+realtime,schema_migrations,1,81,1,1.0:1 (Write-Heavy)
+supabase_migrations,schema_migrations,2,10,-0,Read-Only
+public,profiles,2,45,-0,Read-Only
+public,resumes,2,19,-0,Read-Only
+public,job_status_history,2,9,-0,Read-Only
+public,privacy_settings,1,43,-0,Read-Only
+public,weekly_progress,1,15,-0,Read-Only
+public,settings,1,34,-0,Read-Only

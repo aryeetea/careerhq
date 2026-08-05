@@ -1,0 +1,23 @@
+name,last_vacuum,last_autovacuum,last_analyze,last_autoanalyze,rowcount,dead_rowcount,autovacuum_threshold,expect_autovacuum,autoanalyze_threshold,expect_autoanalyze
+public.activity_events,"","","","",            -1,             0,            50,no,            50,no
+public.ai_request_logs,"","","","",            -1,            17,            50,no,            50,no
+public.certifications,"","","","",            -1,             0,            50,no,            50,no
+public.encouragement_reactions,"","","","",            -1,             0,            50,no,            50,no
+public.friend_requests,"","","","",            -1,             0,            50,no,            50,no
+public.friendships,"","","","",            -1,             0,            50,no,            50,no
+public.goal_members,"","","","",            -1,             0,            50,no,            50,no
+public.goals,"","","","",            -1,             0,            50,no,            50,no
+public.group_invites,"","","","",            -1,             0,            50,no,            50,no
+public.group_join_links,"","","","",            -1,             0,            50,no,            50,no
+public.group_members,"","","","",            -1,             0,            50,no,            50,no
+public.groups,"","","","",            -1,             0,            50,no,            50,no
+public.job_status_history,"","","","",            -1,             4,            50,no,            50,no
+public.jobs,"","","","",            -1,             6,            50,no,            50,no
+public.privacy_selected_friends,"","","","",            -1,             0,            50,no,            50,no
+public.privacy_settings,"","","","",            -1,            31,            50,no,            50,no
+public.profile_activity,"","","","",            -1,             0,            50,no,            50,no
+public.profiles,"","","","",            -1,            29,            50,no,            50,no
+public.resumes,"","","","",            -1,            12,            50,no,            50,no
+public.settings,"","","","",            -1,            22,            50,no,            50,no
+public.user_blocks,"","","","",            -1,             0,            50,no,            50,no
+public.weekly_progress,"","","","",            -1,            10,            50,no,            50,no
