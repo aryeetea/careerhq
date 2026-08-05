@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { ThoughtBubble } from "@/components/shared/ThoughtBubble";
 import { useProfile, usePrivacySettings } from "@/hooks/queries/useProfile";
 import { useSignedAvatarUrl } from "@/hooks/useSignedAvatarUrl";
 import { initials, timeAgo } from "@/lib/utils";
@@ -91,13 +92,19 @@ export default function ProfilePage() {
                   <div className="min-w-0">
                     <h2 className="truncate font-display text-2xl font-semibold">{profile.display_name}</h2>
                     <p className="truncate text-sm text-foreground/68">@{profile.username}</p>
-                    {profile.status_message ? (
-                      <p className="mt-2 max-w-lg text-sm leading-6 text-foreground/78">{profile.status_message}</p>
-                    ) : (
-                      <p className="mt-2 max-w-lg text-sm leading-6 text-muted-foreground">
-                        Add a short status message in Settings if you want friends to see how you&apos;re feeling this week.
-                      </p>
-                    )}
+                    <div className="mt-3 max-w-lg">
+                      {profile.status_message ? (
+                        <ThoughtBubble tone="accent">
+                          <p className="text-sm leading-6 text-foreground/82">{profile.status_message}</p>
+                        </ThoughtBubble>
+                      ) : (
+                        <ThoughtBubble>
+                          <p className="text-sm leading-6 text-muted-foreground">
+                            Add a short status message in Settings if you want friends to see how you&apos;re feeling this week.
+                          </p>
+                        </ThoughtBubble>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -156,9 +163,11 @@ export default function ProfilePage() {
                       <p className="truncate text-xs text-foreground/65">@{profile.username}</p>
                     </div>
                   </div>
-                  <p className="mt-3 text-sm leading-6 text-foreground/78">
-                    {profile.status_message || "No status message yet."}
-                  </p>
+                  <div className="mt-3">
+                    <ThoughtBubble className="bg-secondary/35">
+                      <p className="text-sm leading-6 text-foreground/78">{profile.status_message || "No status message yet."}</p>
+                    </ThoughtBubble>
+                  </div>
                   <div className="mt-4 flex flex-wrap gap-2 text-xs">
                     <span className="rounded-full bg-secondary px-2.5 py-1 text-secondary-foreground">
                       Goal: {profile.weekly_application_goal || 0}/week

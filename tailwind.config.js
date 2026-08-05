@@ -117,6 +117,14 @@ export default {
           "0%, 100%": { transform: "translate3d(-4%, 0, 0) rotate(-10deg) scaleX(1)" },
           "50%": { transform: "translate3d(4%, -2%, 0) rotate(-6deg) scaleX(1.08)" },
         },
+        "stream-reverse": {
+          "0%, 100%": { transform: "translate3d(4%, 2%, 0) rotate(8deg) scaleX(1)" },
+          "50%": { transform: "translate3d(-5%, -1%, 0) rotate(12deg) scaleX(1.12)" },
+        },
+        "drift-soft": {
+          "0%, 100%": { transform: "translate3d(0, 0, 0) scale(1)" },
+          "50%": { transform: "translate3d(0, -6%, 0) scale(1.06)" },
+        },
         shimmer: {
           "0%": { backgroundPosition: "-200% 0" },
           "100%": { backgroundPosition: "200% 0" },
@@ -141,6 +149,8 @@ export default {
         "drift-b": "drift-b 26s ease-in-out infinite",
         "drift-c": "drift-c 30s ease-in-out infinite",
         stream: "stream 18s ease-in-out infinite",
+        "stream-reverse": "stream-reverse 24s ease-in-out infinite",
+        "drift-soft": "drift-soft 20s ease-in-out infinite",
         shimmer: "shimmer 2.4s linear infinite",
         "gentle-pop": "gentle-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)",
         "ring-glow": "ring-glow 2.2s ease-in-out infinite",

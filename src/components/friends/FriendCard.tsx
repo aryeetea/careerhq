@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ReactionPicker } from "@/components/friends/ReactionPicker";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
+import { ThoughtBubble } from "@/components/shared/ThoughtBubble";
 import { useSignedAvatarUrl } from "@/hooks/useSignedAvatarUrl";
 import { useRemoveFriend, useBlockUser } from "@/hooks/queries/useFriends";
 import { useToast } from "@/components/shared/toast";
@@ -38,7 +39,13 @@ export function FriendCard({ friend }: { friend: FriendCardData }) {
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold">{friend.display_name || friend.username}</p>
             <p className="truncate text-xs text-muted-foreground">@{friend.username}</p>
-            {friend.status_message && <p className="mt-1 text-xs italic text-muted-foreground">"{friend.status_message}"</p>}
+            {friend.status_message && (
+              <div className="mt-2">
+                <ThoughtBubble className="px-3 py-2">
+                  <p className="text-xs leading-5 text-foreground/74">{friend.status_message}</p>
+                </ThoughtBubble>
+              </div>
+            )}
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger
@@ -59,9 +66,13 @@ export function FriendCard({ friend }: { friend: FriendCardData }) {
         </div>
 
         {!hasAnyShared ? (
-          <p className="mt-3 rounded-lg bg-secondary/50 px-3 py-2.5 text-xs text-muted-foreground">
-            {friend.display_name || friend.username} hasn't chosen to share progress yet.
-          </p>
+          <div className="mt-3">
+            <ThoughtBubble className="bg-secondary/55 px-3 py-2.5">
+              <p className="text-xs leading-5 text-muted-foreground">
+                {friend.display_name || friend.username} hasn&apos;t chosen to share progress yet.
+              </p>
+            </ThoughtBubble>
+          </div>
         ) : (
           <div className="mt-3 space-y-2.5">
             {friend.applications_this_week !== null && (
