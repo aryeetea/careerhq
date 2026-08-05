@@ -273,7 +273,6 @@ export async function extractResumeText(client: ReturnType<typeof getOpenAIClien
           {
             type: "input_file",
             file_url: signed.signedUrl,
-            filename: resume.file_name ?? `${resume.name}.pdf`,
           },
         ],
       },

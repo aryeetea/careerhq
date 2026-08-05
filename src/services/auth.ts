@@ -41,6 +41,25 @@ function normalizeAuthError(error: unknown) {
   return error instanceof Error ? error : new Error("Something went wrong with authentication.");
 }
 
+async function ensureActiveSession() {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (session) return session;
+
+  const { data, error } = await supabase.auth.refreshSession();
+  if (error) {
+    throw normalizeAuthError(error);
+  }
+
+  if (!data.session) {
+    throw new Error("Your session has expired. Sign in again, then update your password.");
+  }
+
+  return data.session;
+}
+
 export async function signUp(email: string, password: string, displayName: string) {
   assertSupabaseConfigured();
   try {
@@ -136,8 +155,13 @@ export async function requestPasswordReset(email: string) {
 
 export async function updatePassword(newPassword: string) {
   assertSupabaseConfigured();
-  const { error } = await supabase.auth.updateUser({ password: newPassword });
-  if (error) throw error;
+  try {
+    await ensureActiveSession();
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) throw error;
+  } catch (error) {
+    throw normalizeAuthError(error);
+  }
 }
 
 export async function resendVerificationEmail(email: string) {
