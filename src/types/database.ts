@@ -26,7 +26,7 @@ export type VisibilityLevel = "private" | "friends_only" | "selected_friends" | 
 export type FriendRequestStatus = "pending" | "accepted" | "declined" | "cancelled";
 export type ReactionType = "proud" | "keep_going" | "you_got_this" | "congrats" | "cheering";
 export type ReactionContext = "weekly_progress" | "goal" | "group" | "general";
-export type ThemeName = "floral" | "neutral" | "dark";
+export type ThemeName = "floral" | "neutral" | "sunrise" | "meadow" | "dark" | "midnight";
 
 export interface JobAiExtraction {
   company: string | null;
@@ -284,6 +284,27 @@ export interface GroupInvite {
   status: FriendRequestStatus;
   created_at: string;
   updated_at: string;
+}
+
+export interface GroupJoinLink {
+  id: string;
+  group_id: string;
+  created_by: string;
+  token: string;
+  is_active: boolean;
+  expires_at: string | null;
+  last_used_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GroupJoinLinkPreview {
+  group_id: string;
+  group_name: string;
+  group_description: string | null;
+  member_count: number;
+  is_active: boolean;
+  expires_at: string | null;
 }
 
 export interface EncouragementReaction {

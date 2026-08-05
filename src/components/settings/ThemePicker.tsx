@@ -1,4 +1,4 @@
-import { Check, Flower2, Moon, Square } from "lucide-react";
+import { Check, Flower2, Leaf, Moon, Square, Sunrise } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import type { ThemeName } from "@/types/database";
 import { cn } from "@/lib/utils";
@@ -6,14 +6,17 @@ import { cn } from "@/lib/utils";
 const THEMES: { id: ThemeName; label: string; description: string; icon: typeof Flower2; preview: string[] }[] = [
   { id: "floral", label: "Floral", description: "Warm ivory, rose, and sage — the default", icon: Flower2, preview: ["#fbf3ea", "#d98b93", "#8fae95"] },
   { id: "neutral", label: "Neutral", description: "Clean and calm, less color", icon: Square, preview: ["#f7f6f3", "#46527a", "#c9c4b8"] },
+  { id: "sunrise", label: "Sunrise", description: "Apricot, coral, and buttercream", icon: Sunrise, preview: ["#fff2e3", "#ef8e72", "#f2c86b"] },
+  { id: "meadow", label: "Meadow", description: "Soft greens with a fresh notebook feel", icon: Leaf, preview: ["#f5f8ef", "#7ca26a", "#d7bf8a"] },
   { id: "dark", label: "Dark", description: "Warm charcoal, easy at night", icon: Moon, preview: ["#17151c", "#e08a96", "#2a2733"] },
+  { id: "midnight", label: "Midnight", description: "Deep ink, lilac glow, and cool blue", icon: Moon, preview: ["#111827", "#8b7cf6", "#60a5fa"] },
 ];
 
 export function ThemePicker() {
   const { theme, setTheme } = useTheme();
 
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
       {THEMES.map((t) => {
         const active = theme === t.id;
         return (

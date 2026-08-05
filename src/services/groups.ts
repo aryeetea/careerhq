@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import type { Group, GroupInvite, GroupMember } from "@/types/database";
+import type { Group, GroupInvite, GroupJoinLink, GroupJoinLinkPreview, GroupMember } from "@/types/database";
 
 export interface GroupWithMembers extends Group {
   group_members: GroupMember[];
@@ -78,4 +78,26 @@ export async function removeGroupMember(groupId: string, userId: string): Promis
 
 export async function leaveGroup(groupId: string, userId: string): Promise<void> {
   return removeGroupMember(groupId, userId);
+}
+
+export async function createGroupJoinLink(groupId: string): Promise<GroupJoinLink> {
+  const { data, error } = await supabase
+    .from("group_join_links")
+    .insert({ group_id: groupId })
+    .select("*")
+    .single();
+  if (error) throw error;
+  return data as GroupJoinLink;
+}
+
+export async function previewGroupJoinLink(token: string): Promise<GroupJoinLinkPreview | null> {
+  const { data, error } = await supabase.rpc("preview_group_join_link", { p_token: token });
+  if (error) throw error;
+  return ((data as GroupJoinLinkPreview[] | null) ?? [])[0] ?? null;
+}
+
+export async function joinGroupViaLink(token: string): Promise<string> {
+  const { data, error } = await supabase.rpc("join_group_via_link", { p_token: token });
+  if (error) throw error;
+  return data as string;
 }

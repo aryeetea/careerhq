@@ -21,6 +21,15 @@ export function useGroup(id: string | undefined) {
   });
 }
 
+export function useGroupJoinLinkPreview(token: string | undefined) {
+  return useQuery({
+    queryKey: ["group-join-preview", token ?? ""],
+    queryFn: () => groupsService.previewGroupJoinLink(token as string),
+    enabled: Boolean(token),
+    retry: 0,
+  });
+}
+
 export function useGroupInvites() {
   const { user } = useAuth();
   const userId = user?.id ?? "";
@@ -98,5 +107,21 @@ export function useRemoveGroupMember() {
   return useMutation({
     mutationFn: ({ groupId, userId }: { groupId: string; userId: string }) => groupsService.removeGroupMember(groupId, userId),
     onSuccess: (_r, vars) => invalidate(vars.groupId),
+  });
+}
+
+export function useCreateGroupJoinLink() {
+  const invalidate = useInvalidateGroups();
+  return useMutation({
+    mutationFn: (groupId: string) => groupsService.createGroupJoinLink(groupId),
+    onSuccess: (result) => invalidate(result.group_id),
+  });
+}
+
+export function useJoinGroupViaLink() {
+  const invalidate = useInvalidateGroups();
+  return useMutation({
+    mutationFn: (token: string) => groupsService.joinGroupViaLink(token),
+    onSuccess: (groupId) => invalidate(groupId),
   });
 }

@@ -35,7 +35,8 @@ export default function SignIn() {
   const [requestStatus, setRequestStatus] = React.useState<string | null>(null);
   const [verifyError, setVerifyError] = React.useState<string | null>(null);
   const [isResending, setIsResending] = React.useState(false);
-  const redirectTo = (location.state as { from?: string } | null)?.from ?? "/app";
+  const params = React.useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const redirectTo = params.get("next") ?? (location.state as { from?: string } | null)?.from ?? "/app";
   const passwordForm = useForm<SignInValues>({ resolver: zodResolver(signInSchema) });
   const otpRequestForm = useForm<OtpRequestValues>({ resolver: zodResolver(otpRequestSchema) });
   const otpVerifyForm = useForm<OtpVerificationValues>({ resolver: zodResolver(otpVerificationSchema) });
@@ -200,7 +201,7 @@ export default function SignIn() {
               <div className="flex items-center justify-between gap-3">
                 <Label htmlFor="password">Password</Label>
                 <Link
-                  to="/forgot-password"
+                  to={params.get("next") ? `/forgot-password?next=${encodeURIComponent(params.get("next") as string)}` : "/forgot-password"}
                   className="rounded-full px-1.5 py-1 text-sm font-medium text-primary/90 transition-colors hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
                   Forgot password?
@@ -369,7 +370,7 @@ export default function SignIn() {
       <p className="mt-5 text-center text-sm leading-6 text-foreground/68">
         New to Bloom?{" "}
         <Link
-          to="/signup"
+          to={params.get("next") ? `/signup?next=${encodeURIComponent(params.get("next") as string)}` : "/signup"}
           className="rounded-full px-1.5 py-1 font-semibold text-primary/90 transition-colors hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
           Create an account

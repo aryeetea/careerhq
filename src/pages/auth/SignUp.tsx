@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeft, LoaderCircle, Mail } from "lucide-react";
@@ -29,7 +29,10 @@ const OTP_RESEND_SECONDS = 45;
 
 export default function SignUp() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { push } = useToast();
+  const params = React.useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const redirectTo = params.get("next") ?? "/onboarding";
   const [authMethod, setAuthMethod] = React.useState<"password" | "otp">("password");
   const [sent, setSent] = React.useState<string | null>(null);
   const [passwordError, setPasswordError] = React.useState<string | null>(null);
@@ -97,7 +100,7 @@ export default function SignUp() {
     try {
       const result = await signUp(values.email, values.password, values.displayName);
       if (result.session) {
-        navigate("/onboarding", { replace: true });
+        navigate(redirectTo, { replace: true });
         return;
       }
       setSent(values.email);
@@ -133,7 +136,7 @@ export default function SignUp() {
 
     try {
       await verifyEmailOtp(otpSignup.email, values.token);
-      navigate("/onboarding", { replace: true });
+      navigate(redirectTo, { replace: true });
     } catch (err) {
       const message = err instanceof Error ? err.message : "That code didn't work. Request a fresh one and try again.";
       setVerifyError(message);
@@ -261,7 +264,7 @@ export default function SignUp() {
               <Input
                 id="displayName"
                 autoComplete="name"
-                placeholder="Aileen"
+                placeholder="Jane Doe"
                 {...passwordForm.register("displayName")}
                 aria-invalid={!!passwordForm.formState.errors.displayName}
                 aria-describedby={passwordForm.formState.errors.displayName ? "signup-display-name-error" : undefined}
@@ -423,7 +426,7 @@ export default function SignUp() {
                 <Input
                   id="otp-display-name"
                   autoComplete="name"
-                  placeholder="Aileen"
+                  placeholder="Jane Doe"
                   {...otpRequestForm.register("displayName")}
                   aria-invalid={!!otpRequestForm.formState.errors.displayName}
                   aria-describedby={otpRequestForm.formState.errors.displayName ? "otp-display-name-error" : undefined}
@@ -486,7 +489,7 @@ export default function SignUp() {
       <p className="mt-5 text-center text-sm leading-6 text-foreground/68">
         Already have an account?{" "}
         <Link
-          to="/login"
+          to={params.get("next") ? `/login?next=${encodeURIComponent(params.get("next") as string)}` : "/login"}
           className="rounded-full px-1.5 py-1 font-semibold text-primary/90 transition-colors hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
           Sign in

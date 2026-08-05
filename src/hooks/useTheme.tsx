@@ -12,15 +12,18 @@ const ThemeContext = React.createContext<ThemeContextValue | null>(null);
 
 function getInitialTheme(): ThemeName {
   const stored = localStorage.getItem(STORAGE_KEY) as ThemeName | null;
-  if (stored === "floral" || stored === "neutral" || stored === "dark") return stored;
+  if (stored === "floral" || stored === "neutral" || stored === "sunrise" || stored === "meadow" || stored === "dark" || stored === "midnight") return stored;
   return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "floral";
 }
 
 function applyTheme(theme: ThemeName) {
   const root = document.documentElement;
   root.classList.toggle("dark", theme === "dark");
-  if (theme === "neutral") root.setAttribute("data-theme", "neutral");
-  else root.removeAttribute("data-theme");
+  if (theme === "dark" || theme === "floral") {
+    root.removeAttribute("data-theme");
+    return;
+  }
+  root.setAttribute("data-theme", theme);
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {

@@ -123,6 +123,114 @@
     --radius: 0.85rem;
   }
 
+  :root[data-theme="sunrise"] {
+    --background: 35 100% 96%;
+    --foreground: 16 24% 18%;
+
+    --card: 34 100% 99%;
+    --card-foreground: 16 24% 18%;
+
+    --popover: 34 100% 99%;
+    --popover-foreground: 16 24% 18%;
+
+    --primary: 8 74% 66%;
+    --primary-foreground: 36 100% 98%;
+
+    --secondary: 48 72% 91%;
+    --secondary-foreground: 25 32% 26%;
+
+    --muted: 34 54% 93%;
+    --muted-foreground: 24 14% 40%;
+
+    --accent: 21 86% 92%;
+    --accent-foreground: 12 42% 32%;
+
+    --destructive: 5 70% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 145 34% 40%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 34 82% 48%;
+    --warning-foreground: 0 0% 100%;
+
+    --border: 28 45% 86%;
+    --input: 28 45% 86%;
+    --ring: 8 74% 66%;
+
+    --rose: 7 76% 70%;
+    --rose-foreground: 0 0% 100%;
+    --sage: 142 24% 54%;
+    --sage-foreground: 0 0% 100%;
+    --lavender: 255 42% 76%;
+    --lavender-foreground: 0 0% 100%;
+    --gold: 42 86% 62%;
+    --gold-foreground: 26 48% 20%;
+    --peach: 22 89% 76%;
+    --peach-foreground: 18 48% 24%;
+    --sky: 201 68% 68%;
+    --sky-foreground: 0 0% 100%;
+
+    --shadow-color: 17 40% 26%;
+    --glass-bg: 34 100% 99%;
+    --glass-highlight: 0 0% 100%;
+    --glass-border: 28 52% 88%;
+  }
+
+  :root[data-theme="meadow"] {
+    --background: 84 32% 95%;
+    --foreground: 96 14% 18%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 96 14% 18%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 96 14% 18%;
+
+    --primary: 117 24% 49%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 48 34% 89%;
+    --secondary-foreground: 40 28% 24%;
+
+    --muted: 84 20% 91%;
+    --muted-foreground: 84 10% 38%;
+
+    --accent: 143 24% 90%;
+    --accent-foreground: 145 28% 26%;
+
+    --destructive: 6 58% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 36% 38%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 37 70% 46%;
+    --warning-foreground: 0 0% 100%;
+
+    --border: 82 18% 84%;
+    --input: 82 18% 84%;
+    --ring: 117 24% 49%;
+
+    --rose: 9 50% 68%;
+    --rose-foreground: 0 0% 100%;
+    --sage: 118 24% 48%;
+    --sage-foreground: 0 0% 100%;
+    --lavender: 247 28% 72%;
+    --lavender-foreground: 0 0% 100%;
+    --gold: 40 54% 58%;
+    --gold-foreground: 35 34% 18%;
+    --peach: 24 58% 74%;
+    --peach-foreground: 20 38% 22%;
+    --sky: 192 40% 62%;
+    --sky-foreground: 0 0% 100%;
+
+    --shadow-color: 103 20% 20%;
+    --glass-bg: 0 0% 100%;
+    --glass-highlight: 0 0% 100%;
+    --glass-border: 82 18% 87%;
+  }
+
   /* ---------------------------------------------------------------- */
   /* Theme 3: "Dark" — warm charcoal, not harsh black                  */
   /* ---------------------------------------------------------------- */
@@ -178,6 +286,60 @@
     --glass-bg: 250 20% 14%;
     --glass-highlight: 30 20% 92%;
     --glass-border: 250 14% 26%;
+  }
+
+  :root[data-theme="midnight"] {
+    --background: 224 38% 10%;
+    --foreground: 214 33% 94%;
+
+    --card: 225 34% 13%;
+    --card-foreground: 214 33% 94%;
+
+    --popover: 225 34% 13%;
+    --popover-foreground: 214 33% 94%;
+
+    --primary: 258 80% 71%;
+    --primary-foreground: 228 36% 12%;
+
+    --secondary: 220 26% 19%;
+    --secondary-foreground: 214 33% 94%;
+
+    --muted: 223 24% 18%;
+    --muted-foreground: 219 18% 68%;
+
+    --accent: 214 38% 20%;
+    --accent-foreground: 207 88% 83%;
+
+    --destructive: 4 74% 62%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 158 42% 50%;
+    --success-foreground: 225 32% 12%;
+
+    --warning: 40 84% 58%;
+    --warning-foreground: 225 32% 12%;
+
+    --border: 223 22% 24%;
+    --input: 223 22% 24%;
+    --ring: 258 80% 71%;
+
+    --rose: 337 71% 68%;
+    --rose-foreground: 225 32% 12%;
+    --sage: 154 34% 54%;
+    --sage-foreground: 225 32% 12%;
+    --lavender: 258 80% 71%;
+    --lavender-foreground: 225 32% 12%;
+    --gold: 42 80% 61%;
+    --gold-foreground: 225 32% 12%;
+    --peach: 16 76% 69%;
+    --peach-foreground: 225 32% 12%;
+    --sky: 206 79% 66%;
+    --sky-foreground: 225 32% 12%;
+
+    --shadow-color: 229 45% 3%;
+    --glass-bg: 225 34% 15%;
+    --glass-highlight: 214 33% 94%;
+    --glass-border: 223 24% 28%;
   }
 
   * {
