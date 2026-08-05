@@ -70,3 +70,12 @@ export function computeDashboardStats(jobs: Job[]): DashboardStats {
     last7Days,
   };
 }
+
+// Shared by Dashboard's "Upcoming interviews" list and Profile's achievements
+// card — jobs in an interview stage, most recent first.
+export function getUpcomingInterviews(jobs: Job[], limit = 5): Job[] {
+  return jobs
+    .filter((j) => (j.status === "interview" || j.status === "final_interview") && j.interview_date)
+    .sort((a, b) => new Date(b.interview_date!).getTime() - new Date(a.interview_date!).getTime())
+    .slice(0, limit);
+}

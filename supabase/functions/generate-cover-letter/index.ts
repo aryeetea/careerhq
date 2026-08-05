@@ -7,6 +7,7 @@ import {
   generateCoverLetterText,
   getJobForUser,
   getOpenAIClient,
+  getProfileCareerGoal,
   getUserResumes,
   requireUser,
 } from "../_shared/utils.ts";
@@ -24,6 +25,7 @@ Deno.serve(async (request) => {
     const openai = getOpenAIClient();
     const job = await getJobForUser(adminClient, user.id, payload.jobId);
     const resumes = await getUserResumes(adminClient, user.id);
+    const careerGoal = await getProfileCareerGoal(adminClient, user.id);
 
     const selectedResumeId = payload.selectedResumeId ?? job.resume_id ?? null;
     const selectedResume = resumes.find((resume) => resume.id === selectedResumeId) ?? null;
@@ -39,6 +41,7 @@ Deno.serve(async (request) => {
         typeof job.ai_extracted_data?.raw_job_text === "string"
           ? job.ai_extracted_data.raw_job_text
           : job.job_description ?? "",
+      careerGoal,
     });
 
     const { error } = await adminClient

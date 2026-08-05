@@ -19,7 +19,7 @@ import { useJobs } from "@/hooks/queries/useJobs";
 import { useResumes } from "@/hooks/queries/useResumes";
 import { useCertifications } from "@/hooks/queries/useCertifications";
 import { useProfile } from "@/hooks/queries/useProfile";
-import { computeDashboardStats } from "@/lib/stats";
+import { computeDashboardStats, getUpcomingInterviews } from "@/lib/stats";
 import { CERTIFICATION_STATUS_META } from "@/lib/constants";
 import type { Job } from "@/types/database";
 
@@ -45,11 +45,13 @@ export default function Dashboard() {
   }, [jobs]);
 
   const upcomingInterviews: UpcomingRow[] = React.useMemo(() => {
-    return jobs
-      .filter((j) => (j.status === "interview" || j.status === "final_interview") && j.interview_date)
-      .sort((a, b) => new Date(b.interview_date!).getTime() - new Date(a.interview_date!).getTime())
-      .slice(0, 5)
-      .map((j) => ({ id: j.id, title: j.title, subtitle: j.company, date: j.interview_date!, onClick: () => setSelectedJob(j) }));
+    return getUpcomingInterviews(jobs, 5).map((j) => ({
+      id: j.id,
+      title: j.title,
+      subtitle: j.company,
+      date: j.interview_date!,
+      onClick: () => setSelectedJob(j),
+    }));
   }, [jobs]);
 
   const recent = React.useMemo(() => jobs.slice(0, 6), [jobs]);

@@ -206,6 +206,14 @@ export async function getUserResumes(adminClient: any, userId: string): Promise<
   return (data ?? []) as ResumeRow[];
 }
 
+// Best-effort only: a missing/unreadable profile should never block cover
+// letter generation, so this returns null on any error instead of throwing.
+export async function getProfileCareerGoal(adminClient: any, userId: string): Promise<string | null> {
+  const { data, error } = await adminClient.from("profiles").select("career_goal").eq("id", userId).single();
+  if (error || !data) return null;
+  return (data.career_goal as string | null) ?? null;
+}
+
 export async function getJobForUser(adminClient: any, userId: string, jobId: string): Promise<JobRow> {
   const { data, error } = await adminClient
     .from("jobs")
@@ -315,15 +323,21 @@ const analysisSchema = {
     "raw_job_text",
     "fit_score",
     "verdict",
+    "confidence_level",
+    "verdict_explanation",
     "priority",
     "deal_breakers",
     "matching_strengths",
     "missing_required_qualifications",
     "missing_preferred_qualifications",
+    "gaps_that_matter",
+    "gaps_that_dont_matter",
+    "highest_impact_next_step",
     "resume_rankings",
     "recommended_resume_id",
     "recommended_resume_reason",
     "resume_improvement_suggestions",
+    "career_coach_advice",
   ],
   properties: {
     company: { type: ["string", "null"] },
@@ -342,15 +356,31 @@ const analysisSchema = {
     responsibilities: { type: "array", items: { type: "string" } },
     raw_job_text: { type: "string" },
     fit_score: { type: "integer", minimum: 0, maximum: 10 },
-    verdict: { type: "string", enum: ["apply", "maybe", "skip"] },
+    verdict: {
+      type: "string",
+      enum: [
+        "excellent_match",
+        "strong_match",
+        "worth_applying",
+        "stretch_opportunity",
+        "high_risk",
+        "not_recommended",
+      ],
+    },
+    confidence_level: { type: "string", enum: ["low", "medium", "high"] },
+    verdict_explanation: { type: "string" },
     priority: { type: "integer", enum: [1, 2, 3] },
     deal_breakers: { type: "array", items: { type: "string" } },
     matching_strengths: { type: "array", items: { type: "string" } },
     missing_required_qualifications: { type: "array", items: { type: "string" } },
     missing_preferred_qualifications: { type: "array", items: { type: "string" } },
+    gaps_that_matter: { type: "array", items: { type: "string" } },
+    gaps_that_dont_matter: { type: "array", items: { type: "string" } },
+    highest_impact_next_step: { type: "string" },
     recommended_resume_id: { type: ["string", "null"] },
     recommended_resume_reason: { type: ["string", "null"] },
     resume_improvement_suggestions: { type: "array", items: { type: "string" } },
+    career_coach_advice: { type: "string" },
     resume_rankings: {
       type: "array",
       items: {
@@ -399,8 +429,28 @@ export async function analyzeJobAndResumes(
         content: [
           {
             type: "input_text",
-            text:
-              "You analyze job postings and resumes for a job-search organizer. Use only evidence in the provided job text and resume text. Never fabricate experience, credentials, deadlines, or company details. Never estimate hiring odds or interview probability. If information is absent, return null or an empty array. A deal breaker should be something explicitly required by the job that is missing or clearly unsupported by the recommended resume. Resume improvement suggestions must stay honest and focus on framing, ordering, emphasis, keywords, or clarifying already-supported experience.",
+            text: [
+              "You are Bloom's career coach: an experienced recruiter, a hiring manager, and a career coach combined. Your job is not to grade the candidate — it is to help them become a stronger candidate and to tell them, honestly, how competitive they are for THIS role.",
+              "",
+              "Use only evidence in the provided job text and resume text. Never fabricate experience, credentials, deadlines, or company details. Never estimate hiring odds or interview probability as a percentage. If information is absent, return null or an empty array.",
+              "",
+              "Evaluate holistically across every dimension the evidence supports: required qualifications, preferred qualifications, years of experience, transferable experience, education, technical skills, soft skills, portfolio/project relevance, project quality, leadership signals, certifications, industry alignment, seniority level, location requirements, and overall competitiveness. Only weigh work authorization if the job text explicitly states a requirement (e.g. \"must be authorized to work without sponsorship\") — if it does, note it as something to verify, never assume or guess the candidate's status.",
+              "",
+              "verdict is one of six categories — pick the one that best matches the overall picture, using fit_score as a loose anchor, not a rigid formula:",
+              "  excellent_match (~9-10): exceptional alignment, minimal gaps.",
+              "  strong_match (~7-8): clearly qualified, only minor gaps.",
+              "  worth_applying (~5-6): solid partial fit, some real gaps but a reasonable case to apply.",
+              "  stretch_opportunity (~3-4): notable gaps, but bridgeable — worth trying with eyes open.",
+              "  high_risk (~2): major gaps against required qualifications; a long shot, not a lost cause.",
+              "  not_recommended (~0-1): fundamental mismatch (e.g. wrong field, missing an explicit hard requirement with no workaround).",
+              "confidence_level reflects how much evidence you had to work with (low if resume/job text was thin or ambiguous, high if both were detailed and specific).",
+              "verdict_explanation is 2-4 sentences written directly to the candidate, in the voice of a supportive coach: name what aligns first, name the real gap if there is one, and end by saying plainly whether this is worth applying for. Never use shaming or discouraging language, and never imply the candidate has already failed.",
+              "gaps_that_matter vs gaps_that_dont_matter: split the identified gaps into ones that could genuinely cost this candidate the role, and ones that are minor or easily explained/offset — be explicit, don't just restate missing_required vs missing_preferred verbatim; use judgment about what actually matters for this specific role.",
+              "highest_impact_next_step is ONE concrete, specific action — the single highest-leverage thing this candidate could do before applying (e.g. reframe a specific project, quantify a specific achievement, address a specific gap) — not a generic tip.",
+              "career_coach_advice closes the analysis: 2-3 sentences of direct, encouraging, realistic coaching — the kind of thing a good mentor says after reviewing the fit. It should leave the candidate more confident and clearer on what to do next, never worse than when they started reading.",
+              "",
+              "A deal breaker should be something explicitly required by the job that is missing or clearly unsupported by the recommended resume. Resume improvement suggestions must stay honest and focus on framing, ordering, emphasis, keywords, or clarifying already-supported experience — never invent or exaggerate anything not already in the resume.",
+            ].join("\n"),
           },
         ],
       },
@@ -415,7 +465,6 @@ export async function analyzeJobAndResumes(
                 resumes: resumePayload,
                 instructions: {
                   fit_score: "0 to 10 based only on evidence match and role fit.",
-                  verdict: "apply = strong fit, maybe = mixed fit, skip = clear mismatch.",
                   priority: "3 = high urgency/high value, 2 = normal, 1 = low priority.",
                 },
               },
@@ -472,6 +521,7 @@ export async function generateCoverLetterText(
     selectedResume: { id: string; name: string; extractedText: string } | null;
     analysis: unknown;
     rawJobText: string;
+    careerGoal: string | null;
   },
 ) {
   const response = await createOpenAIResponse(client, {
@@ -491,8 +541,12 @@ export async function generateCoverLetterText(
         content: [
           {
             type: "input_text",
-            text:
-              "Write a concise, honest cover letter draft. Use only evidence present in the provided resume text and job text. Do not invent metrics, titles, tools, or experience. If the resume does not support a claim, leave it out. Use a warm professional tone, 3 to 5 short paragraphs, and keep it ready for editing by the applicant.",
+            text: [
+              "Write a concise, honest cover letter draft in the applicant's voice. Use only evidence present in the provided resume text and job text. Do not invent metrics, titles, tools, or experience — if the resume doesn't support a claim, leave it out.",
+              "Reference specifics: the company and role by name, one or two concrete projects or achievements pulled from the resume, the applicant's career goal if one was provided (naturally, not as a bolted-on sentence), and the experience most relevant to this specific job's responsibilities.",
+              "Avoid clichés and anything that reads as AI-generated boilerplate. Do not open with \"I am writing to express my interest in...\". Do not use stock phrases like \"team player\", \"results-driven professional\", \"proven track record\", \"passionate about leveraging\", or \"dynamic environment\". Write the way a thoughtful person would actually write about their own work.",
+              "3 to 5 short paragraphs, warm but professional, ready for the applicant to review and send.",
+            ].join("\n"),
           },
         ],
       },
@@ -517,6 +571,7 @@ export async function generateCoverLetterText(
                   : null,
                 analysis: params.analysis,
                 raw_job_text: params.rawJobText.slice(0, 18000),
+                applicant_career_goal: params.careerGoal,
               },
               null,
               2,

@@ -12,13 +12,14 @@ import { resetPasswordSchema, type ResetPasswordValues } from "@/lib/validation"
 import { updatePassword, signOut } from "@/services/auth";
 import { useAuth } from "@/hooks/useAuth";
 import { useBlockedUsers, useUnblockUser } from "@/hooks/queries/useFriends";
-import { useSharedContextProfiles } from "@/hooks/queries/useProfile";
+import { useProfile, useSharedContextProfiles } from "@/hooks/queries/useProfile";
 import { useToast } from "@/components/shared/toast";
-import { initials } from "@/lib/utils";
+import { formatDate, initials } from "@/lib/utils";
 import { DeleteAccountDialog } from "@/components/settings/DeleteAccountDialog";
 
 export function AccountSection() {
   const { user } = useAuth();
+  const { data: profile } = useProfile();
   const navigate = useNavigate();
   const { push } = useToast();
   const { data: blocked = [] } = useBlockedUsers();
@@ -51,6 +52,7 @@ export function AccountSection() {
         <CardContent className="p-4">
           <p className="text-sm font-medium">Signed in as</p>
           <p className="mt-0.5 text-sm text-muted-foreground">{user?.email}</p>
+          {profile && <p className="mt-0.5 text-xs text-muted-foreground">Joined {formatDate(profile.created_at)}</p>}
         </CardContent>
       </Card>
 

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { queryKeys } from "@/lib/queryClient";
 import * as profilesService from "@/services/profiles";
+import { logActivity } from "@/services/activity";
 import type { PrivacySettings, Profile, Settings } from "@/types/database";
 
 export function useProfile() {
@@ -28,7 +29,10 @@ export function useCompleteOnboarding() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (patch: Partial<Profile>) => profilesService.completeOnboarding(user!.id, patch),
-    onSuccess: (updated) => qc.setQueryData<Profile>(queryKeys.profile(user!.id), updated),
+    onSuccess: (updated) => {
+      qc.setQueryData<Profile>(queryKeys.profile(user!.id), updated);
+      void logActivity(user!.id, "onboarding_completed", "Completed onboarding");
+    },
   });
 }
 

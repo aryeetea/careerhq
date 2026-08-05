@@ -137,6 +137,7 @@ export type GroupFormValues = z.infer<typeof groupFormSchema>;
 
 export const profileFormSchema = z.object({
   displayName: z.string().trim().min(1, "Enter a display name").max(60),
+  bio: z.string().trim().max(160).optional().or(z.literal("")),
   careerGoal: z.string().trim().max(280).optional().or(z.literal("")),
   primaryJobTitles: z.array(z.string().trim().min(1)).max(10).default([]),
   preferredLocations: z.array(z.string().trim().min(1)).max(10).default([]),

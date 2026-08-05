@@ -1,38 +1,51 @@
+import * as React from "react";
 import { Link } from "react-router-dom";
-import { CalendarDays, MapPin, Pencil, Shield, Sparkles, Target, UserRound, Users2 } from "lucide-react";
+import { CalendarClock, MapPin, Pencil, Sparkles, UserRound } from "lucide-react";
 import { TopBar } from "@/components/layout/TopBar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Progress } from "@/components/ui/progress";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ThoughtBubble } from "@/components/shared/ThoughtBubble";
-import { useProfile, usePrivacySettings } from "@/hooks/queries/useProfile";
+import { CareerGoalCard } from "@/components/profile/CareerGoalCard";
+import { WeeklyProgressCard } from "@/components/profile/WeeklyProgressCard";
+import { SearchHealthCard } from "@/components/profile/SearchHealthCard";
+import { BloomGarden } from "@/components/profile/BloomGarden";
+import { RecentActivityFeed } from "@/components/profile/RecentActivityFeed";
+import { FriendPreviewCard } from "@/components/profile/FriendPreviewCard";
+import { StatusBadge } from "@/components/jobs/StatusBadge";
+import { useProfile } from "@/hooks/queries/useProfile";
+import { useJobs } from "@/hooks/queries/useJobs";
+import { useResumes } from "@/hooks/queries/useResumes";
+import { useGoals } from "@/hooks/queries/useGoals";
+import { useRecentActivity } from "@/hooks/queries/useActivity";
 import { useSignedAvatarUrl } from "@/hooks/useSignedAvatarUrl";
-import { initials, timeAgo } from "@/lib/utils";
-import type { Profile } from "@/types/database";
-
-function completionPercent(profile: Profile) {
-  const checks = [
-    Boolean(profile.avatar_url),
-    Boolean(profile.display_name),
-    Boolean(profile.username),
-    Boolean(profile.career_goal),
-    profile.primary_job_titles.length > 0,
-    profile.preferred_locations.length > 0,
-    profile.weekly_application_goal > 0,
-    Boolean(profile.status_message),
-    Boolean(profile.onboarded_at),
-  ];
-
-  const completed = checks.filter(Boolean).length;
-  return Math.round((completed / checks.length) * 100);
-}
+import { computeDashboardStats, getUpcomingInterviews } from "@/lib/stats";
+import { computeGardenStages } from "@/lib/garden";
+import { initials } from "@/lib/utils";
 
 export default function ProfilePage() {
   const { data: profile } = useProfile();
-  const { data: privacy } = usePrivacySettings();
+  const { data: jobs = [] } = useJobs();
+  const { data: resumes = [] } = useResumes();
+  const { data: goals = [] } = useGoals();
+  const { data: activity = [] } = useRecentActivity();
   const avatarUrl = useSignedAvatarUrl(profile?.avatar_url ?? null);
+
+  const stats = React.useMemo(() => computeDashboardStats(jobs), [jobs]);
+  const gardenStages = React.useMemo(
+    () => (profile ? computeGardenStages(jobs, resumes, profile.created_at) : []),
+    [jobs, resumes, profile]
+  );
+  const recentAchievements = React.useMemo(
+    () =>
+      gardenStages
+        .filter((s) => s.unlocked && s.key !== "account_created")
+        .sort((a, b) => new Date(b.unlockedAt ?? 0).getTime() - new Date(a.unlockedAt ?? 0).getTime())
+        .slice(0, 2),
+    [gardenStages]
+  );
+  const upcomingInterviews = React.useMemo(() => getUpcomingInterviews(jobs, 3), [jobs]);
 
   if (!profile) {
     return (
@@ -54,21 +67,11 @@ export default function ProfilePage() {
     );
   }
 
-  const percent = completionPercent(profile);
-  const visibilityLabel =
-    privacy?.profile_visibility === "friends_only"
-      ? "Friends only"
-      : privacy?.profile_visibility === "selected_friends"
-        ? "Selected friends"
-        : privacy?.profile_visibility === "hidden"
-          ? "Hidden"
-          : "Private";
-
   return (
     <div className="flex flex-1 flex-col">
       <TopBar
         title="Profile"
-        subtitle="A warm, private snapshot of you and your search"
+        subtitle="A living snapshot of you and your search"
         action={
           <Button asChild size="sm" className="gap-1.5">
             <Link to="/app/settings">
@@ -80,130 +83,100 @@ export default function ProfilePage() {
       />
 
       <div className="flex-1 overflow-y-auto px-4 pb-10 sm:px-8">
-        <div className="grid gap-4 xl:grid-cols-[1.15fr,0.85fr]">
+        <div className="grid gap-4">
+          {/* Identity: avatar, stable professional bio, and today's reflection — kept
+              visually distinct so they never read as the same field. */}
           <Card className="glass-subtle border-border/60">
             <CardContent className="p-5 sm:p-6">
-              <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
                 <div className="flex items-center gap-4">
                   <Avatar className="h-20 w-20 border border-border/80 shadow-soft">
                     {avatarUrl && <AvatarImage src={avatarUrl} alt="" />}
                     <AvatarFallback className="text-lg">{initials(profile.display_name || "You")}</AvatarFallback>
                   </Avatar>
-                  <div className="min-w-0">
+                  <div className="min-w-0 sm:hidden">
                     <h2 className="truncate font-display text-2xl font-semibold">{profile.display_name}</h2>
                     <p className="truncate text-sm text-foreground/68">@{profile.username}</p>
-                    <div className="mt-3 max-w-lg">
-                      {profile.status_message ? (
-                        <ThoughtBubble tone="accent">
-                          <p className="text-sm leading-6 text-foreground/82">{profile.status_message}</p>
-                        </ThoughtBubble>
-                      ) : (
-                        <ThoughtBubble>
-                          <p className="text-sm leading-6 text-muted-foreground">
-                            Add a short status message in Settings if you want friends to see how you&apos;re feeling this week.
-                          </p>
-                        </ThoughtBubble>
-                      )}
-                    </div>
                   </div>
                 </div>
 
-                <div className="min-w-[12rem] rounded-2xl border border-border/70 bg-card/70 p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-semibold">Profile completion</p>
-                    <span className="text-sm font-semibold text-primary">{percent}%</span>
+                <div className="min-w-0 flex-1">
+                  <div className="hidden sm:block">
+                    <h2 className="truncate font-display text-2xl font-semibold">{profile.display_name}</h2>
+                    <p className="truncate text-sm text-foreground/68">@{profile.username}</p>
                   </div>
-                  <Progress value={percent} className="mt-3" />
-                  <p className="mt-3 text-xs leading-5 text-foreground/65">
-                    A fuller profile makes Bloom&apos;s dashboard and social features feel more personal.
+
+                  <p className="mt-2 text-sm leading-6 text-foreground/82">
+                    {profile.bio || (
+                      <span className="text-muted-foreground">
+                        Add a one-line professional intro in{" "}
+                        <Link to="/app/settings" className="font-medium text-primary hover:underline">
+                          Settings
+                        </Link>
+                        .
+                      </span>
+                    )}
                   </p>
+
+                  <div className="mt-3 max-w-lg">
+                    <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Today</p>
+                    {profile.status_message ? (
+                      <ThoughtBubble tone="accent">
+                        <p className="text-sm leading-6 text-foreground/82">{profile.status_message}</p>
+                      </ThoughtBubble>
+                    ) : (
+                      <ThoughtBubble>
+                        <p className="text-sm leading-6 text-muted-foreground">
+                          Nothing jotted down today — add a quick thought whenever you like.
+                        </p>
+                      </ThoughtBubble>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                <InfoCard
-                  icon={<Target className="h-4 w-4 text-primary" />}
-                  label="Career goal"
-                  value={profile.career_goal || "Not added yet"}
-                />
-                <InfoCard
-                  icon={<CalendarDays className="h-4 w-4 text-gold" />}
-                  label="Weekly application goal"
-                  value={profile.weekly_application_goal > 0 ? `${profile.weekly_application_goal} applications` : "No goal set yet"}
-                />
-                <InfoCard
-                  icon={<Sparkles className="h-4 w-4 text-sage" />}
-                  label="Target roles"
-                  value={profile.primary_job_titles.length > 0 ? profile.primary_job_titles.join(", ") : "No target roles yet"}
-                />
-                <InfoCard
-                  icon={<MapPin className="h-4 w-4 text-lavender" />}
-                  label="Preferred locations"
-                  value={profile.preferred_locations.length > 0 ? profile.preferred_locations.join(", ") : "No preferred locations yet"}
-                />
-              </div>
+              {(profile.primary_job_titles.length > 0 || profile.preferred_locations.length > 0) && (
+                <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                  <InfoCard
+                    icon={<Sparkles className="h-4 w-4 text-sage" />}
+                    label="Target roles"
+                    value={profile.primary_job_titles.length > 0 ? profile.primary_job_titles.join(", ") : "No target roles yet"}
+                  />
+                  <InfoCard
+                    icon={<MapPin className="h-4 w-4 text-lavender" />}
+                    label="Preferred locations"
+                    value={profile.preferred_locations.length > 0 ? profile.preferred_locations.join(", ") : "No preferred locations yet"}
+                  />
+                </div>
+              )}
             </CardContent>
           </Card>
 
-          <div className="grid gap-4">
-            <Card className="glass-subtle border-border/60">
-              <CardContent className="p-5">
-                <div className="mb-4 flex items-center gap-2">
-                  <Users2 className="h-4 w-4 text-primary" />
-                  <h3 className="font-semibold">Friend preview</h3>
-                </div>
-                <div className="rounded-[1.75rem] border border-border/70 bg-card/80 p-4 shadow-soft">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-12 w-12 border border-border">
-                      {avatarUrl && <AvatarImage src={avatarUrl} alt="" />}
-                      <AvatarFallback>{initials(profile.display_name || "You")}</AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold">{profile.display_name}</p>
-                      <p className="truncate text-xs text-foreground/65">@{profile.username}</p>
-                    </div>
-                  </div>
-                  <div className="mt-3">
-                    <ThoughtBubble className="bg-secondary/35">
-                      <p className="text-sm leading-6 text-foreground/78">{profile.status_message || "No status message yet."}</p>
-                    </ThoughtBubble>
-                  </div>
-                  <div className="mt-4 flex flex-wrap gap-2 text-xs">
-                    <span className="rounded-full bg-secondary px-2.5 py-1 text-secondary-foreground">
-                      Goal: {profile.weekly_application_goal || 0}/week
-                    </span>
-                    <span className="rounded-full bg-accent px-2.5 py-1 text-accent-foreground">
-                      Sharing {profile.sharing_enabled ? "enabled" : "off"}
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          <div className="grid gap-4 lg:grid-cols-3">
+            <CareerGoalCard profile={profile} goals={goals} />
+            <WeeklyProgressCard stats={stats} weeklyGoal={profile.weekly_application_goal} />
+            <SearchHealthCard profile={profile} resumes={resumes} jobs={jobs} goals={goals} />
+          </div>
 
-            <Card className="glass-subtle border-border/60">
-              <CardContent className="p-5">
-                <div className="mb-4 flex items-center gap-2">
-                  <Shield className="h-4 w-4 text-gold" />
-                  <h3 className="font-semibold">Privacy and account overview</h3>
-                </div>
-                <dl className="grid gap-3 text-sm">
-                  <MetaRow label="Profile visibility" value={visibilityLabel} />
-                  <MetaRow label="Sharing features" value={profile.sharing_enabled ? "Enabled" : "Off by default"} />
-                  <MetaRow label="Onboarding" value={profile.onboarded_at ? "Complete" : "Still in progress"} />
-                  <MetaRow label="Joined" value={timeAgo(profile.created_at)} />
-                </dl>
-                <div className="mt-5 flex flex-wrap gap-2">
-                  <Button asChild variant="outline" size="sm">
-                    <Link to="/app/settings">Open settings</Link>
-                  </Button>
-                  {!profile.onboarded_at && (
-                    <Button asChild size="sm">
-                      <Link to="/onboarding">Finish onboarding</Link>
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+          <BloomGarden jobs={jobs} resumes={resumes} accountCreatedAt={profile.created_at} />
+
+          <div className="grid gap-4 lg:grid-cols-3">
+            <div className="grid gap-4 lg:col-span-2">
+              <RecentActivityFeed activity={activity} />
+              <AchievementsAndInterviewsCard
+                achievements={recentAchievements}
+                upcomingInterviews={upcomingInterviews.map((j) => ({ id: j.id, title: j.title, company: j.company, date: j.interview_date!, status: j.status }))}
+              />
+            </div>
+            <FriendPreviewCard
+              profile={profile}
+              avatarUrl={avatarUrl}
+              currentStreak={stats.currentStreak}
+              applicationsThisWeek={stats.applicationsThisWeek}
+              mostRecentAchievement={recentAchievements[0] ?? null}
+              sharedGoals={goals.filter((g) => g.owner_id === profile.id && g.is_shared)}
+              latestActivity={activity[0] ?? null}
+            />
           </div>
         </div>
       </div>
@@ -223,11 +196,53 @@ function InfoCard({ icon, label, value }: { icon: React.ReactNode; label: string
   );
 }
 
-function MetaRow({ label, value }: { label: string; value: string }) {
+// Replaces the old "Privacy and account overview" card — that information
+// already lives in Settings. This surfaces things that keep being useful:
+// what you've recently unlocked in the garden, and what's coming up.
+function AchievementsAndInterviewsCard({
+  achievements,
+  upcomingInterviews,
+}: {
+  achievements: { key: string; emoji: string; label: string; description: string }[];
+  upcomingInterviews: { id: string; title: string; company: string; date: string; status: import("@/types/database").JobStatus }[];
+}) {
   return (
-    <div className="flex items-start justify-between gap-4 rounded-xl bg-card/60 px-3 py-2.5">
-      <dt className="text-foreground/65">{label}</dt>
-      <dd className="text-right font-medium text-foreground">{value}</dd>
-    </div>
+    <Card className="glass-subtle border-border/60">
+      <CardContent className="grid gap-5 p-5 sm:grid-cols-2">
+        <div>
+          <h3 className="mb-3 font-semibold">Recent achievements</h3>
+          {achievements.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Your next Bloom Garden milestone will show up here.</p>
+          ) : (
+            <ul className="grid gap-2">
+              {achievements.map((a) => (
+                <li key={a.key} className="flex items-center gap-2 text-sm">
+                  <span className="text-lg">{a.emoji}</span> {a.label}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+        <div>
+          <h3 className="mb-3 flex items-center gap-1.5 font-semibold">
+            <CalendarClock className="h-4 w-4 text-gold" /> Upcoming interviews
+          </h3>
+          {upcomingInterviews.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nothing on the calendar right now.</p>
+          ) : (
+            <ul className="grid gap-2">
+              {upcomingInterviews.map((j) => (
+                <li key={j.id} className="flex items-center justify-between gap-2 text-sm">
+                  <span className="min-w-0 truncate">
+                    {j.title} <span className="text-muted-foreground">· {j.company}</span>
+                  </span>
+                  <StatusBadge status={j.status} className="shrink-0" />
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

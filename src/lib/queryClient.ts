@@ -34,6 +34,7 @@ export const queryKeys = {
   group: (id: string) => ["group", id] as const,
   groupInvites: (userId: string) => ["group-invites", userId] as const,
   notifications: (userId: string) => ["notifications", userId] as const,
+  profileActivity: (userId: string) => ["profile-activity", userId] as const,
   unreadCount: (userId: string) => ["unread-count", userId] as const,
   reactions: (contextType: string, contextId: string) => ["reactions", contextType, contextId] as const,
 };

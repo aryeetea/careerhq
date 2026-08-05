@@ -78,6 +78,7 @@ export interface Profile {
   username: string;
   display_name: string;
   avatar_url: string | null;
+  bio: string | null;
   career_goal: string | null;
   primary_job_titles: string[];
   preferred_locations: string[];
@@ -326,5 +327,29 @@ export interface ActivityEvent {
   entity_id: string | null;
   payload: Record<string, unknown>;
   read_at: string | null;
+  created_at: string;
+}
+
+// Powers the Profile page's "Recent Activity" feed. Deliberately separate
+// from ActivityEvent/activity_events, which backs the social notification
+// bell — see profile_activity's migration comment for why.
+export type ProfileActivityType =
+  | "job_saved"
+  | "job_applied"
+  | "interview_scheduled"
+  | "offer_received"
+  | "ai_analysis_run"
+  | "resume_uploaded"
+  | "certification_added"
+  | "certification_completed"
+  | "goal_created"
+  | "onboarding_completed";
+
+export interface ProfileActivity {
+  id: string;
+  user_id: string;
+  type: ProfileActivityType;
+  title: string;
+  metadata: Record<string, unknown>;
   created_at: string;
 }

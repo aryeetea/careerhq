@@ -36,6 +36,7 @@ export function ProfileForm() {
     values: profile
       ? {
           displayName: profile.display_name,
+          bio: profile.bio ?? "",
           careerGoal: profile.career_goal ?? "",
           primaryJobTitles: profile.primary_job_titles,
           preferredLocations: profile.preferred_locations,
@@ -49,6 +50,7 @@ export function ProfileForm() {
     try {
       await updateProfile.mutateAsync({
         display_name: values.displayName.trim(),
+        bio: values.bio?.trim() || null,
         career_goal: values.careerGoal?.trim() || null,
         primary_job_titles: values.primaryJobTitles,
         preferred_locations: values.preferredLocations,
@@ -121,8 +123,15 @@ export function ProfileForm() {
       </div>
 
       <div className="grid gap-1.5">
-        <Label htmlFor="p-statusMessage">Status message</Label>
-        <Input id="p-statusMessage" placeholder="A short note friends can see" {...register("statusMessage")} maxLength={140} />
+        <Label htmlFor="p-bio">Professional bio</Label>
+        <Input id="p-bio" placeholder="Product Designer passionate about thoughtful digital experiences" {...register("bio")} maxLength={160} />
+        <p className="text-xs text-muted-foreground">A one-line intro. This stays stable — it's how you introduce yourself, not how you feel today.</p>
+      </div>
+
+      <div className="grid gap-1.5">
+        <Label htmlFor="p-statusMessage">Daily reflection</Label>
+        <Input id="p-statusMessage" placeholder="What's on your mind today?" {...register("statusMessage")} maxLength={140} />
+        <p className="text-xs text-muted-foreground">A quick thought for today — friends who follow your progress can see this.</p>
       </div>
 
       <div className="grid gap-1.5">

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { queryKeys } from "@/lib/queryClient";
 import * as goalsService from "@/services/goals";
+import { logActivity } from "@/services/activity";
 
 export function useGoals() {
   const { user } = useAuth();
@@ -24,7 +25,10 @@ export function useCreateGoal() {
   const invalidate = useInvalidateGoals();
   return useMutation({
     mutationFn: (input: goalsService.NewGoal) => goalsService.createGoal(user!.id, input),
-    onSuccess: invalidate,
+    onSuccess: (goal) => {
+      invalidate();
+      void logActivity(user!.id, "goal_created", `Set a new goal: ${goal.name}`, { goalId: goal.id });
+    },
   });
 }
 

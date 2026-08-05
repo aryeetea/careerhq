@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { queryKeys } from "@/lib/queryClient";
 import * as resumesService from "@/services/resumes";
+import { logActivity } from "@/services/activity";
 import type { Resume } from "@/types/database";
 
 export function useResumes() {
@@ -21,6 +22,7 @@ export function useCreateResume() {
     mutationFn: (input: resumesService.CreateResumeInput) => resumesService.createResume(user!.id, input),
     onSuccess: (resume) => {
       qc.setQueryData<Resume[]>(queryKeys.resumes(user!.id), (prev) => (prev ? [resume, ...prev] : [resume]));
+      void logActivity(user!.id, "resume_uploaded", `Uploaded ${resume.name}`, { resumeId: resume.id });
     },
   });
 }
