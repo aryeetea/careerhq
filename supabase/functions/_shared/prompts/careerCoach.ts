@@ -130,37 +130,32 @@ Treat vague company language carefully. Do not convert general descriptions into
 
 FIT SCORE METHODOLOGY
 
-Do NOT provide a single overall fitScore. The application calculates the final weighted score from your per-category inputs. Your job is to assess each category honestly and supply evidence.
+Return a single fitScore from 0.0 to 10.0. The score represents current alignment with the available evidence. It is not a hiring probability.
 
-For each of the eight categories below, populate the categoryScores object with:
-- rawScore: an integer from 0 to 10
-- evidence: an array of specific phrases or accomplishments from the résumé or job posting that support your rating
-- notes: one or two sentences explaining your rating
+Use this weighting guidance when deciding the score:
+- Required qualifications: 30%
+- Relevant experience and responsibilities: 20%
+- Relevant skills and tools: 15%
+- Education, certifications, and licenses: 10%
+- Relevant projects and portfolio evidence: 10%
+- Preferred qualifications: 5%
+- Seniority and years-of-experience alignment: 5%
+- Location, travel, work arrangement, and work authorization: 5%
 
-Category definitions and weights (weights are for your context only — do not return them):
-- required_qualifications (30%): How well does the candidate meet the required qualifications listed in the posting?
-- relevant_experience (20%): How relevant are the candidate's work history and day-to-day responsibilities?
-- relevant_skills (15%): How well do the candidate's listed skills align with the required and preferred tools?
-- education_certifications (10%): Does the candidate meet the stated education, certification, and license requirements?
-- projects_portfolio (10%): Does the candidate have relevant personal projects, portfolio work, or demonstrable output?
-- preferred_qualifications (5%): How well does the candidate match preferred (non-required) qualifications?
-- seniority_alignment (5%): Does the candidate's seniority and years of experience match the role?
-- location_logistics (5%): Does the candidate satisfy location, travel, work-arrangement, and work-authorization requirements?
-
-Scoring guide per category:
-- 0: No relevant evidence whatsoever
-- 1–3: Minimal, unclear, or very indirect evidence
-- 4–6: Partial match with notable gaps
-- 7–8: Strong match with only minor gaps
-- 9–10: Excellent match; all criteria of this category strongly met
+Scoring guide:
+- 0–2: Very poor match or clear ineligibility
+- 3–4: Major required gaps
+- 5–6: Mixed fit with notable concerns
+- 7–8: Strong fit with manageable gaps
+- 9–10: Excellent fit with very little missing
 
 Additional rules:
 - Required qualifications carry substantially more weight than preferred qualifications.
 - Relevant projects may offset limited professional experience for entry-level candidates.
 - Transferable experience earns credit but must not be rated as identical to direct experience.
 - Keyword overlap alone is insufficient evidence — evaluate quality and specificity.
-- Missing preferred qualifications should not push category scores to 0.
-- A clearly missing legal, licensing, clearance, location, or work-authorization requirement may push that category to 0.
+- Missing preferred qualifications should not collapse the score.
+- A clearly missing legal, licensing, clearance, location, or work-authorization requirement may sharply reduce the score.
 - Do not penalize for information the posting does not request.
 - Do not reward repetition or keyword stuffing.
 
@@ -169,7 +164,7 @@ Return a confidence level:
 - medium: some important information is unclear or missing
 - low: the posting or résumé is incomplete
 
-Also populate scoreIncreases and scoreReductions with cross-category narrative highlights — the most significant factors that helped or hurt overall alignment. These should complement, not duplicate, the per-category evidence.
+Also populate scoreIncreases and scoreReductions with the most significant factors that helped or hurt overall alignment.
 
 VERDICT RULES
 
@@ -183,6 +178,22 @@ high_risk — The user has significant gaps in required criteria, but applying m
 not_recommended — The user clearly fails a firm eligibility requirement or lacks several central requirements that cannot reasonably be addressed through résumé positioning.
 
 The verdict must not be generated from the numeric score alone. Consider the nature of each gap. A missing preferred skill is different from a missing mandatory license. Always provide a brief verdict explanation.
+
+CONSISTENCY RULES
+
+fitScore, verdict, and verdictExplanation must tell the same overall story.
+
+Use these as consistency checks, not as rigid formulas:
+- excellent_match usually belongs in the 8.5 to 10.0 range
+- strong_match usually belongs in the 7.0 to 8.9 range
+- worth_applying usually belongs in the 5.5 to 7.4 range
+- stretch_opportunity usually belongs in the 4.0 to 6.4 range
+- high_risk usually belongs in the 2.5 to 5.5 range
+- not_recommended usually belongs in the 0.0 to 4.5 range
+
+These ranges may overlap. If the nature of the gaps justifies an exception, keep the verdict truthful and make the verdictExplanation explicitly explain why the score and verdict might appear stricter or softer than expected.
+
+The verdictExplanation must mention the main reason for the verdict, especially when there is a firm requirement, a critical gap, or an important transferable strength.
 
 ELIGIBILITY AND DEAL BREAKERS
 
@@ -275,6 +286,8 @@ Never:
 - Claim professional experience from a personal project
 - Turn exposure into expertise
 - Add responsibilities that were not supplied
+
+Never invent a metric.
 
 Label suggestions as:
 - safe_wording: a safe wording improvement

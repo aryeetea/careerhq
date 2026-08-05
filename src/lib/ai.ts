@@ -15,16 +15,6 @@ const analysisSourceSchema = z.enum(["url", "manual", "url_plus_manual"]);
 const applicationPrioritySchema = z.enum(["apply_now", "apply_soon", "consider", "skip"]);
 const resumeSuggestionTypeSchema = z.enum(["safe_wording", "reorder", "confirm_with_user", "genuine_gap"]);
 const dealBreakerStatusSchema = z.enum(["confirmed", "possible", "insufficient_information"]);
-const scoringCategorySchema = z.enum([
-  "required_qualifications",
-  "relevant_experience",
-  "relevant_skills",
-  "education_certifications",
-  "projects_portfolio",
-  "preferred_qualifications",
-  "seniority_alignment",
-  "location_logistics",
-]);
 
 export const extractedJobSchema = z.object({
   company: z.string().nullable(),
@@ -69,22 +59,9 @@ export const aiJobExtractionSchema = z.object({
   rawJobText: z.string(),
 });
 
-export const categoryScoreSchema = z.object({
-  category: scoringCategorySchema,
-  label: z.string(),
-  rawScore: z.number().int().min(0).max(10),
-  weight: z.number().min(0).max(1),
-  weightedContribution: z.number().min(0).max(10),
-  evidence: z.array(z.string()),
-  notes: z.string(),
-});
-export type CategoryScore = z.infer<typeof categoryScoreSchema>;
-
 export const analysisResultSchema = z.object({
-  // fitScore and rubricVersion are app-calculated from categoryScores.
+  // fitScore is model-provided and bounded to the same 0-10 scale shown in the UI.
   fitScore: z.number().min(0).max(10),
-  rubricVersion: z.string(),
-  categoryScores: z.array(categoryScoreSchema),
   confidence: confidenceLevelSchema,
   verdict: verdictSchema,
   verdictExplanation: z.string(),

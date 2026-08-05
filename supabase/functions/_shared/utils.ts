@@ -1,8 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { ZodError } from "npm:zod";
-import { analysisResponseSchema, coverLetterResponseSchema } from "./schemas.ts";
+import { analysisResponseSchema, coverLetterResponseSchema, type AnalysisResponse } from "./schemas.ts";
 import { buildAnalysisPrompt, buildCoverLetterPrompt, CAREER_COACH_PROMPT_VERSION } from "./prompts/careerCoach.ts";
-import { buildScoredRubric, type CategoryInput, type ScoringCategory } from "./rubric.ts";
 
 const ANALYSIS_MODEL = "gpt-5.6-terra";
 const EXTRACTION_MODEL = "gpt-5.6-luna";
@@ -15,6 +14,7 @@ const COVER_LETTER_TIMEOUT_MS = 60_000;
 // Maximum 5xx retries; 4xx and auth errors are never retried.
 const MAX_RETRIES = 2;
 const RETRY_DELAY_MS = [1_000, 2_000];
+const POSITIVE_VERDICTS = new Set(["excellent_match", "strong_match", "worth_applying"]);
 
 export interface ResumeRow {
   id: string;
@@ -121,6 +121,27 @@ export function getOpenAIClient() {
   return {
     apiKey: getEnv("OPENAI_API_KEY"),
   };
+}
+
+export function assertVerdictFollowsInstructions(response: AnalysisResponse): void {
+  const verdict = response.analysis.verdict;
+  const confirmedDealBreakers = response.jobExtraction.dealBreakers.filter((item) => item.status === "confirmed");
+  const criticalGapCount = response.analysis.criticalGaps.length;
+  const issues: string[] = [];
+
+  if (verdict === "excellent_match" && criticalGapCount > 0) {
+    issues.push("excellent_match cannot include criticalGaps because the prompt defines it as meeting nearly all required qualifications");
+  }
+
+  if (POSITIVE_VERDICTS.has(verdict) && confirmedDealBreakers.length > 0) {
+    issues.push(
+      `positive verdict "${verdict}" conflicts with confirmed deal breakers: ${confirmedDealBreakers.map((item) => item.label).join(", ")}`,
+    );
+  }
+
+  if (issues.length > 0) {
+    throw new Error(`Verdict does not follow prompt instructions: ${issues.join("; ")}`);
+  }
 }
 
 function normalizeWhitespace(text: string): string {
@@ -446,24 +467,11 @@ const jobExtractionJsonSchema = {
   },
 } as const;
 
-const categoryInputJsonSchema = {
-  type: "object",
-  additionalProperties: false,
-  required: ["rawScore", "evidence", "notes"],
-  properties: {
-    rawScore: { type: "integer", minimum: 0, maximum: 10 },
-    evidence: { type: "array", items: { type: "string" } },
-    notes: { type: "string" },
-  },
-} as const;
-
-// The model provides per-category evidence and raw scores; fitScore is
-// calculated by the app in mergeWithMeta and is NOT part of this schema.
 const analysisResultJsonSchema = {
   type: "object",
   additionalProperties: false,
   required: [
-    "categoryScores",
+    "fitScore",
     "confidence",
     "verdict",
     "verdictExplanation",
@@ -479,30 +487,7 @@ const analysisResultJsonSchema = {
     "nextStep",
   ],
   properties: {
-    categoryScores: {
-      type: "object",
-      additionalProperties: false,
-      required: [
-        "required_qualifications",
-        "relevant_experience",
-        "relevant_skills",
-        "education_certifications",
-        "projects_portfolio",
-        "preferred_qualifications",
-        "seniority_alignment",
-        "location_logistics",
-      ],
-      properties: {
-        required_qualifications:  categoryInputJsonSchema,
-        relevant_experience:      categoryInputJsonSchema,
-        relevant_skills:          categoryInputJsonSchema,
-        education_certifications: categoryInputJsonSchema,
-        projects_portfolio:       categoryInputJsonSchema,
-        preferred_qualifications: categoryInputJsonSchema,
-        seniority_alignment:      categoryInputJsonSchema,
-        location_logistics:       categoryInputJsonSchema,
-      },
-    },
+    fitScore: { type: "number", minimum: 0, maximum: 10 },
     confidence: { type: "string", enum: ["high", "medium", "low"] },
     verdict: {
       type: "string",
@@ -622,24 +607,15 @@ export async function analyzeJobAndResumes(
 
   function mergeWithMeta(parsed: unknown) {
     const p = parsed as Record<string, unknown>;
-    const modelAnalysis = (p.analysis ?? {}) as Record<string, unknown>;
-    // The model provides per-category raw inputs; the app calculates the score.
-    const categoryInputs = modelAnalysis.categoryScores as Record<ScoringCategory, CategoryInput>;
-    const scored = buildScoredRubric(categoryInputs);
-
-    return analysisResponseSchema.parse({
+    const response = analysisResponseSchema.parse({
       ...p,
-      analysis: {
-        ...modelAnalysis,
-        fitScore: scored.fitScore,
-        rubricVersion: scored.rubricVersion,
-        categoryScores: scored.categories,
-      },
       importStatus: jobSource.importStatus,
       source: jobSource.source,
       fetchedUrl: jobSource.fetchedUrl,
       promptVersion: CAREER_COACH_PROMPT_VERSION,
     });
+    assertVerdictFollowsInstructions(response);
+    return response;
   }
 
   try {
@@ -649,6 +625,8 @@ export async function analyzeJobAndResumes(
     const errorSummary =
       firstError instanceof ZodError
         ? firstError.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")
+        : firstError instanceof Error
+        ? firstError.message
         : "Invalid JSON or unexpected structure";
     console.error("Analysis validation failed on first attempt:", errorSummary);
 

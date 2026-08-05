@@ -8,6 +8,8 @@ import type {
   CertificationStatus,
 } from "@/types/database";
 
+export const UNSET_SELECT_VALUE = "__unset__";
+
 export const STATUS_META: Record<JobStatus, { label: string; dot: string; badge: string }> = {
   saved: { label: "Saved", dot: "bg-slate-400", badge: "bg-slate-400/15 text-slate-500" },
   applying: { label: "Applying", dot: "bg-sky", badge: "bg-sky/15 text-sky" },

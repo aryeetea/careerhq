@@ -25,7 +25,7 @@ import { useDeleteJob, useJobStatusHistory, useUpdateJob } from "@/hooks/queries
 import { useAnalyzeJob, useGenerateCoverLetter } from "@/hooks/queries/useJobAi";
 import { useToast } from "@/components/shared/toast";
 import { useCelebration } from "@/components/ambient/Celebration";
-import { JOB_STATUSES, STATUS_META, VERDICT_OPTIONS } from "@/lib/constants";
+import { JOB_STATUSES, STATUS_META, UNSET_SELECT_VALUE, VERDICT_OPTIONS } from "@/lib/constants";
 import { dateInputToISO, formatDate, formatDateTime, toDateInputValue } from "@/lib/utils";
 import type { JobAnalysisPayload } from "@/lib/ai";
 
@@ -324,9 +324,13 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
                 </div>
                 <div className="grid gap-1.5">
                   <Label>Verdict</Label>
-                  <Select value={watch("verdict") || ""} onValueChange={(v) => setValue("verdict", v as JobFormValues["verdict"], { shouldDirty: true })}>
+                  <Select
+                    value={watch("verdict") || UNSET_SELECT_VALUE}
+                    onValueChange={(v) => setValue("verdict", (v === UNSET_SELECT_VALUE ? "" : v) as JobFormValues["verdict"], { shouldDirty: true })}
+                  >
                     <SelectTrigger><SelectValue placeholder="Not evaluated" /></SelectTrigger>
                     <SelectContent>
+                      <SelectItem value={UNSET_SELECT_VALUE}>Not evaluated</SelectItem>
                       {VERDICT_OPTIONS.map((v) => (
                         <SelectItem key={v.value} value={v.value}>{v.emoji} {v.label}</SelectItem>
                       ))}

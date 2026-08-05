@@ -20,7 +20,7 @@ import type { NewJob, Resume } from "@/types/database";
 import { useCreateJob } from "@/hooks/queries/useJobs";
 import { useAnalyzeJob } from "@/hooks/queries/useJobAi";
 import { useToast } from "@/components/shared/toast";
-import { JOB_STATUSES, VERDICT_OPTIONS } from "@/lib/constants";
+import { JOB_STATUSES, UNSET_SELECT_VALUE, VERDICT_OPTIONS } from "@/lib/constants";
 import { AnalysisSummary } from "@/components/jobs/AnalysisSummary";
 import { toDateInputValue } from "@/lib/utils";
 import type { JobAnalysisPayload } from "@/lib/ai";
@@ -145,7 +145,6 @@ export function AddJobDialog({ open, onOpenChange, resumes }: AddJobDialogProps)
       ai_recommended_resume_id: analysis?.recommendedResumeId ?? null,
       ai_last_analyzed_at: analysis ? new Date().toISOString() : null,
       ai_prompt_version: analysis?.promptVersion ?? null,
-      ai_rubric_version: analysis?.analysis.rubricVersion ?? null,
     };
 
     try {
@@ -245,9 +244,13 @@ export function AddJobDialog({ open, onOpenChange, resumes }: AddJobDialogProps)
                   </div>
                   <div className="grid gap-1.5">
                     <Label>Verdict</Label>
-                    <Select value={watch("verdict") || ""} onValueChange={(v) => setValue("verdict", v as JobFormValues["verdict"])}>
+                    <Select
+                      value={watch("verdict") || UNSET_SELECT_VALUE}
+                      onValueChange={(v) => setValue("verdict", (v === UNSET_SELECT_VALUE ? "" : v) as JobFormValues["verdict"])}
+                    >
                       <SelectTrigger><SelectValue placeholder="Not evaluated" /></SelectTrigger>
                       <SelectContent>
+                        <SelectItem value={UNSET_SELECT_VALUE}>Not evaluated</SelectItem>
                         {VERDICT_OPTIONS.map((v) => (
                           <SelectItem key={v.value} value={v.value}>{v.emoji} {v.label}</SelectItem>
                         ))}
