@@ -107,11 +107,12 @@ export default function GroupDetail() {
     );
   }
 
-  const isOwner = group.owner_id === user?.id;
+  const activeGroup = group;
+  const isOwner = activeGroup.owner_id === user?.id;
 
   async function copyJoinLink() {
     try {
-      const link = await createJoinLink.mutateAsync(group.id);
+      const link = await createJoinLink.mutateAsync(activeGroup.id);
       const inviteUrl = `${window.location.origin}/join/group/${link.token}`;
       await navigator.clipboard.writeText(inviteUrl);
       push("Group invite link copied", "success");
@@ -123,8 +124,8 @@ export default function GroupDetail() {
   return (
     <div className="flex flex-1 flex-col">
       <TopBar
-        title={group.name}
-        subtitle={group.description ?? undefined}
+        title={activeGroup.name}
+        subtitle={activeGroup.description ?? undefined}
         action={
           <>
             <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => navigate("/app/groups")}>
@@ -143,8 +144,8 @@ export default function GroupDetail() {
         <Card className="glass-subtle mb-4 border-border/60">
           <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
             <div className="text-sm text-muted-foreground">
-              {group.group_members.length} member{group.group_members.length === 1 ? "" : "s"}
-              {group.weekly_goal_target ? ` · shared goal: ${group.weekly_goal_target} applications/week` : ""}
+              {activeGroup.group_members.length} member{activeGroup.group_members.length === 1 ? "" : "s"}
+              {activeGroup.weekly_goal_target ? ` · shared goal: ${activeGroup.weekly_goal_target} applications/week` : ""}
             </div>
             <div className="flex gap-2">
               {isOwner ? (
@@ -161,7 +162,7 @@ export default function GroupDetail() {
         </Card>
 
         <div className="grid gap-2.5">
-          {group.group_members.map((m) => {
+          {activeGroup.group_members.map((m) => {
             const profile = profileMap?.get(m.user_id);
             return (
               <MemberRow
@@ -169,8 +170,8 @@ export default function GroupDetail() {
                 userId={m.user_id}
                 name={m.user_id === user?.id ? "You" : profile?.display_name || "Member"}
                 avatarPath={profile?.avatar_url ?? null}
-                weeklyGoalTarget={group.weekly_goal_target}
-                groupId={group.id}
+                weeklyGoalTarget={activeGroup.weekly_goal_target}
+                groupId={activeGroup.id}
                 isOwnerView={isOwner}
                 onRemove={() => setRemoveTarget(m.user_id)}
               />
@@ -179,16 +180,16 @@ export default function GroupDetail() {
         </div>
       </div>
 
-      <InviteToGroupDialog open={inviteOpen} onOpenChange={setInviteOpen} groupId={group.id} existingMemberIds={memberIds} />
+      <InviteToGroupDialog open={inviteOpen} onOpenChange={setInviteOpen} groupId={activeGroup.id} existingMemberIds={memberIds} />
 
       <ConfirmDialog
         open={confirmLeave}
         onOpenChange={setConfirmLeave}
-        title={`Leave ${group.name}?`}
+        title={`Leave ${activeGroup.name}?`}
         description="You can rejoin later if you're invited again."
         confirmLabel="Leave"
         onConfirm={async () => {
-          await leaveGroup.mutateAsync(group.id);
+          await leaveGroup.mutateAsync(activeGroup.id);
           push("You left the group", "info");
           navigate("/app/groups");
         }}
@@ -196,7 +197,7 @@ export default function GroupDetail() {
       <ConfirmDialog
         open={confirmDelete}
         onOpenChange={setConfirmDelete}
-        title={`Delete ${group.name}?`}
+        title={`Delete ${activeGroup.name}?`}
         description="This removes the group for everyone. This can't be undone."
         confirmLabel="Delete group"
         onConfirm={async () => {
