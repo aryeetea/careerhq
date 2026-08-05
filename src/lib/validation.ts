@@ -22,24 +22,16 @@ export const signInSchema = z.object({
 });
 export type SignInValues = z.infer<typeof signInSchema>;
 
-export const otpRequestSchema = z.object({
+export const magicLinkRequestSchema = z.object({
   email: emailSchema,
 });
-export type OtpRequestValues = z.infer<typeof otpRequestSchema>;
+export type MagicLinkRequestValues = z.infer<typeof magicLinkRequestSchema>;
 
-export const otpVerificationSchema = z.object({
-  token: z
-    .string()
-    .trim()
-    .regex(/^\d{6}$/, "Enter the 6-digit code from your email"),
-});
-export type OtpVerificationValues = z.infer<typeof otpVerificationSchema>;
-
-export const signUpOtpRequestSchema = z.object({
+export const signUpMagicLinkRequestSchema = z.object({
   displayName: z.string().trim().min(1, "Tell us what to call you").max(60),
   email: emailSchema,
 });
-export type SignUpOtpRequestValues = z.infer<typeof signUpOtpRequestSchema>;
+export type SignUpMagicLinkRequestValues = z.infer<typeof signUpMagicLinkRequestSchema>;
 
 export const forgotPasswordSchema = z.object({ email: emailSchema });
 export type ForgotPasswordValues = z.infer<typeof forgotPasswordSchema>;

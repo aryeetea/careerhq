@@ -2,44 +2,34 @@ import * as React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, LoaderCircle } from "lucide-react";
+import { LoaderCircle, Mail, Pencil } from "lucide-react";
 import { AuthLayout } from "@/pages/auth/AuthLayout";
 import { AuthNotice } from "@/components/auth/AuthNotice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  otpRequestSchema,
-  otpVerificationSchema,
-  signInSchema,
-  type OtpRequestValues,
-  type OtpVerificationValues,
-  type SignInValues,
-} from "@/lib/validation";
-import { requestSignInOtp, signIn, verifyEmailOtp } from "@/services/auth";
+import { magicLinkRequestSchema, signInSchema, type MagicLinkRequestValues, type SignInValues } from "@/lib/validation";
+import { requestSignInMagicLink, signIn } from "@/services/auth";
 import { useToast } from "@/components/shared/toast";
 
-const OTP_RESEND_SECONDS = 45;
+const RESEND_COOLDOWN_SECONDS = 45;
 
 export default function SignIn() {
   const navigate = useNavigate();
   const location = useLocation();
   const { push } = useToast();
-  const [authMethod, setAuthMethod] = React.useState<"password" | "otp">("password");
-  const [otpEmail, setOtpEmail] = React.useState<string | null>(null);
+  const [authMethod, setAuthMethod] = React.useState<"password" | "magic-link">("password");
+  const [sentTo, setSentTo] = React.useState<string | null>(null);
   const [resendAvailableAt, setResendAvailableAt] = React.useState<number | null>(null);
   const [secondsRemaining, setSecondsRemaining] = React.useState(0);
   const [passwordError, setPasswordError] = React.useState<string | null>(null);
   const [requestError, setRequestError] = React.useState<string | null>(null);
-  const [requestStatus, setRequestStatus] = React.useState<string | null>(null);
-  const [verifyError, setVerifyError] = React.useState<string | null>(null);
   const [isResending, setIsResending] = React.useState(false);
   const params = React.useMemo(() => new URLSearchParams(location.search), [location.search]);
   const redirectTo = params.get("next") ?? (location.state as { from?: string } | null)?.from ?? "/app";
   const passwordForm = useForm<SignInValues>({ resolver: zodResolver(signInSchema) });
-  const otpRequestForm = useForm<OtpRequestValues>({ resolver: zodResolver(otpRequestSchema) });
-  const otpVerifyForm = useForm<OtpVerificationValues>({ resolver: zodResolver(otpVerificationSchema) });
+  const magicLinkForm = useForm<MagicLinkRequestValues>({ resolver: zodResolver(magicLinkRequestSchema) });
 
   React.useEffect(() => {
     if (!resendAvailableAt) {
@@ -50,9 +40,7 @@ export default function SignIn() {
     const tick = () => {
       const next = Math.max(0, Math.ceil((resendAvailableAt - Date.now()) / 1000));
       setSecondsRemaining(next);
-      if (next === 0) {
-        setResendAvailableAt(null);
-      }
+      if (next === 0) setResendAvailableAt(null);
     };
 
     tick();
@@ -60,26 +48,17 @@ export default function SignIn() {
     return () => window.clearInterval(timer);
   }, [resendAvailableAt]);
 
-  React.useEffect(() => {
-    if (!otpEmail) return;
-    const focusTimer = window.setTimeout(() => otpVerifyForm.setFocus("token"), 20);
-    return () => window.clearTimeout(focusTimer);
-  }, [otpEmail, otpVerifyForm]);
-
   function startResendCooldown() {
-    setResendAvailableAt(Date.now() + OTP_RESEND_SECONDS * 1000);
+    setResendAvailableAt(Date.now() + RESEND_COOLDOWN_SECONDS * 1000);
   }
 
-  function resetOtpFlow() {
-    setOtpEmail(null);
+  function changeEmail() {
+    setSentTo(null);
     setResendAvailableAt(null);
     setSecondsRemaining(0);
-    setRequestStatus(null);
     setRequestError(null);
-    setVerifyError(null);
     setIsResending(false);
-    otpRequestForm.reset();
-    otpVerifyForm.reset();
+    magicLinkForm.reset();
   }
 
   async function onPasswordSubmit(values: SignInValues) {
@@ -94,58 +73,35 @@ export default function SignIn() {
     }
   }
 
-  async function sendCode(values: OtpRequestValues) {
+  async function sendLink(values: MagicLinkRequestValues) {
     setRequestError(null);
-    setVerifyError(null);
-
     try {
-      await requestSignInOtp(values.email, redirectTo);
-      setOtpEmail(values.email);
-      setRequestStatus(`Your 6-digit sign-in code is on the way to ${values.email}.`);
-      otpVerifyForm.reset();
+      await requestSignInMagicLink(values.email, redirectTo);
+      setSentTo(values.email);
       startResendCooldown();
-      push("Your 6-digit sign-in code is on the way.", "success");
+      push("Your sign-in link is on the way.", "success");
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Couldn't send a sign-in code right now.";
+      const message = err instanceof Error ? err.message : "Couldn't send a sign-in link right now.";
       setRequestError(message);
       push(message, "error");
     }
   }
 
-  async function verifyCode(values: OtpVerificationValues) {
-    if (!otpEmail) return;
-
-    setVerifyError(null);
-
-    try {
-      await verifyEmailOtp(otpEmail, values.token);
-      navigate(redirectTo, { replace: true });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "That code didn't work. Request a fresh one and try again.";
-      setVerifyError(message);
-      push(message, "error");
-    }
-  }
-
-  async function resendCode() {
-    if (!otpEmail || isResending) return;
+  async function resendLink() {
+    if (!sentTo || isResending) return;
     if (secondsRemaining > 0) {
-      push(`Give it ${secondsRemaining}s before asking for another code.`, "info");
+      push(`Give it ${secondsRemaining}s before requesting another link.`, "info");
       return;
     }
 
     setRequestError(null);
-    setVerifyError(null);
     setIsResending(true);
-
     try {
-      await requestSignInOtp(otpEmail, redirectTo);
-      otpVerifyForm.reset();
-      setRequestStatus(`A fresh 6-digit sign-in code is on the way to ${otpEmail}.`);
+      await requestSignInMagicLink(sentTo, redirectTo);
       startResendCooldown();
-      push("A fresh 6-digit code is on the way.", "success");
+      push("A fresh sign-in link is on the way.", "success");
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Couldn't resend the code right now.";
+      const message = err instanceof Error ? err.message : "Couldn't resend the link right now.";
       setRequestError(message);
       push(message, "error");
     } finally {
@@ -154,27 +110,25 @@ export default function SignIn() {
   }
 
   const passwordBusy = passwordForm.formState.isSubmitting;
-  const requestBusy = otpRequestForm.formState.isSubmitting;
-  const verifyBusy = otpVerifyForm.formState.isSubmitting;
-  const resendDisabled = secondsRemaining > 0 || isResending || verifyBusy;
+  const requestBusy = magicLinkForm.formState.isSubmitting;
+  const resendDisabled = secondsRemaining > 0 || isResending;
 
   return (
     <AuthLayout title="Welcome back" subtitle="Take a breath. Let's see where things stand.">
       <Tabs
         value={authMethod}
         onValueChange={(value) => {
-          setAuthMethod(value as "password" | "otp");
+          setAuthMethod(value as "password" | "magic-link");
           setPasswordError(null);
           setRequestError(null);
-          setVerifyError(null);
         }}
       >
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="password" aria-controls="signin-password-panel">
             Password
           </TabsTrigger>
-          <TabsTrigger value="otp" aria-controls="signin-otp-panel">
-            Email code
+          <TabsTrigger value="magic-link" aria-controls="signin-magic-link-panel">
+            Email link
           </TabsTrigger>
         </TabsList>
 
@@ -235,131 +189,85 @@ export default function SignIn() {
           </form>
         </TabsContent>
 
-        <TabsContent value="otp" id="signin-otp-panel">
-          {otpEmail ? (
+        <TabsContent value="magic-link" id="signin-magic-link-panel">
+          {sentTo ? (
             <div className="grid gap-4">
-              {requestStatus && (
-                <AuthNotice variant="success">
-                  <span>
-                    {requestStatus} Use the same email address on this screen so Bloom can finish signing you in safely.
-                  </span>
-                </AuthNotice>
-              )}
-              <AuthNotice variant="info">
-                <span>
-                  Codes usually arrive within a minute. Check spam or promotions if it is missing.
-                  {secondsRemaining > 0 ? ` You can request another code in ${secondsRemaining}s.` : " You can resend if it still hasn't arrived."}
-                </span>
-              </AuthNotice>
-
-              <form onSubmit={otpVerifyForm.handleSubmit(verifyCode)} className="grid gap-4" noValidate aria-busy={verifyBusy}>
-                <div className="grid gap-1.5">
-                  <Label htmlFor="otp">6-digit code</Label>
-                  <Input
-                    id="otp"
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    placeholder="123456"
-                    maxLength={6}
-                    {...otpVerifyForm.register("token")}
-                    aria-invalid={!!otpVerifyForm.formState.errors.token || !!verifyError}
-                    aria-describedby={[
-                      "signin-otp-help",
-                      otpVerifyForm.formState.errors.token ? "signin-otp-error" : null,
-                      verifyError ? "signin-otp-request-error" : null,
-                    ]
-                      .filter(Boolean)
-                      .join(" ")}
-                  />
-                  <p id="signin-otp-help" className="text-xs font-medium text-foreground/65">
-                    Enter numbers only. If the code has expired, ask for a fresh one below.
-                  </p>
-                  {otpVerifyForm.formState.errors.token && (
-                    <p id="signin-otp-error" className="text-xs font-medium text-destructive">
-                      {otpVerifyForm.formState.errors.token.message}
-                    </p>
-                  )}
+              <div className="flex flex-col items-center gap-3 py-1 text-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-secondary text-primary">
+                  <Mail className="h-5 w-5" />
                 </div>
-                {verifyError && (
-                  <AuthNotice variant="error" className="animate-slide-up motion-reduce:animate-none">
-                    <span id="signin-otp-request-error">{verifyError}</span>
-                  </AuthNotice>
-                )}
-                <Button type="submit" size="lg" disabled={verifyBusy || isResending} className="mt-1" aria-busy={verifyBusy}>
-                  {verifyBusy ? (
-                    <>
-                      <LoaderCircle className="animate-spin" />
-                      Checking code…
-                    </>
-                  ) : (
-                    "Continue"
-                  )}
-                </Button>
-              </form>
+                <AuthNotice variant="success" className="w-full text-left">
+                  We sent a secure sign-in link to <span className="font-semibold text-foreground">{sentTo}</span>. Open it on
+                  this device to continue.
+                </AuthNotice>
+                <AuthNotice variant="info" className="w-full text-left">
+                  Links usually arrive within a minute. Check spam or promotions if it's missing.
+                  {secondsRemaining > 0 ? ` You can request another in ${secondsRemaining}s.` : " You can resend if it still hasn't arrived."}
+                </AuthNotice>
+              </div>
+
+              {requestError && <AuthNotice variant="error">{requestError}</AuthNotice>}
 
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <Button type="button" variant="ghost" size="sm" onClick={resendCode} disabled={resendDisabled} className="justify-start px-2">
+                <Button type="button" variant="ghost" size="sm" onClick={resendLink} disabled={resendDisabled} className="justify-start px-2">
                   {isResending ? (
                     <>
                       <LoaderCircle className="animate-spin" />
-                      Sending a fresh code…
+                      Sending a fresh link…
                     </>
                   ) : secondsRemaining > 0 ? (
-                    `Resend code in ${secondsRemaining}s`
+                    `Resend link in ${secondsRemaining}s`
                   ) : (
-                    "Resend code"
+                    "Resend link"
                   )}
                 </Button>
-                <Button type="button" variant="outline" size="sm" onClick={resetOtpFlow} className="justify-start sm:justify-center">
-                  <ArrowLeft className="h-4 w-4" />
-                  Back
+                <Button type="button" variant="outline" size="sm" onClick={changeEmail} className="justify-start sm:justify-center">
+                  <Pencil className="h-4 w-4" />
+                  Change email
                 </Button>
               </div>
             </div>
           ) : (
-            <form onSubmit={otpRequestForm.handleSubmit(sendCode)} className="grid gap-4" noValidate aria-busy={requestBusy}>
+            <form onSubmit={magicLinkForm.handleSubmit(sendLink)} className="grid gap-4" noValidate aria-busy={requestBusy}>
               <div className="grid gap-1.5">
-                <Label htmlFor="otp-email">Email</Label>
+                <Label htmlFor="magic-link-email">Email</Label>
                 <Input
-                  id="otp-email"
+                  id="magic-link-email"
                   type="email"
                   autoComplete="email"
                   placeholder="you@example.com"
-                  {...otpRequestForm.register("email")}
-                  aria-invalid={!!otpRequestForm.formState.errors.email || !!requestError}
+                  {...magicLinkForm.register("email")}
+                  aria-invalid={!!magicLinkForm.formState.errors.email || !!requestError}
                   aria-describedby={[
-                    "signin-otp-request-help",
-                    otpRequestForm.formState.errors.email ? "signin-otp-email-error" : null,
-                    requestError ? "signin-otp-request-inline-error" : null,
+                    "signin-magic-link-help",
+                    magicLinkForm.formState.errors.email ? "signin-magic-link-email-error" : null,
+                    requestError ? "signin-magic-link-request-error" : null,
                   ]
                     .filter(Boolean)
                     .join(" ")}
                 />
-                {otpRequestForm.formState.errors.email && (
-                  <p id="signin-otp-email-error" className="text-xs font-medium text-destructive">
-                    {otpRequestForm.formState.errors.email.message}
+                {magicLinkForm.formState.errors.email && (
+                  <p id="signin-magic-link-email-error" className="text-xs font-medium text-destructive">
+                    {magicLinkForm.formState.errors.email.message}
                   </p>
                 )}
               </div>
-              <p id="signin-otp-request-help" className="text-sm leading-6 text-foreground/72">
-                We&apos;ll send a 6-digit sign-in code to your email. No password entry needed on the next step.
+              <p id="signin-magic-link-help" className="text-sm leading-6 text-foreground/72">
+                We&apos;ll email you a secure link — no password needed. Just open it on this device to sign in.
               </p>
-              <AuthNotice variant="info">
-                To protect your inbox, Bloom spaces out code emails for a moment if you tap repeatedly.
-              </AuthNotice>
               {requestError && (
                 <AuthNotice variant="error">
-                  <span id="signin-otp-request-inline-error">{requestError}</span>
+                  <span id="signin-magic-link-request-error">{requestError}</span>
                 </AuthNotice>
               )}
               <Button type="submit" size="lg" disabled={requestBusy} className="mt-1" aria-busy={requestBusy}>
                 {requestBusy ? (
                   <>
                     <LoaderCircle className="animate-spin" />
-                    Sending code…
+                    Sending link…
                   </>
                 ) : (
-                  "Email me a code"
+                  "Email me a sign-in link"
                 )}
               </Button>
             </form>

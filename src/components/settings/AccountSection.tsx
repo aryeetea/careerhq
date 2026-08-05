@@ -2,7 +2,7 @@ import * as React from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { LogOut, ShieldOff } from "lucide-react";
+import { LogOut, ShieldOff, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,6 +15,7 @@ import { useBlockedUsers, useUnblockUser } from "@/hooks/queries/useFriends";
 import { useSharedContextProfiles } from "@/hooks/queries/useProfile";
 import { useToast } from "@/components/shared/toast";
 import { initials } from "@/lib/utils";
+import { DeleteAccountDialog } from "@/components/settings/DeleteAccountDialog";
 
 export function AccountSection() {
   const { user } = useAuth();
@@ -23,6 +24,7 @@ export function AccountSection() {
   const { data: blocked = [] } = useBlockedUsers();
   const { data: profileMap } = useSharedContextProfiles(blocked);
   const unblock = useUnblockUser();
+  const [deleteOpen, setDeleteOpen] = React.useState(false);
 
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<ResetPasswordValues>({
     resolver: zodResolver(resetPasswordSchema),
@@ -96,6 +98,27 @@ export function AccountSection() {
           <LogOut className="h-4 w-4" /> Sign out
         </Button>
       </div>
+
+      <Card className="border-destructive/30 bg-destructive/5">
+        <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
+          <div>
+            <p className="text-sm font-medium">Delete account</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Permanently remove your account and everything in it. This can't be undone.
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            className="border-destructive/40 text-destructive hover:bg-destructive/10"
+            onClick={() => setDeleteOpen(true)}
+          >
+            <Trash2 className="h-4 w-4" /> Delete account
+          </Button>
+        </CardContent>
+      </Card>
+
+      <DeleteAccountDialog open={deleteOpen} onOpenChange={setDeleteOpen} />
     </div>
   );
 }

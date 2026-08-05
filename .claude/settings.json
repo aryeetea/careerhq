@@ -39,7 +39,14 @@
       "Bash(kill -0 72390)",
       "Bash(vercel env *)",
       "Bash(vercel ls *)",
-      "Bash(kill -0 73376)"
+      "Bash(kill -0 73376)",
+      "Bash(supabase config *)",
+      "Bash(vercel inspect *)",
+      "Bash(cd \"/Users/naaayele/Downloads/careerhq \\(1\\)\" && ls node_modules 2>/dev/null | grep -iE \"jsdom|playwright|puppeteer|happy-dom\" ; echo \"---chrome check---\"; ls /Applications 2>/dev/null | grep -i chrome; which chromium chromium-browser google-chrome 2>&1)",
+      "Read(//Applications/**)",
+      "Bash(curl -sf http://localhost:4173/ -o /dev/null)",
+      "Bash(python3 -c \"import json,sys,re; print\\(sys.stdin.read\\(\\)\\)\")",
+      "Bash(node debug_animations.mjs)"
     ]
   }
 }

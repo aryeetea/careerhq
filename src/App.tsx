@@ -18,6 +18,7 @@ import SignIn from "@/pages/auth/SignIn";
 import SignUp from "@/pages/auth/SignUp";
 import ForgotPassword from "@/pages/auth/ForgotPassword";
 import ResetPassword from "@/pages/auth/ResetPassword";
+import AuthCallback from "@/pages/auth/AuthCallback";
 import JoinGroup from "@/pages/JoinGroup";
 
 // Route-level code splitting: everything past the marketing/auth pages is
@@ -49,6 +50,7 @@ export default function App() {
                     <Route path="/" element={<Landing />} />
                     <Route path="/about" element={<About />} />
                     <Route path="/join/group/:token" element={<JoinGroup />} />
+                    <Route path="/auth/callback" element={<AuthCallback />} />
 
                     <Route element={<GuestOnlyRoute />}>
                       <Route path="/login" element={<SignIn />} />

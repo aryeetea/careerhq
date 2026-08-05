@@ -1,4 +1,5 @@
 import { assertSupabaseConfigured, supabase } from "@/lib/supabase";
+import { invokeEdgeFunction } from "@/lib/edgeFunctions";
 
 function normalizeAuthError(error: unknown) {
   if (
@@ -11,7 +12,7 @@ function normalizeAuthError(error: unknown) {
     const normalized = message.toLowerCase();
 
     if (normalized.includes("rate limit") || normalized.includes("security purposes")) {
-      return new Error("You've requested a few codes already. Give it a minute, then try again.");
+      return new Error("You've requested a few links already. Give it a minute, then try again.");
     }
 
     if (normalized.includes("invalid login credentials")) {
@@ -22,13 +23,8 @@ function normalizeAuthError(error: unknown) {
       return new Error("Check your inbox and verify your email before signing in with a password.");
     }
 
-    if (
-      normalized.includes("otp") ||
-      normalized.includes("expired") ||
-      normalized.includes("token") ||
-      normalized.includes("verification code")
-    ) {
-      return new Error("That code is incorrect or expired. Request a new one and try again.");
+    if (normalized.includes("signups not allowed") || normalized.includes("not found") || normalized.includes("user not found")) {
+      return new Error("We couldn't find an account with that email. Try creating one instead.");
     }
 
     if (normalized.includes("network") || normalized.includes("fetch")) {
@@ -89,14 +85,22 @@ export async function signIn(email: string, password: string) {
   }
 }
 
-export async function requestSignInOtp(email: string, redirectPath = "/app") {
+// Builds the /auth/callback URL the emailed magic link points to. `next` is
+// where AuthCallback should send the user once the session is established
+// (it re-checks onboarding status itself, so this is just "where they were
+// headed," not a guarantee of the final destination).
+function callbackUrl(next: string): string {
+  return `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
+}
+
+export async function requestSignInMagicLink(email: string, next = "/app") {
   assertSupabaseConfigured();
   try {
     const { data, error } = await supabase.auth.signInWithOtp({
       email,
       options: {
         shouldCreateUser: false,
-        emailRedirectTo: `${window.location.origin}${redirectPath}`,
+        emailRedirectTo: callbackUrl(next),
       },
     });
     if (error) throw error;
@@ -106,31 +110,16 @@ export async function requestSignInOtp(email: string, redirectPath = "/app") {
   }
 }
 
-export async function requestSignUpOtp(email: string, displayName: string, redirectPath = "/onboarding") {
+export async function requestSignUpMagicLink(email: string, displayName: string, next = "/onboarding") {
   assertSupabaseConfigured();
   try {
     const { data, error } = await supabase.auth.signInWithOtp({
       email,
       options: {
         shouldCreateUser: true,
-        emailRedirectTo: `${window.location.origin}${redirectPath}`,
+        emailRedirectTo: callbackUrl(next),
         data: { display_name: displayName },
       },
-    });
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    throw normalizeAuthError(error);
-  }
-}
-
-export async function verifyEmailOtp(email: string, token: string) {
-  assertSupabaseConfigured();
-  try {
-    const { data, error } = await supabase.auth.verifyOtp({
-      email,
-      token,
-      type: "email",
     });
     if (error) throw error;
     return data;
@@ -168,4 +157,18 @@ export async function resendVerificationEmail(email: string) {
   assertSupabaseConfigured();
   const { error } = await supabase.auth.resend({ type: "signup", email });
   if (error) throw error;
+}
+
+// Permanently deletes the signed-in user's account: their files (resumes,
+// certificates, avatar), then the auth user itself, which cascades through
+// every foreign key in the schema (audited — all `on delete cascade` /
+// `set null`, none `restrict`). Irreversible; the caller is responsible for
+// getting explicit, typed confirmation before calling this.
+export async function deleteMyAccount(): Promise<void> {
+  assertSupabaseConfigured();
+  try {
+    await invokeEdgeFunction<{ deleted: true }>("delete-account");
+  } catch (error) {
+    throw normalizeAuthError(error);
+  }
 }
