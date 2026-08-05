@@ -51,6 +51,7 @@ export default function App() {
                     <Route path="/" element={<Landing />} />
                     <Route path="/about" element={<About />} />
                     <Route path="/join/group/:token" element={<JoinGroup />} />
+                    <Route path="/join/friend/:token" element={<JoinFriend />} />
                     <Route path="/auth/callback" element={<AuthCallback />} />
 
                     <Route element={<GuestOnlyRoute />}>
