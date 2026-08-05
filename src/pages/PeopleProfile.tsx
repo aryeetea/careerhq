@@ -289,6 +289,12 @@ function PeopleProfileContent({ userId, previewMode }: { userId: string; preview
                     <p className="mt-3 max-w-2xl text-sm leading-7 text-foreground/82">{profile.bio}</p>
                   )}
 
+                  {profile?.career_goal && (
+                    <p className="mt-2 max-w-2xl text-sm leading-7 text-foreground/78">
+                      <span className="font-medium text-foreground/85">Working toward:</span> {profile.career_goal}
+                    </p>
+                  )}
+
                   {profile?.career_status && (
                     <p className="mt-3 flex items-center gap-1.5 text-sm font-medium text-primary">
                       <Target className="h-4 w-4 shrink-0" /> {profile.career_status}
