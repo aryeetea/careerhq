@@ -21,7 +21,8 @@
       "Bash(supabase secrets *)",
       "Bash(supabase --help)",
       "Bash(brew list *)",
-      "Bash(brew upgrade *)"
+      "Bash(brew upgrade *)",
+      "Bash(supabase inspect *)"
     ]
   }
 }
