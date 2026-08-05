@@ -36,7 +36,10 @@
       "Bash(kill -0 72153)",
       "Bash(kill -0 72200)",
       "Bash(kill -0 72258)",
-      "Bash(kill -0 72390)"
+      "Bash(kill -0 72390)",
+      "Bash(vercel env *)",
+      "Bash(vercel ls *)",
+      "Bash(kill -0 73376)"
     ]
   }
 }
