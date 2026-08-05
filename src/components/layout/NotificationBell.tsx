@@ -1,4 +1,6 @@
 import { Bell, Check } from "lucide-react";
+import * as React from "react";
+import { useNavigate } from "react-router-dom";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { useMarkAllNotificationsRead, useMarkNotificationRead, useNotifications, useUnreadCount } from "@/hooks/queries/useNotifications";
@@ -28,16 +30,44 @@ function describeEvent(e: ActivityEvent, actorName?: string | null): string {
   }
 }
 
+function getNotificationTarget(event: ActivityEvent): string {
+  switch (event.type) {
+    case "friend_request_received":
+    case "friend_request_accepted":
+      return "/app/friends";
+    case "group_invite_received":
+      return "/app/groups";
+    case "reaction_received": {
+      const contextType = typeof event.payload?.context_type === "string" ? event.payload.context_type : null;
+      if (contextType === "goal") return "/app/goals";
+      if (contextType === "group") return "/app/groups";
+      return "/app/friends";
+    }
+    default:
+      return "/app";
+  }
+}
+
 export function NotificationBell() {
+  const navigate = useNavigate();
   const { data: notifications = [] } = useNotifications();
   const { data: unread = 0 } = useUnreadCount();
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
+  const [open, setOpen] = React.useState(false);
   const actorIds = Array.from(new Set(notifications.map((notification) => notification.actor_id).filter((id): id is string => Boolean(id))));
   const { data: actorProfiles } = useVisibleBasicProfiles(actorIds);
 
+  async function handleNotificationClick(notification: ActivityEvent) {
+    if (!notification.read_at) {
+      await markRead.mutateAsync(notification.id);
+    }
+    setOpen(false);
+    navigate(getNotificationTarget(notification));
+  }
+
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="icon" className="relative" aria-label={`Notifications${unread > 0 ? `, ${unread} unread` : ""}`}>
           <Bell className="h-4.5 w-4.5" />
@@ -65,7 +95,7 @@ export function NotificationBell() {
             notifications.map((n) => (
               <button
                 key={n.id}
-                onClick={() => !n.read_at && markRead.mutate(n.id)}
+                onClick={() => void handleNotificationClick(n)}
                 className="flex w-full flex-col items-start gap-0.5 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-secondary/60"
               >
                 <span className="flex w-full items-center gap-2 text-sm">
