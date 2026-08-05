@@ -51,11 +51,12 @@ export type JobAnalysisPayload = z.infer<typeof jobAnalysisPayloadSchema>;
 
 export const analyzeJobRequestSchema = z
   .object({
+    jobId: z.string().uuid().optional(),
     jobUrl: z.string().trim().url().optional(),
     manualJobDescription: z.string().trim().optional(),
   })
-  .refine((value) => Boolean(value.jobUrl || value.manualJobDescription), {
-    message: "Provide a job URL or a pasted description.",
+  .refine((value) => Boolean(value.jobId || value.jobUrl || value.manualJobDescription), {
+    message: "Provide a saved job, a job URL, or a pasted description.",
   });
 export type AnalyzeJobRequest = z.infer<typeof analyzeJobRequestSchema>;
 

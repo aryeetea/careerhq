@@ -1,3 +1,4 @@
+import * as React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -17,8 +18,12 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { jobFormSchema, type JobFormValues } from "@/lib/validation";
 import type { NewJob, Resume } from "@/types/database";
 import { useCreateJob } from "@/hooks/queries/useJobs";
+import { useAnalyzeJob } from "@/hooks/queries/useJobAi";
 import { useToast } from "@/components/shared/toast";
 import { JOB_STATUSES } from "@/lib/constants";
+import { AnalysisSummary } from "@/components/jobs/AnalysisSummary";
+import { toDateInputValue } from "@/lib/utils";
+import type { JobAnalysisPayload } from "@/lib/ai";
 
 interface AddJobDialogProps {
   open: boolean;
@@ -54,7 +59,9 @@ const DEFAULT_VALUES: Partial<JobFormValues> = {
 
 export function AddJobDialog({ open, onOpenChange, resumes }: AddJobDialogProps) {
   const createJob = useCreateJob();
+  const analyzeJob = useAnalyzeJob();
   const { push } = useToast();
+  const [analysis, setAnalysis] = React.useState<JobAnalysisPayload | null>(null);
 
   const {
     register,
@@ -66,8 +73,47 @@ export function AddJobDialog({ open, onOpenChange, resumes }: AddJobDialogProps)
   } = useForm<JobFormValues>({ resolver: zodResolver(jobFormSchema), defaultValues: DEFAULT_VALUES });
 
   function close(nextOpen: boolean) {
-    if (!nextOpen) reset(DEFAULT_VALUES);
+    if (!nextOpen) {
+      reset(DEFAULT_VALUES);
+      setAnalysis(null);
+    }
     onOpenChange(nextOpen);
+  }
+
+  async function handleAnalyze() {
+    try {
+      const result = await analyzeJob.mutateAsync({
+        jobUrl: watch("jobUrl")?.trim() || undefined,
+        manualJobDescription: watch("jobDescription")?.trim() || undefined,
+      });
+      const next = result.analysis;
+      setAnalysis(next);
+      setValue("company", next.extracted_job.company ?? "", { shouldDirty: true });
+      setValue("title", next.extracted_job.title ?? "", { shouldDirty: true });
+      setValue("location", next.extracted_job.location ?? "", { shouldDirty: true });
+      setValue("salary", next.extracted_job.salary ?? "", { shouldDirty: true });
+      setValue("workArrangement", next.extracted_job.work_arrangement ?? "", { shouldDirty: true });
+      setValue("deadline", toDateInputValue(next.extracted_job.deadline), { shouldDirty: true });
+      setValue("jobDescription", next.extracted_job.raw_job_text, { shouldDirty: true });
+      setValue("fitScore", next.fit_score, { shouldDirty: true });
+      setValue("verdict", next.verdict, { shouldDirty: true });
+      setValue("priority", next.priority, { shouldDirty: true });
+      setValue("strengths", next.matching_strengths.join("\n"), { shouldDirty: true });
+      setValue(
+        "missingQualifications",
+        [
+          ...next.missing_required_qualifications.map((item) => `Required: ${item}`),
+          ...next.missing_preferred_qualifications.map((item) => `Preferred: ${item}`),
+        ].join("\n"),
+        { shouldDirty: true },
+      );
+      if (result.selected_resume_id) {
+        setValue("resumeId", result.selected_resume_id, { shouldDirty: true });
+      }
+      push("AI analysis is ready to review.", "success");
+    } catch (err) {
+      push(err instanceof Error ? err.message : "Couldn't analyze that job yet.", "error");
+    }
   }
 
   async function onSubmit(values: JobFormValues) {
@@ -95,6 +141,10 @@ export function AddJobDialog({ open, onOpenChange, resumes }: AddJobDialogProps)
       strengths: values.strengths?.trim() || null,
       missing_qualifications: values.missingQualifications?.trim() || null,
       notes: values.notes?.trim() || null,
+      ai_extracted_data: analysis?.extracted_job,
+      ai_analysis: analysis,
+      ai_recommended_resume_id: analysis?.recommended_resume_id ?? null,
+      ai_last_analyzed_at: analysis ? new Date().toISOString() : null,
     };
 
     try {
@@ -118,8 +168,16 @@ export function AddJobDialog({ open, onOpenChange, resumes }: AddJobDialogProps)
           <div className="grid gap-3 rounded-xl border border-border/70 bg-card/40 p-3.5">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Basic information</p>
             <div className="grid gap-1.5">
-              <Label htmlFor="jobUrl">Job link</Label>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <Label htmlFor="jobUrl">Job link</Label>
+                <Button type="button" variant="outline" size="sm" onClick={handleAnalyze} disabled={analyzeJob.isPending}>
+                  {analyzeJob.isPending ? "Analyzing…" : "Import & analyze with AI"}
+                </Button>
+              </div>
               <Input id="jobUrl" placeholder="https://linkedin.com/jobs/view/…" {...register("jobUrl")} />
+              <p className="text-xs text-muted-foreground">
+                If the link is blocked or incomplete, paste the job description below and run the analysis again.
+              </p>
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="grid gap-1.5">
@@ -159,6 +217,14 @@ export function AddJobDialog({ open, onOpenChange, resumes }: AddJobDialogProps)
               <Textarea id="jobDescription" rows={5} placeholder="Paste the full job description here…" {...register("jobDescription")} />
             </div>
           </div>
+
+          {analysis && (
+            <AnalysisSummary
+              analysis={analysis}
+              selectedResumeId={watch("resumeId") || null}
+              onApplyRecommendation={(resumeId) => setValue("resumeId", resumeId, { shouldDirty: true })}
+            />
+          )}
 
           <Accordion type="multiple" className="rounded-xl border border-border/70 bg-card/40 px-3.5">
             <AccordionItem value="evaluation">

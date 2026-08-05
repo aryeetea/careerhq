@@ -109,5 +109,5 @@ Three themes, switchable from Settings → Appearance, stored in `localStorage`:
 - "Selected friends" privacy visibility uses one shared allow-list per user rather than a separate list per individual field.
 - No email notifications yet — in-app only, as scoped.
 - No dedicated group activity feed.
-- AI-assisted fit score / verdict is not built; the fields are there (fit_score, verdict) and entirely manual today, ready for an AI pass later without a schema change.
+- AI-assisted job analysis and cover-letter generation now depend on deployed Supabase Edge Functions plus runtime secrets (`OPENAI_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`). The frontend is wired; production setup still needs those secrets configured server-side.
 - No seeded demo data — the app has no demo mode by design (it's a real personal data tool, not a showcase). Every empty state instead gives a one-line prompt for what to add first.

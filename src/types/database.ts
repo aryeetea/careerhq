@@ -29,9 +29,12 @@ export type ReactionContext = "weekly_progress" | "goal" | "group" | "general";
 export type ThemeName = "floral" | "neutral" | "dark";
 
 export interface JobAiExtraction {
-  source: "url" | "manual" | "url_plus_manual";
-  import_status: "success" | "manual_fallback";
-  fetched_url: string | null;
+  company: string | null;
+  title: string | null;
+  location: string | null;
+  salary: string | null;
+  work_arrangement: WorkArrangement | null;
+  deadline: string | null;
   requirements: string[];
   required_qualifications: string[];
   preferred_qualifications: string[];
@@ -40,7 +43,6 @@ export interface JobAiExtraction {
   experience: string[];
   certifications: string[];
   responsibilities: string[];
-  deadline_text: string | null;
   raw_job_text: string;
 }
 
@@ -54,6 +56,10 @@ export interface ResumeRecommendation {
 }
 
 export interface JobAiAnalysis {
+  import_status: "success" | "manual_fallback";
+  source: "url" | "manual" | "url_plus_manual";
+  fetched_url: string | null;
+  extracted_job: JobAiExtraction;
   fit_score: number;
   verdict: JobVerdict;
   priority: 1 | 2 | 3;

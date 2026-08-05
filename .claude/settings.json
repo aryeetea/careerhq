@@ -10,7 +10,12 @@
       "Bash(supabase --version)",
       "Bash(env)",
       "Bash(supabase projects *)",
-      "Bash(echo \"EXIT:$?\")"
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(npx tsc *)",
+      "Bash(tee /tmp/tsc-out.log)",
+      "Bash(echo \"EXIT CODE: $?\")",
+      "Bash(awk -F: '$2>0')",
+      "Bash(node -e ' *)"
     ]
   }
 }
