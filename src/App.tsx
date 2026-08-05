@@ -20,6 +20,7 @@ import ForgotPassword from "@/pages/auth/ForgotPassword";
 import ResetPassword from "@/pages/auth/ResetPassword";
 import AuthCallback from "@/pages/auth/AuthCallback";
 import JoinGroup from "@/pages/JoinGroup";
+import JoinFriend from "@/pages/JoinFriend";
 
 // Route-level code splitting: everything past the marketing/auth pages is
 // lazy-loaded so first paint only ships what a signed-out visitor needs.

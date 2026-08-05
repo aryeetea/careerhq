@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Flame, MoreVertical, UserMinus, Ban } from "lucide-react";
+import { Eye, Flame, MoreVertical, PartyPopper, Sparkles, UserMinus, Ban } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
@@ -7,6 +7,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { ReactionPicker } from "@/components/friends/ReactionPicker";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { ThoughtBubble } from "@/components/shared/ThoughtBubble";
+import { FriendProfileDialog } from "@/components/friends/FriendProfileDialog";
 import { useSignedAvatarUrl } from "@/hooks/useSignedAvatarUrl";
 import { useRemoveFriend, useBlockUser } from "@/hooks/queries/useFriends";
 import { useToast } from "@/components/shared/toast";
@@ -20,6 +21,10 @@ export function FriendCard({ friend }: { friend: FriendCardData }) {
   const { push } = useToast();
   const [confirmRemove, setConfirmRemove] = React.useState(false);
   const [confirmBlock, setConfirmBlock] = React.useState(false);
+  const [profileOpen, setProfileOpen] = React.useState(false);
+
+  const recentlyActive = Boolean(friend.applications_this_week) || Boolean(friend.current_streak);
+  const celebrating = Boolean(friend.offers_count);
 
   const hasAnyShared =
     friend.applications_this_week !== null ||
@@ -55,6 +60,9 @@ export function FriendCard({ friend }: { friend: FriendCardData }) {
               <MoreVertical className="h-4 w-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={() => setProfileOpen(true)}>
+                <Eye className="mr-2 h-4 w-4" /> View profile
+              </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => setConfirmRemove(true)}>
                 <UserMinus className="mr-2 h-4 w-4" /> Remove friend
               </DropdownMenuItem>
@@ -64,6 +72,21 @@ export function FriendCard({ friend }: { friend: FriendCardData }) {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+
+        {(recentlyActive || celebrating) && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {recentlyActive && (
+              <span className="flex items-center gap-1 rounded-full bg-sage/15 px-2 py-0.5 text-[11px] font-medium text-sage-foreground">
+                <Sparkles className="h-3 w-3" aria-hidden="true" /> Recently active
+              </span>
+            )}
+            {celebrating && (
+              <span className="flex items-center gap-1 rounded-full bg-gold/15 px-2 py-0.5 text-[11px] font-medium text-gold">
+                <PartyPopper className="h-3 w-3" aria-hidden="true" /> Celebrating a win
+              </span>
+            )}
+          </div>
+        )}
 
         {!hasAnyShared ? (
           <div className="mt-3">
@@ -137,6 +160,7 @@ export function FriendCard({ friend }: { friend: FriendCardData }) {
           push("User blocked", "info");
         }}
       />
+      <FriendProfileDialog friend={friend} open={profileOpen} onOpenChange={setProfileOpen} />
     </Card>
   );
 }

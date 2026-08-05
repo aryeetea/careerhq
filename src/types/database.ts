@@ -362,6 +362,45 @@ export interface GroupJoinLinkPreview {
   expires_at: string | null;
 }
 
+export interface FriendInviteLink {
+  id: string;
+  owner_id: string;
+  token: string;
+  is_active: boolean;
+  expires_at: string | null;
+  max_uses: number | null;
+  use_count: number;
+  last_used_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FriendInviteLinkPreview {
+  owner_id: string;
+  display_name: string;
+  username: string;
+  avatar_url: string | null;
+  bio: string | null;
+  career_goal: string | null;
+  is_active: boolean;
+  expires_at: string | null;
+  max_uses: number | null;
+  use_count: number;
+}
+
+export interface MutualConnections {
+  mutual_groups: string[];
+  mutual_goals: string[];
+}
+
+export interface SuggestedFriend {
+  id: string;
+  username: string;
+  display_name: string;
+  avatar_url: string | null;
+  mutual_group_count: number;
+}
+
 export interface EncouragementReaction {
   id: string;
   sender_id: string;
