@@ -39,9 +39,10 @@ export async function updateJob(id: string, patch: Partial<Job>): Promise<Job> {
   return data as Job;
 }
 
-// date_applied / interview_date / offer_date / rejection_date are stamped
-// server-side (see trg_jobs_stamp_dates in 0001_core_schema.sql) the first
-// time status reaches the relevant stage, and are never overwritten once set.
+// date_applied / follow_up_date / interview_date / offer_date /
+// rejection_date are stamped server-side (see trg_jobs_stamp_dates in the
+// Supabase migrations) the first time status reaches the relevant stage, and
+// are never overwritten once set.
 export async function updateJobStatus(id: string, status: JobStatus): Promise<Job> {
   const { data, error } = await supabase.from("jobs").update({ status }).eq("id", id).select("*").single();
   if (error) throw error;
