@@ -60,7 +60,7 @@ async function ensureActiveSession() {
   return data.session;
 }
 
-export async function signUp(email: string, password: string, displayName: string) {
+export async function signUp(email: string, password: string, displayName: string, redirectPath = "/login") {
   assertSupabaseConfigured();
   try {
     const { data, error } = await supabase.auth.signUp({
@@ -68,7 +68,7 @@ export async function signUp(email: string, password: string, displayName: strin
       password,
       options: {
         data: { display_name: displayName },
-        emailRedirectTo: `${window.location.origin}/login`,
+        emailRedirectTo: `${window.location.origin}${redirectPath}`,
       },
     });
     if (error) throw error;
@@ -89,14 +89,14 @@ export async function signIn(email: string, password: string) {
   }
 }
 
-export async function requestSignInOtp(email: string) {
+export async function requestSignInOtp(email: string, redirectPath = "/app") {
   assertSupabaseConfigured();
   try {
     const { data, error } = await supabase.auth.signInWithOtp({
       email,
       options: {
         shouldCreateUser: false,
-        emailRedirectTo: `${window.location.origin}/app`,
+        emailRedirectTo: `${window.location.origin}${redirectPath}`,
       },
     });
     if (error) throw error;
@@ -106,14 +106,14 @@ export async function requestSignInOtp(email: string) {
   }
 }
 
-export async function requestSignUpOtp(email: string, displayName: string) {
+export async function requestSignUpOtp(email: string, displayName: string, redirectPath = "/onboarding") {
   assertSupabaseConfigured();
   try {
     const { data, error } = await supabase.auth.signInWithOtp({
       email,
       options: {
         shouldCreateUser: true,
-        emailRedirectTo: `${window.location.origin}/onboarding`,
+        emailRedirectTo: `${window.location.origin}${redirectPath}`,
         data: { display_name: displayName },
       },
     });

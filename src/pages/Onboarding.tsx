@@ -206,7 +206,7 @@ export default function Onboarding() {
 
               <div className="grid gap-1.5">
                 <Label htmlFor="displayName">Display name</Label>
-                <Input id="displayName" {...register("displayName")} aria-invalid={!!errors.displayName} />
+                <Input id="displayName" placeholder="Jane Doe" {...register("displayName")} aria-invalid={!!errors.displayName} />
                 {errors.displayName && <p className="text-xs text-destructive">{errors.displayName.message}</p>}
               </div>
 

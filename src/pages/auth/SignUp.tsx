@@ -98,7 +98,12 @@ export default function SignUp() {
     setResendVerificationState({ error: null, loading: false, success: null });
 
     try {
-      const result = await signUp(values.email, values.password, values.displayName);
+      const result = await signUp(
+        values.email,
+        values.password,
+        values.displayName,
+        `/login?next=${encodeURIComponent(redirectTo)}`
+      );
       if (result.session) {
         navigate(redirectTo, { replace: true });
         return;
@@ -116,7 +121,7 @@ export default function SignUp() {
     setVerifyError(null);
 
     try {
-      await requestSignUpOtp(values.email, values.displayName);
+      await requestSignUpOtp(values.email, values.displayName, redirectTo);
       setOtpSignup(values);
       setRequestStatus(`Your 6-digit sign-up code is on the way to ${values.email}.`);
       otpVerifyForm.reset();
@@ -156,7 +161,7 @@ export default function SignUp() {
     setIsResending(true);
 
     try {
-      await requestSignUpOtp(otpSignup.email, otpSignup.displayName);
+      await requestSignUpOtp(otpSignup.email, otpSignup.displayName, redirectTo);
       otpVerifyForm.reset();
       setRequestStatus(`A fresh 6-digit sign-up code is on the way to ${otpSignup.email}.`);
       startResendCooldown();
@@ -229,7 +234,7 @@ export default function SignUp() {
               )}
             </Button>
             <Button asChild className="flex-1">
-              <Link to="/login">Back to sign in</Link>
+              <Link to={params.get("next") ? `/login?next=${encodeURIComponent(params.get("next") as string)}` : "/login"}>Back to sign in</Link>
             </Button>
           </div>
         </div>

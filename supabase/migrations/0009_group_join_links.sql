@@ -1,7 +1,7 @@
 create table if not exists group_join_links (
   id uuid primary key default gen_random_uuid(),
   group_id uuid not null references groups(id) on delete cascade,
-  created_by uuid not null references auth.users(id) on delete cascade,
+  created_by uuid not null default auth.uid() references auth.users(id) on delete cascade,
   token text not null unique default replace(gen_random_uuid()::text, '-', ''),
   is_active boolean not null default true,
   expires_at timestamptz,

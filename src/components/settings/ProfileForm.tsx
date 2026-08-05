@@ -111,7 +111,7 @@ export function ProfileForm() {
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="grid gap-1.5">
           <Label htmlFor="p-displayName">Display name</Label>
-          <Input id="p-displayName" {...register("displayName")} aria-invalid={!!errors.displayName} />
+          <Input id="p-displayName" placeholder="Jane Doe" {...register("displayName")} aria-invalid={!!errors.displayName} />
           {errors.displayName && <p className="text-xs text-destructive">{errors.displayName.message}</p>}
         </div>
         <div className="grid gap-1.5">

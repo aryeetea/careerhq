@@ -99,7 +99,7 @@ export default function SignIn() {
     setVerifyError(null);
 
     try {
-      await requestSignInOtp(values.email);
+      await requestSignInOtp(values.email, redirectTo);
       setOtpEmail(values.email);
       setRequestStatus(`Your 6-digit sign-in code is on the way to ${values.email}.`);
       otpVerifyForm.reset();
@@ -139,7 +139,7 @@ export default function SignIn() {
     setIsResending(true);
 
     try {
-      await requestSignInOtp(otpEmail);
+      await requestSignInOtp(otpEmail, redirectTo);
       otpVerifyForm.reset();
       setRequestStatus(`A fresh 6-digit sign-in code is on the way to ${otpEmail}.`);
       startResendCooldown();
