@@ -4,10 +4,14 @@ import {
   generateCoverLetterRequestSchema,
   generateCoverLetterResponseSchema,
   jobAnalysisPayloadSchema,
+  suggestProfileCopyRequestSchema,
+  suggestProfileCopyResponseSchema,
   type AnalyzeJobRequest,
   type GenerateCoverLetterRequest,
   type GenerateCoverLetterResponse,
   type JobAnalysisPayload,
+  type SuggestProfileCopyRequest,
+  type SuggestProfileCopyResponse,
 } from "@/lib/ai";
 
 export async function analyzeJob(request: AnalyzeJobRequest): Promise<{ analysis: JobAnalysisPayload; selected_resume_id: string | null }> {
@@ -23,4 +27,10 @@ export async function generateCoverLetter(request: GenerateCoverLetterRequest): 
   const payload = generateCoverLetterRequestSchema.parse(request);
   const data = await invokeEdgeFunction<unknown>("generate-cover-letter", payload);
   return generateCoverLetterResponseSchema.parse(data);
+}
+
+export async function suggestProfileCopy(request: SuggestProfileCopyRequest): Promise<SuggestProfileCopyResponse> {
+  const payload = suggestProfileCopyRequestSchema.parse(request);
+  const data = await invokeEdgeFunction<unknown>("suggest-profile-copy", payload);
+  return suggestProfileCopyResponseSchema.parse(data);
 }

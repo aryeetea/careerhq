@@ -105,6 +105,18 @@ export const coverLetterResponseSchema = z.object({
   resume_name: z.string().nullable(),
 });
 
+export const suggestProfileCopyRequestSchema = z.object({
+  field: z.enum(["bio", "career_status"]),
+});
+
+export const suggestProfileCopyResponseSchema = z.object({
+  field: z.enum(["bio", "career_status"]),
+  suggestion: z.string(),
+  reason: z.string(),
+});
+
 export type AnalyzeJobRequest = z.infer<typeof analyzeJobRequestSchema>;
 export type AnalysisResponse = z.infer<typeof analysisResponseSchema>;
 export type CoverLetterRequest = z.infer<typeof coverLetterRequestSchema>;
+export type SuggestProfileCopyRequest = z.infer<typeof suggestProfileCopyRequestSchema>;
+export type SuggestProfileCopyResponse = z.infer<typeof suggestProfileCopyResponseSchema>;

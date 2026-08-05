@@ -1,14 +1,17 @@
 import * as React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Camera, X } from "lucide-react";
+import { Camera, LoaderCircle, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { profileFormSchema, type ProfileFormValues } from "@/lib/validation";
 import { useProfile, useUpdateAvatar, useUpdateProfile } from "@/hooks/queries/useProfile";
+import { useResumes } from "@/hooks/queries/useResumes";
+import { useSuggestProfileCopy } from "@/hooks/queries/useJobAi";
 import { useSignedAvatarUrl } from "@/hooks/useSignedAvatarUrl";
 import { removeAvatar as removeAvatarService } from "@/services/profiles";
 import { useAuth } from "@/hooks/useAuth";
@@ -24,12 +27,16 @@ function splitTags(value: string): string[] {
 export function ProfileForm() {
   const { user } = useAuth();
   const { data: profile } = useProfile();
+  const { data: resumes = [] } = useResumes();
   const updateProfile = useUpdateProfile();
   const updateAvatar = useUpdateAvatar();
+  const suggestProfileCopy = useSuggestProfileCopy();
   const avatarUrl = useSignedAvatarUrl(profile?.avatar_url);
   const { push } = useToast();
   const qc = useQueryClient();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [draftSuggestion, setDraftSuggestion] = React.useState<{ field: "bio" | "career_status"; suggestion: string; reason: string } | null>(null);
+  const [saveState, setSaveState] = React.useState<"idle" | "saved">("idle");
 
   const { register, handleSubmit, reset, setValue, watch, formState: { errors, isSubmitting, isDirty } } = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -63,6 +70,7 @@ export function ProfileForm() {
       });
       push("Profile updated", "success");
       reset(values);
+      setSaveState("saved");
     } catch (err) {
       push(err instanceof Error ? err.message : "Couldn't save your profile.", "error");
     }
@@ -88,11 +96,46 @@ export function ProfileForm() {
     push("Photo removed", "info");
   }
 
+  async function handleSuggest(field: "bio" | "career_status") {
+    try {
+      const suggestion = await suggestProfileCopy.mutateAsync({ field });
+      setDraftSuggestion(suggestion);
+    } catch (err) {
+      push(err instanceof Error ? err.message : "Couldn't generate a suggestion right now.", "error");
+    }
+  }
+
+  function applySuggestion() {
+    if (!draftSuggestion) return;
+    if (draftSuggestion.field === "bio") {
+      setValue("bio", draftSuggestion.suggestion, { shouldDirty: true });
+    } else {
+      setValue("careerStatus", draftSuggestion.suggestion, { shouldDirty: true });
+    }
+    push("Suggestion added. You can still edit it before saving.", "success");
+    setDraftSuggestion(null);
+  }
+
   if (!profile) return null;
 
+  const bioValue = watch("bio") ?? "";
+  const careerStatusValue = watch("careerStatus") ?? "";
+  const statusMessageValue = watch("statusMessage") ?? "";
+
+  React.useEffect(() => {
+    if (isDirty) setSaveState("idle");
+  }, [isDirty]);
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4" noValidate>
-      <div className="flex items-center gap-4">
+    <form onSubmit={handleSubmit(onSubmit)} className="grid gap-6" noValidate>
+      <div className="rounded-[2rem] border border-border/65 bg-[linear-gradient(180deg,rgba(255,255,255,0.82),rgba(255,255,255,0.5))] p-5 shadow-soft sm:p-6">
+        <div className="mb-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary/75">Your Profile</p>
+          <h2 className="mt-2 font-display text-2xl font-semibold tracking-tight">A steady introduction, with room for today.</h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-foreground/72">Keep it brief, clear, and easy to revisit.</p>
+        </div>
+
+        <div className="flex items-center gap-4">
         <div className="relative">
           <Avatar className="h-16 w-16 border border-border">
             {avatarUrl && <AvatarImage src={avatarUrl} alt="" />}
@@ -113,6 +156,7 @@ export function ProfileForm() {
           </Button>
         )}
       </div>
+      </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="grid gap-1.5">
@@ -126,25 +170,114 @@ export function ProfileForm() {
         </div>
       </div>
 
-      <div className="grid gap-1.5">
-        <Label htmlFor="p-bio">Professional bio</Label>
-        <Input id="p-bio" placeholder="Product Designer passionate about thoughtful digital experiences" {...register("bio")} maxLength={160} />
-        <p className="text-xs text-muted-foreground">A one-line intro. This stays stable — it's how you introduce yourself, not how you feel today.</p>
-      </div>
+      <div className="grid gap-4 rounded-[2rem] border border-border/65 bg-card/55 p-5 shadow-soft sm:p-6">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary/75">Voice</p>
+          <h3 className="mt-2 font-display text-xl font-semibold tracking-tight">Short, human profile details.</h3>
+        </div>
 
-      <div className="grid gap-1.5">
-        <Label htmlFor="p-careerStatus">Career status</Label>
-        <Input id="p-careerStatus" placeholder="Open to Product Design opportunities" {...register("careerStatus")} maxLength={120} />
-        <p className="text-xs text-muted-foreground">Your current focus — changes every so often, not daily. Different from the quick thought below.</p>
-      </div>
+        <ProfileFieldCard
+          label="About you"
+          fieldId="p-bio"
+          helperText="A short introduction that rarely changes."
+          action={
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => handleSuggest("bio")}
+              disabled={suggestProfileCopy.isPending}
+            >
+              {suggestProfileCopy.isPending && draftSuggestion?.field !== "bio" ? <LoaderCircle className="animate-spin" /> : <Sparkles />}
+              AI Suggest
+            </Button>
+          }
+        >
+          <AutoResizeTextarea
+            id="p-bio"
+            minRows={1}
+            maxHeight={144}
+            value={bioValue}
+            onChange={(event) => setValue("bio", event.target.value, { shouldDirty: true, shouldValidate: true })}
+            placeholder="IT graduate building thoughtful digital products."
+            error={!!errors.bio}
+            aria-describedby={errors.bio ? "p-bio-error" : undefined}
+          />
+          {errors.bio && <p id="p-bio-error" className="text-xs text-destructive">{errors.bio.message}</p>}
+        </ProfileFieldCard>
 
-      <div className="grid gap-1.5">
-        <Label htmlFor="p-statusMessage">Today's thought</Label>
-        <Input id="p-statusMessage" placeholder="Preparing for tomorrow's interview" {...register("statusMessage")} maxLength={140} />
-        <p className="text-xs text-muted-foreground">
-          A quick, temporary note — friends who follow your progress can see this. You can also update just this from your Profile
-          page without opening Settings.
-        </p>
+        <ProfileFieldCard
+          label="Career status"
+          fieldId="p-careerStatus"
+          helperText="What you're focused on right now."
+          action={
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => handleSuggest("career_status")}
+              disabled={suggestProfileCopy.isPending}
+            >
+              {suggestProfileCopy.isPending && draftSuggestion?.field !== "career_status" ? <LoaderCircle className="animate-spin" /> : <Sparkles />}
+              AI Suggest
+            </Button>
+          }
+        >
+          <AutoResizeTextarea
+            id="p-careerStatus"
+            minRows={1}
+            maxHeight={128}
+            value={careerStatusValue}
+            onChange={(event) => setValue("careerStatus", event.target.value, { shouldDirty: true, shouldValidate: true })}
+            placeholder="Seeking entry-level product and project roles."
+            error={!!errors.careerStatus}
+            aria-describedby={errors.careerStatus ? "p-career-status-error" : undefined}
+          />
+          {errors.careerStatus && <p id="p-career-status-error" className="text-xs text-destructive">{errors.careerStatus.message}</p>}
+        </ProfileFieldCard>
+
+        <ProfileFieldCard
+          label="Today's thought"
+          fieldId="p-statusMessage"
+          helperText="What's on your mind today?"
+        >
+          <AutoResizeTextarea
+            id="p-statusMessage"
+            minRows={1}
+            maxHeight={128}
+            value={statusMessageValue}
+            onChange={(event) => setValue("statusMessage", event.target.value, { shouldDirty: true, shouldValidate: true })}
+            placeholder="Staying consistent and trusting the process."
+            error={!!errors.statusMessage}
+            aria-describedby={errors.statusMessage ? "p-status-message-error" : undefined}
+          />
+          {errors.statusMessage && <p id="p-status-message-error" className="text-xs text-destructive">{errors.statusMessage.message}</p>}
+        </ProfileFieldCard>
+
+        {draftSuggestion && (
+          <div className="rounded-[1.6rem] border border-primary/20 bg-primary/5 p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold">
+                  Suggested {draftSuggestion.field === "bio" ? "About you" : "Career status"}
+                </p>
+                <p className="mt-1 text-sm leading-6 text-foreground/82">{draftSuggestion.suggestion}</p>
+                <p className="mt-2 text-xs leading-5 text-muted-foreground">{draftSuggestion.reason}</p>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Built from the profile, goals, and {resumes.length > 0 ? "resume evidence" : "current Bloom details"} you already have in Bloom.
+                </p>
+              </div>
+              <div className="flex shrink-0 gap-2">
+                <Button type="button" variant="ghost" size="sm" onClick={() => setDraftSuggestion(null)}>
+                  Keep mine
+                </Button>
+                <Button type="button" size="sm" onClick={applySuggestion}>
+                  Use suggestion
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="grid gap-1.5">
@@ -170,8 +303,47 @@ export function ProfileForm() {
       </div>
 
       <div>
-        <Button type="submit" disabled={isSubmitting || !isDirty}>{isSubmitting ? "Saving…" : "Save profile"}</Button>
+        <div className="flex flex-wrap items-center gap-3">
+          {isDirty && (
+            <>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Saving…" : "Save profile"}
+              </Button>
+              <p className="text-sm text-muted-foreground">Unsaved changes</p>
+            </>
+          )}
+          {!isDirty && saveState === "saved" && <p className="text-sm text-success">Saved</p>}
+        </div>
       </div>
     </form>
+  );
+}
+
+function ProfileFieldCard({
+  label,
+  fieldId,
+  helperText,
+  action,
+  children,
+}: {
+  label: string;
+  fieldId: string;
+  helperText: string;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-[1.6rem] border border-border/60 bg-background/70 p-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <Label htmlFor={fieldId} className="text-sm font-semibold">
+            {label}
+          </Label>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">{helperText}</p>
+        </div>
+        {action && <div className="flex items-center gap-2">{action}</div>}
+      </div>
+      <div className="mt-3 grid gap-2">{children}</div>
+    </div>
   );
 }
