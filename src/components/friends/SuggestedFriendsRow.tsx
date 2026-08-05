@@ -3,6 +3,7 @@ import { Sparkles, UserPlus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { PersonLink } from "@/components/people/PersonLink";
 import { useSuggestedFriends } from "@/hooks/queries/useFriendConnections";
 import { useSendFriendRequest } from "@/hooks/queries/useFriends";
 import { useSignedAvatarUrl } from "@/hooks/useSignedAvatarUrl";
@@ -18,16 +19,18 @@ function SuggestedFriendCard({ suggestion }: { suggestion: SuggestedFriend }) {
 
   return (
     <div className="flex w-40 shrink-0 flex-col items-center gap-2 rounded-2xl border border-border/70 bg-card/70 p-3.5 text-center">
-      <Avatar className="h-12 w-12 border border-border">
-        {avatarUrl && <AvatarImage src={avatarUrl} alt="" />}
-        <AvatarFallback>{initials(suggestion.display_name || suggestion.username)}</AvatarFallback>
-      </Avatar>
-      <div className="min-w-0">
-        <p className="truncate text-sm font-medium">{suggestion.display_name || suggestion.username}</p>
-        <p className="truncate text-xs text-muted-foreground">
-          {suggestion.mutual_group_count} mutual group{suggestion.mutual_group_count === 1 ? "" : "s"}
-        </p>
-      </div>
+      <PersonLink userId={suggestion.id} className="contents">
+        <Avatar className="h-12 w-12 border border-border">
+          {avatarUrl && <AvatarImage src={avatarUrl} alt="" />}
+          <AvatarFallback>{initials(suggestion.display_name || suggestion.username)}</AvatarFallback>
+        </Avatar>
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium transition-colors hover:text-primary">{suggestion.display_name || suggestion.username}</p>
+          <p className="truncate text-xs text-muted-foreground">
+            {suggestion.mutual_group_count} mutual group{suggestion.mutual_group_count === 1 ? "" : "s"}
+          </p>
+        </div>
+      </PersonLink>
       <Button
         size="sm"
         variant={sent ? "outline" : "default"}

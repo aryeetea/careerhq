@@ -1,11 +1,14 @@
 import * as React from "react";
+import { Link } from "react-router-dom";
 import { Plus, Trash2, Users } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Chip } from "@/components/ui/chip";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { ReactionPicker } from "@/components/friends/ReactionPicker";
+import { PersonLink } from "@/components/people/PersonLink";
 import { useSignedAvatarUrl } from "@/hooks/useSignedAvatarUrl";
 import { useSharedContextProfiles } from "@/hooks/queries/useProfile";
 import { useAuth } from "@/hooks/useAuth";
@@ -23,13 +26,17 @@ function MemberRow({ userId, displayName, avatarPath, progress, target, unit, is
 
   return (
     <div className="flex items-center gap-2.5">
-      <Avatar className="h-7 w-7 border border-border">
-        {avatarUrl && <AvatarImage src={avatarUrl} alt="" />}
-        <AvatarFallback className="text-[10px]">{initials(displayName)}</AvatarFallback>
-      </Avatar>
+      <PersonLink userId={userId} className="shrink-0">
+        <Avatar className="h-7 w-7 border border-border">
+          {avatarUrl && <AvatarImage src={avatarUrl} alt="" />}
+          <AvatarFallback className="text-[10px]">{initials(displayName)}</AvatarFallback>
+        </Avatar>
+      </PersonLink>
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between text-xs">
-          <span className="truncate font-medium">{displayName}</span>
+          <PersonLink userId={userId} className="truncate font-medium transition-colors hover:text-primary">
+            {displayName}
+          </PersonLink>
           <span className="text-muted-foreground">{progress}/{target} {unit}</span>
         </div>
         <Progress value={pct} className="mt-1 h-1.5" />
@@ -82,7 +89,7 @@ export function GoalCard({ goal }: { goal: GoalWithMembers }) {
         <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
           {goal.deadline && <span>Due {formatDate(goal.deadline)}</span>}
           {goal.is_shared && (
-            <span className="flex items-center gap-1"><Users className="h-3 w-3" /> Shared</span>
+            <Chip variant="muted" className="min-h-7 gap-1 text-[11px]"><Users className="h-3 w-3" /> Shared</Chip>
           )}
         </div>
 
@@ -129,6 +136,11 @@ export function GoalCard({ goal }: { goal: GoalWithMembers }) {
             }}
           >
             Leave goal
+          </Button>
+        )}
+        {goal.is_shared && (
+          <Button asChild size="sm" variant="ghost" className="mt-2 w-full">
+            <Link to="/app/goals">View shared goal details</Link>
           </Button>
         )}
       </CardContent>

@@ -1,27 +1,29 @@
 import * as React from "react";
 import { Eye, Flame, MoreVertical, PartyPopper, Sparkles, UserMinus, Ban } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Chip } from "@/components/ui/chip";
 import { Progress } from "@/components/ui/progress";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ReactionPicker } from "@/components/friends/ReactionPicker";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { ThoughtBubble } from "@/components/shared/ThoughtBubble";
-import { FriendProfileDialog } from "@/components/friends/FriendProfileDialog";
 import { useSignedAvatarUrl } from "@/hooks/useSignedAvatarUrl";
 import { useRemoveFriend, useBlockUser } from "@/hooks/queries/useFriends";
 import { useToast } from "@/components/shared/toast";
+import { getPersonProfilePath } from "@/lib/people";
 import { initials } from "@/lib/utils";
 import type { FriendCard as FriendCardData } from "@/types/database";
 
 export function FriendCard({ friend }: { friend: FriendCardData }) {
+  const navigate = useNavigate();
   const avatarUrl = useSignedAvatarUrl(friend.avatar_url);
   const removeFriend = useRemoveFriend();
   const blockUser = useBlockUser();
   const { push } = useToast();
   const [confirmRemove, setConfirmRemove] = React.useState(false);
   const [confirmBlock, setConfirmBlock] = React.useState(false);
-  const [profileOpen, setProfileOpen] = React.useState(false);
 
   const recentlyActive = Boolean(friend.applications_this_week) || Boolean(friend.current_streak);
   const celebrating = Boolean(friend.offers_count);
@@ -34,7 +36,18 @@ export function FriendCard({ friend }: { friend: FriendCardData }) {
     friend.certification_percentage !== null;
 
   return (
-    <Card className="hover-lift">
+    <Card
+      className="hover-lift cursor-pointer"
+      role="link"
+      tabIndex={0}
+      onClick={() => navigate(getPersonProfilePath(friend.user_id))}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          navigate(getPersonProfilePath(friend.user_id));
+        }
+      }}
+    >
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
           <Avatar className="h-11 w-11 border border-border">
@@ -55,13 +68,14 @@ export function FriendCard({ friend }: { friend: FriendCardData }) {
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger
+              onClick={(event) => event.stopPropagation()}
               className="rounded-full p-1 text-muted-foreground outline-none hover:bg-secondary"
               aria-label={`More actions for ${friend.display_name || friend.username}`}
             >
               <MoreVertical className="h-4 w-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onSelect={() => setProfileOpen(true)}>
+              <DropdownMenuItem onSelect={() => navigate(getPersonProfilePath(friend.user_id))}>
                 <Eye className="mr-2 h-4 w-4" /> View profile
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => setConfirmRemove(true)}>
@@ -77,14 +91,14 @@ export function FriendCard({ friend }: { friend: FriendCardData }) {
         {(recentlyActive || celebrating) && (
           <div className="mt-2 flex flex-wrap gap-1.5">
             {recentlyActive && (
-              <span className="flex items-center gap-1 rounded-full bg-sage/15 px-2 py-0.5 text-[11px] font-medium text-sage-foreground">
+              <Chip variant="success" className="min-h-7 gap-1 text-[11px]">
                 <Sparkles className="h-3 w-3" aria-hidden="true" /> Recently active
-              </span>
+              </Chip>
             )}
             {celebrating && (
-              <span className="flex items-center gap-1 rounded-full bg-gold/15 px-2 py-0.5 text-[11px] font-medium text-gold">
+              <Chip variant="warning" className="min-h-7 gap-1 text-[11px]">
                 <PartyPopper className="h-3 w-3" aria-hidden="true" /> Celebrating a win
-              </span>
+              </Chip>
             )}
           </div>
         )}
@@ -135,7 +149,9 @@ export function FriendCard({ friend }: { friend: FriendCardData }) {
         )}
 
         <div className="mt-3">
-          <ReactionPicker recipientId={friend.user_id} contextType="weekly_progress" />
+          <div onClick={(event) => event.stopPropagation()}>
+            <ReactionPicker recipientId={friend.user_id} contextType="weekly_progress" />
+          </div>
         </div>
       </CardContent>
 
@@ -161,7 +177,6 @@ export function FriendCard({ friend }: { friend: FriendCardData }) {
           push("User blocked", "info");
         }}
       />
-      <FriendProfileDialog friend={friend} open={profileOpen} onOpenChange={setProfileOpen} />
     </Card>
   );
 }

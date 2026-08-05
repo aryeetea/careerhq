@@ -10,6 +10,7 @@ import {
   useIncomingRequests,
   useOutgoingRequests,
 } from "@/hooks/queries/useFriends";
+import { PersonLink } from "@/components/people/PersonLink";
 import { useVisibleBasicProfiles } from "@/hooks/queries/useProfile";
 import { useSignedAvatarUrl } from "@/hooks/useSignedAvatarUrl";
 import { useToast } from "@/components/shared/toast";
@@ -52,9 +53,15 @@ export function PendingInvitationsSection() {
                 const p = profiles?.get(req.recipient_id);
                 return (
                   <div key={req.id} className="flex items-center justify-between gap-2 rounded-lg bg-secondary/50 px-3 py-2 text-sm">
-                    <span className="min-w-0 truncate text-muted-foreground">
-                      {p?.display_name || p?.username || "Pending request"} · {timeAgo(req.created_at)}
-                    </span>
+                    {p ? (
+                      <PersonLink userId={req.recipient_id} className="min-w-0 truncate text-muted-foreground transition-colors hover:text-primary">
+                        {p.display_name || p.username} · {timeAgo(req.created_at)}
+                      </PersonLink>
+                    ) : (
+                      <span className="min-w-0 truncate text-muted-foreground">
+                        Pending request · {timeAgo(req.created_at)}
+                      </span>
+                    )}
                     <Button size="sm" variant="ghost" onClick={() => cancel.mutate(req.id)}>
                       Cancel
                     </Button>
@@ -77,6 +84,7 @@ export function PendingInvitationsSection() {
                 return (
                   <IncomingRow
                     key={req.id}
+                    userId={req.requester_id}
                     requestId={req.id}
                     name={p?.display_name || p?.username || "Someone"}
                     avatarPath={avatarUrl}
@@ -96,6 +104,7 @@ export function PendingInvitationsSection() {
 }
 
 function IncomingRow({
+  userId,
   requestId,
   name,
   avatarPath,
@@ -104,6 +113,7 @@ function IncomingRow({
   push,
   celebrate,
 }: {
+  userId: string;
   requestId: string;
   name: string;
   avatarPath: string | null;
@@ -115,11 +125,15 @@ function IncomingRow({
   const avatarUrl = useSignedAvatarUrl(avatarPath);
   return (
     <div className="flex items-center gap-2.5 rounded-lg bg-secondary/50 px-3 py-2 text-sm">
-      <Avatar className="h-7 w-7 shrink-0 border border-border">
-        {avatarUrl && <AvatarImage src={avatarUrl} alt="" />}
-        <AvatarFallback className="text-[10px]">{initials(name)}</AvatarFallback>
-      </Avatar>
-      <span className="min-w-0 flex-1 truncate">{name} wants to connect</span>
+      <PersonLink userId={userId} className="shrink-0">
+        <Avatar className="h-7 w-7 shrink-0 border border-border">
+          {avatarUrl && <AvatarImage src={avatarUrl} alt="" />}
+          <AvatarFallback className="text-[10px]">{initials(name)}</AvatarFallback>
+        </Avatar>
+      </PersonLink>
+      <PersonLink userId={userId} className="min-w-0 flex-1 truncate transition-colors hover:text-primary">
+        {name} wants to connect
+      </PersonLink>
       <div className="flex shrink-0 gap-1">
         <Button
           size="sm"

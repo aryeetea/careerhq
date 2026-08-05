@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { CalendarClock, MapPin, Pencil, Sparkles, Target, UserRound } from "lucide-react";
 import { TopBar } from "@/components/layout/TopBar";
 import { Button } from "@/components/ui/button";
+import { Chip } from "@/components/ui/chip";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -134,9 +135,7 @@ export default function ProfilePage() {
               {profile.skills.length > 0 && (
                 <div className="mt-5 flex flex-wrap gap-1.5">
                   {profile.skills.map((skill) => (
-                    <span key={skill} className="rounded-full bg-secondary px-2.5 py-1 text-xs font-medium text-secondary-foreground">
-                      {skill}
-                    </span>
+                    <Chip key={skill} variant="neutral">{skill}</Chip>
                   ))}
                 </div>
               )}
@@ -191,13 +190,22 @@ export default function ProfilePage() {
 }
 
 function InfoCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  const tokens = value
+    .split(",")
+    .map((token) => token.trim())
+    .filter(Boolean);
+
   return (
     <div className="rounded-2xl border border-border/70 bg-card/70 p-4">
       <div className="mb-2 flex items-center gap-2 text-sm font-semibold">
         {icon}
         {label}
       </div>
-      <p className="text-sm leading-6 text-foreground/78">{value}</p>
+      <div className="flex flex-wrap gap-2">
+        {tokens.map((token) => (
+          <Chip key={token} variant="interactive">{token}</Chip>
+        ))}
+      </div>
     </div>
   );
 }

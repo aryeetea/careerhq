@@ -1,7 +1,10 @@
 import { Flame, Heart, Sparkles, Target, Users2 } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Chip } from "@/components/ui/chip";
+import { getPersonProfilePath } from "@/lib/people";
 import { initials } from "@/lib/utils";
 import type { GardenStage } from "@/lib/garden";
 import type { GoalWithMembers } from "@/services/goals";
@@ -33,6 +36,15 @@ export function FriendPreviewCard({
         </div>
         <p className="mb-3 text-xs text-muted-foreground">This is roughly what friends see on your card.</p>
 
+        <div className="mb-3 flex flex-wrap gap-2">
+          <Button asChild size="sm" variant="outline">
+            <Link to={getPersonProfilePath(profile.id, { isSelf: true, preview: "friend" })}>Preview as friend</Link>
+          </Button>
+          <Button asChild size="sm" variant="outline">
+            <Link to={getPersonProfilePath(profile.id, { isSelf: true, preview: "non_friend" })}>Preview as non-friend</Link>
+          </Button>
+        </div>
+
         <div className="rounded-[1.75rem] border border-border/70 bg-card/80 p-4 shadow-soft">
           <div className="flex items-center gap-3">
             <Avatar className="h-11 w-11 border border-border">
@@ -52,11 +64,11 @@ export function FriendPreviewCard({
           )}
 
           <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
-            <span>{applicationsThisWeek} applications this week</span>
+            <Chip variant="muted">{applicationsThisWeek} applications this week</Chip>
             {currentStreak > 0 && (
-              <span className="flex items-center gap-1 text-gold">
+              <Chip variant="warning" className="gap-1">
                 <Flame className="h-3 w-3" /> {currentStreak}-day streak
-              </span>
+              </Chip>
             )}
           </div>
 

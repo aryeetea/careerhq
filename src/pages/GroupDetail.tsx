@@ -12,6 +12,7 @@ import { ErrorState } from "@/components/shared/ErrorState";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { ReactionPicker } from "@/components/friends/ReactionPicker";
 import { InviteToGroupDialog } from "@/components/groups/InviteToGroupDialog";
+import { PersonLink } from "@/components/people/PersonLink";
 import { useDeleteGroup, useGroup, useLeaveGroup, useRemoveGroupMember } from "@/hooks/queries/useGroups";
 import { useSharedContextProfiles } from "@/hooks/queries/useProfile";
 import { useSignedAvatarUrl } from "@/hooks/useSignedAvatarUrl";
@@ -35,12 +36,16 @@ function MemberRow({ userId, name, avatarPath, weeklyGoalTarget, groupId, isOwne
 
   return (
     <div className="flex items-center gap-3 rounded-xl border border-border/60 bg-card/50 p-3">
-      <Avatar className="h-9 w-9 border border-border">
-        {avatarUrl && <AvatarImage src={avatarUrl} alt="" />}
-        <AvatarFallback className="text-xs">{initials(name)}</AvatarFallback>
-      </Avatar>
+      <PersonLink userId={userId} className="shrink-0">
+        <Avatar className="h-9 w-9 border border-border">
+          {avatarUrl && <AvatarImage src={avatarUrl} alt="" />}
+          <AvatarFallback className="text-xs">{initials(name)}</AvatarFallback>
+        </Avatar>
+      </PersonLink>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium">{name}</p>
+        <PersonLink userId={userId} className="truncate text-sm font-medium transition-colors hover:text-primary">
+          {name}
+        </PersonLink>
         {weekly !== null ? (
           <>
             <div className="mt-0.5 flex items-center justify-between text-[11px] text-muted-foreground">

@@ -2,8 +2,10 @@ import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { queryKeys } from "@/lib/queryClient";
+import { describeNotificationEvent, maybePlayNotificationSound, maybeShowBrowserNotification } from "@/lib/notificationAlerts";
 import * as notificationsService from "@/services/notifications";
 import { useSettings } from "@/hooks/queries/useProfile";
+import { useToast } from "@/components/shared/toast";
 
 export function useNotifications() {
   const { user } = useAuth();
@@ -11,6 +13,7 @@ export function useNotifications() {
   const { data: settings } = useSettings();
   const mutedTypes = settings?.muted_notification_types ?? [];
   const qc = useQueryClient();
+  const { push } = useToast();
 
   const query = useQuery({
     queryKey: [...queryKeys.notifications(userId), mutedTypes],
@@ -24,6 +27,11 @@ export function useNotifications() {
       qc.invalidateQueries({ queryKey: queryKeys.notifications(userId) });
       qc.invalidateQueries({ queryKey: queryKeys.unreadCount(userId) });
 
+      const message = describeNotificationEvent(event);
+      push(message, "info");
+      maybePlayNotificationSound();
+      maybeShowBrowserNotification(message);
+
       if (event.type === "friend_request_received" || event.type === "friend_request_accepted") {
         qc.invalidateQueries({ queryKey: queryKeys.friendIds(userId) });
         qc.invalidateQueries({ queryKey: queryKeys.friendCards(userId) });
@@ -32,7 +40,7 @@ export function useNotifications() {
       }
     });
     return unsubscribe;
-  }, [userId, qc]);
+  }, [userId, qc, push]);
 
   return query;
 }

@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AuthNotice } from "@/components/auth/AuthNotice";
+import { PersonLink } from "@/components/people/PersonLink";
 import { useUserSearch, useSendFriendRequest, useOutgoingRequests, useFriendIds } from "@/hooks/queries/useFriends";
 import { useValidateFriendCode, useSendFriendRequestByCode, useCreateFriendCode, useMyFriendCodes, useRegenerateFriendCode } from "@/hooks/queries/useFriendCode";
 import { useProfile } from "@/hooks/queries/useProfile";
@@ -152,14 +153,18 @@ function SearchResultRow({ id, username, displayName, avatarUrl: avatarPath, alr
 
   return (
     <div className="flex items-center gap-3 rounded-lg px-2 py-2">
-      <Avatar className="h-9 w-9 border border-border">
-        {signedUrl && <AvatarImage src={signedUrl} alt="" />}
-        <AvatarFallback>{initials(displayName || username)}</AvatarFallback>
-      </Avatar>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium">{displayName || username}</p>
-        <p className="truncate text-xs text-muted-foreground">@{username}</p>
-      </div>
+      <PersonLink userId={id} className="shrink-0">
+        <Avatar className="h-9 w-9 border border-border">
+          {signedUrl && <AvatarImage src={signedUrl} alt="" />}
+          <AvatarFallback>{initials(displayName || username)}</AvatarFallback>
+        </Avatar>
+      </PersonLink>
+      <PersonLink userId={id} className="min-w-0 flex-1">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium transition-colors hover:text-primary">{displayName || username}</p>
+          <p className="truncate text-xs text-muted-foreground">@{username}</p>
+        </div>
+      </PersonLink>
       <Button size="sm" variant={disabled ? "outline" : "default"} disabled={disabled} onClick={handleSend}>
         {alreadyFriend ? "Friends" : disabled ? "Sent" : <><UserPlus className="h-3.5 w-3.5" /> Add</>}
       </Button>

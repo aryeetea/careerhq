@@ -3,6 +3,7 @@ import { Check, Link2, UserPlus } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { PersonLink } from "@/components/people/PersonLink";
 import { useFriendCards } from "@/hooks/queries/useFriends";
 import { useCreateGroupJoinLink, useInviteToGroup } from "@/hooks/queries/useGroups";
 import { useSignedAvatarUrl } from "@/hooks/useSignedAvatarUrl";
@@ -16,11 +17,15 @@ function FriendRow({ id, name, avatarPath, groupId, disabled }: { id: string; na
 
   return (
     <div className="flex items-center gap-3 rounded-lg px-2 py-2">
-      <Avatar className="h-8 w-8 border border-border">
-        {avatarUrl && <AvatarImage src={avatarUrl} alt="" />}
-        <AvatarFallback className="text-xs">{initials(name)}</AvatarFallback>
-      </Avatar>
-      <span className="flex-1 truncate text-sm">{name}</span>
+      <PersonLink userId={id} className="shrink-0">
+        <Avatar className="h-8 w-8 border border-border">
+          {avatarUrl && <AvatarImage src={avatarUrl} alt="" />}
+          <AvatarFallback className="text-xs">{initials(name)}</AvatarFallback>
+        </Avatar>
+      </PersonLink>
+      <PersonLink userId={id} className="flex-1 truncate text-sm transition-colors hover:text-primary">
+        {name}
+      </PersonLink>
       <Button
         size="sm"
         variant="outline"

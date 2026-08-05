@@ -40,4 +40,5 @@ export const queryKeys = {
   friendCodes: (userId: string) => ["friend-codes", userId] as const,
   mutualConnections: (friendId: string) => ["mutual-connections", friendId] as const,
   suggestedFriends: (userId: string) => ["suggested-friends", userId] as const,
+  peopleProfile: (userId: string, preview?: string) => ["people-profile", userId, preview ?? "live"] as const,
 };

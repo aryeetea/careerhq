@@ -299,6 +299,52 @@ export interface FriendCard {
   certification_percentage: number | null;
 }
 
+export type PeopleProfileRelationship =
+  | "self"
+  | "friend"
+  | "friend_preview"
+  | "non_friend_preview"
+  | "incoming_request"
+  | "outgoing_request"
+  | "group_member";
+
+export interface PeopleProfileGoalSummary {
+  id: string;
+  name: string;
+  description: string | null;
+  target_count: number;
+  unit: string;
+  deadline: string | null;
+}
+
+export interface PeopleProfileSimpleGroup {
+  id: string;
+  name: string;
+}
+
+export interface PeopleProfileView {
+  user_id: string;
+  username: string;
+  display_name: string;
+  avatar_url: string | null;
+  bio: string | null;
+  career_goal: string | null;
+  career_status: string | null;
+  status_message: string | null;
+  relationship: PeopleProfileRelationship;
+  applications_this_week: number | null;
+  applications_this_month: number | null;
+  weekly_goal: number | null;
+  interviews_count: number | null;
+  offers_count: number | null;
+  current_streak: number | null;
+  certification_name: string | null;
+  certification_percentage: number | null;
+  shared_goals: PeopleProfileGoalSummary[];
+  mutual_groups: PeopleProfileSimpleGroup[];
+  mutual_goals: PeopleProfileSimpleGroup[];
+}
+
 export interface Goal {
   id: string;
   owner_id: string;
