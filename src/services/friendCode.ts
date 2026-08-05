@@ -1,10 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import type { FriendCode, FriendCodeCreated, FriendCodeExpiration, FriendCodeMaxUses, FriendCodePreview } from "@/types/database";
-
-export interface FriendCodeSettings {
-  expiresIn: FriendCodeExpiration;
-  maxUses: FriendCodeMaxUses;
-}
+import type { FriendCode, FriendCodeCreated, FriendCodePreview } from "@/types/database";
 
 // create/regenerate/revoke still raise on failure (genuine exceptional
 // cases — bad max_uses, missing row, no session) and supabase-js surfaces
@@ -29,25 +24,16 @@ export async function listMyFriendCodes(): Promise<FriendCode[]> {
   return data as FriendCode[];
 }
 
-export async function createFriendCode(settings: FriendCodeSettings): Promise<FriendCodeCreated> {
-  const { data, error } = await supabase
-    .rpc("create_friend_code", { p_expires_in: settings.expiresIn, p_max_uses: settings.maxUses })
-    .single();
+export async function createFriendCode(): Promise<FriendCodeCreated> {
+  const { data, error } = await supabase.rpc("create_friend_code").single();
   if (error) throw error;
   return data as FriendCodeCreated;
 }
 
-export async function regenerateFriendCode(id: string, settings: FriendCodeSettings): Promise<FriendCodeCreated> {
-  const { data, error } = await supabase
-    .rpc("regenerate_friend_code", { p_id: id, p_expires_in: settings.expiresIn, p_max_uses: settings.maxUses })
-    .single();
+export async function regenerateFriendCode(id: string): Promise<FriendCodeCreated> {
+  const { data, error } = await supabase.rpc("regenerate_friend_code", { p_id: id }).single();
   if (error) throw error;
   return data as FriendCodeCreated;
-}
-
-export async function revokeFriendCode(id: string): Promise<void> {
-  const { error } = await supabase.rpc("revoke_friend_code", { p_id: id });
-  if (error) throw error;
 }
 
 interface ValidateFriendCodeResult extends FriendCodePreview {
@@ -65,18 +51,16 @@ export async function validateFriendCode(code: string): Promise<FriendCodePrevie
   return result;
 }
 
-interface UseFriendCodeResult {
+interface SendFriendRequestByCodeResult {
   success: boolean;
   error_message: string | null;
   request_id: string | null;
 }
 
-// The "spend" call — creates the pending friend_requests row via the
-// existing friend-request system. Returns the friend_requests.id.
-export async function useFriendCode(code: string): Promise<string> {
+export async function sendFriendRequestByCode(code: string): Promise<string> {
   const { data, error } = await supabase.rpc("use_friend_code", { p_code: code }).single();
   if (error) throw error;
-  const result = data as UseFriendCodeResult;
+  const result = data as SendFriendRequestByCodeResult;
   if (!result.success || !result.request_id) throw new Error(result.error_message ?? GENERIC_CODE_ERROR);
   return result.request_id;
 }

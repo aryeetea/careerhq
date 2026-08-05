@@ -369,16 +369,13 @@ export interface GroupJoinLinkPreview {
   expires_at: string | null;
 }
 
-export type FriendCodeExpiration = "24h" | "7d" | "30d" | "never";
-export type FriendCodeMaxUses = 1 | 5 | 10;
-
 export interface FriendCode {
   id: string;
   created_by: string;
+  code_plaintext: string | null;
   code_hint: string;
   is_active: boolean;
   expires_at: string | null;
-  max_uses: FriendCodeMaxUses;
   use_count: number;
   created_at: string;
   updated_at: string;
@@ -389,8 +386,6 @@ export interface FriendCode {
 export interface FriendCodeCreated {
   code: string;
   id: string;
-  expires_at: string | null;
-  max_uses: FriendCodeMaxUses;
 }
 
 export interface FriendCodePreview {

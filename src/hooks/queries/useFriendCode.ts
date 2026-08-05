@@ -22,7 +22,7 @@ function useInvalidateFriendCodes() {
 export function useCreateFriendCode() {
   const invalidate = useInvalidateFriendCodes();
   return useMutation({
-    mutationFn: (settings: friendCodeService.FriendCodeSettings) => friendCodeService.createFriendCode(settings),
+    mutationFn: () => friendCodeService.createFriendCode(),
     onSuccess: invalidate,
   });
 }
@@ -30,16 +30,7 @@ export function useCreateFriendCode() {
 export function useRegenerateFriendCode() {
   const invalidate = useInvalidateFriendCodes();
   return useMutation({
-    mutationFn: ({ id, settings }: { id: string; settings: friendCodeService.FriendCodeSettings }) =>
-      friendCodeService.regenerateFriendCode(id, settings),
-    onSuccess: invalidate,
-  });
-}
-
-export function useRevokeFriendCode() {
-  const invalidate = useInvalidateFriendCodes();
-  return useMutation({
-    mutationFn: (id: string) => friendCodeService.revokeFriendCode(id),
+    mutationFn: (id: string) => friendCodeService.regenerateFriendCode(id),
     onSuccess: invalidate,
   });
 }
@@ -50,11 +41,11 @@ export function useValidateFriendCode() {
   });
 }
 
-export function useSpendFriendCode() {
+export function useSendFriendRequestByCode() {
   const { user } = useAuth();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (code: string) => friendCodeService.useFriendCode(code),
+    mutationFn: (code: string) => friendCodeService.sendFriendRequestByCode(code),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.outgoingRequests(user?.id ?? "") });
     },

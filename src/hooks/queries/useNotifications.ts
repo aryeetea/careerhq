@@ -20,9 +20,16 @@ export function useNotifications() {
 
   React.useEffect(() => {
     if (!userId) return;
-    const unsubscribe = notificationsService.subscribeToNotifications(userId, () => {
+    const unsubscribe = notificationsService.subscribeToNotifications(userId, (event) => {
       qc.invalidateQueries({ queryKey: queryKeys.notifications(userId) });
       qc.invalidateQueries({ queryKey: queryKeys.unreadCount(userId) });
+
+      if (event.type === "friend_request_received" || event.type === "friend_request_accepted") {
+        qc.invalidateQueries({ queryKey: queryKeys.friendIds(userId) });
+        qc.invalidateQueries({ queryKey: queryKeys.friendCards(userId) });
+        qc.invalidateQueries({ queryKey: queryKeys.incomingRequests(userId) });
+        qc.invalidateQueries({ queryKey: queryKeys.outgoingRequests(userId) });
+      }
     });
     return unsubscribe;
   }, [userId, qc]);

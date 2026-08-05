@@ -12,9 +12,7 @@ import {
   ScanLine,
   Search,
   Send,
-  Settings2,
   Share2,
-  ShieldOff,
   Sparkles,
   UserPlus,
 } from "lucide-react";
@@ -23,15 +21,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AuthNotice } from "@/components/auth/AuthNotice";
 import { useUserSearch, useSendFriendRequest, useOutgoingRequests, useFriendIds } from "@/hooks/queries/useFriends";
-import { useValidateFriendCode, useSpendFriendCode, useCreateFriendCode, useMyFriendCodes, useRegenerateFriendCode, useRevokeFriendCode } from "@/hooks/queries/useFriendCode";
+import { useValidateFriendCode, useSendFriendRequestByCode, useCreateFriendCode, useMyFriendCodes, useRegenerateFriendCode } from "@/hooks/queries/useFriendCode";
 import { useProfile } from "@/hooks/queries/useProfile";
 import { useSignedAvatarUrl } from "@/hooks/useSignedAvatarUrl";
 import { useToast } from "@/components/shared/toast";
 import { initials } from "@/lib/utils";
-import type { FriendCodeExpiration, FriendCodeMaxUses, FriendCodePreview } from "@/types/database";
+import type { FriendCodePreview } from "@/types/database";
 
 // A single entry point for every friendship action. Rather than scattering
 // "Add Friend" / "Enter Friend Code" / "My Friend Code" as separate,
@@ -44,7 +41,7 @@ const HEADERS: Record<Mode, { title: string; description: string }> = {
   menu: { title: "Add a friend", description: "Choose how you'd like to connect." },
   search: { title: "Search Bloom users", description: "Find someone already using Bloom." },
   code: { title: "Enter a friend code", description: "Have a code from a friend? Enter it below." },
-  invite: { title: "Invite someone", description: "Share a code with someone who isn't on Bloom yet." },
+  invite: { title: "Invite someone", description: "Share your Bloom Code so someone can send you a friend request." },
 };
 
 export function AddFriendDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
@@ -58,7 +55,7 @@ export function AddFriendDialog({ open, onOpenChange }: { open: boolean; onOpenC
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-h-[92vh] w-[calc(100%-1rem)] max-w-[40rem] gap-3 overflow-y-auto rounded-[1.75rem] px-4 py-5 sm:w-[calc(100%-2rem)] sm:gap-4 sm:px-6 sm:py-6">
         <DialogHeader>
           <div className="flex items-center gap-1.5">
             {mode !== "menu" && (
@@ -89,7 +86,7 @@ export function AddFriendDialog({ open, onOpenChange }: { open: boolean; onOpenC
 
 function ModeMenu({ onSelect }: { onSelect: (mode: Mode) => void }) {
   return (
-    <div className="grid gap-2">
+    <div className="grid gap-2.5 sm:gap-3">
       <OptionRow
         icon={<Search className="h-4.5 w-4.5" />}
         title="Search Bloom users"
@@ -105,7 +102,7 @@ function ModeMenu({ onSelect }: { onSelect: (mode: Mode) => void }) {
       <OptionRow
         icon={<KeyRound className="h-4.5 w-4.5" />}
         title="Invite someone"
-        description="Generate a code to share with someone who isn't connected yet."
+        description="Share your Bloom Code so someone can send you a friend request."
         onClick={() => onSelect("invite")}
       />
     </div>
@@ -117,16 +114,16 @@ function OptionRow({ icon, title, description, onClick }: { icon: React.ReactNod
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full items-center gap-3 rounded-2xl border border-border/70 bg-card/70 px-4 py-3.5 text-left transition-colors hover:border-primary/40 hover:bg-secondary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="flex w-full items-start gap-3 rounded-2xl border border-border/70 bg-card/70 px-4 py-3.5 text-left transition-colors hover:border-primary/40 hover:bg-secondary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:items-center sm:px-5 sm:py-4"
     >
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary text-secondary-foreground">
+      <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-secondary text-secondary-foreground sm:mt-0 sm:h-11 sm:w-11">
         {icon}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-sm font-medium">{title}</span>
-        <span className="block truncate text-xs text-muted-foreground">{description}</span>
+        <span className="block text-sm font-medium leading-5 sm:text-base">{title}</span>
+        <span className="mt-0.5 block text-xs leading-5 text-muted-foreground sm:text-sm">{description}</span>
       </span>
-      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+      <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground sm:mt-0" />
     </button>
   );
 }
@@ -184,7 +181,7 @@ function SearchUsersView() {
         <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
         <Input autoFocus placeholder="username" value={query} onChange={(e) => setQuery(e.target.value)} className="pl-8" />
       </div>
-      <div className="max-h-72 overflow-y-auto">
+      <div className="max-h-[min(52vh,22rem)] overflow-y-auto">
         {query.trim().length < 2 ? (
           <p className="py-8 text-center text-sm text-muted-foreground">Type at least 2 characters to search.</p>
         ) : isFetching ? (
@@ -292,7 +289,7 @@ function EnterCodeView({ onDone }: { onDone: () => void }) {
   const [preview, setPreview] = React.useState<FriendCodePreview | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const validateCode = useValidateFriendCode();
-  const spendCode = useSpendFriendCode();
+  const sendFriendRequestByCode = useSendFriendRequestByCode();
   const { push } = useToast();
 
   async function handleContinue() {
@@ -308,7 +305,7 @@ function EnterCodeView({ onDone }: { onDone: () => void }) {
 
   async function handleSend() {
     try {
-      await spendCode.mutateAsync(input);
+      await sendFriendRequestByCode.mutateAsync(input);
       push("Friend request sent", "success");
       onDone();
     } catch (err) {
@@ -317,14 +314,14 @@ function EnterCodeView({ onDone }: { onDone: () => void }) {
   }
 
   if (preview) {
-    return <CodeConfirmationView preview={preview} onSend={handleSend} onCancel={() => setPreview(null)} sending={spendCode.isPending} />;
+    return <CodeConfirmationView preview={preview} onSend={handleSend} onCancel={() => setPreview(null)} sending={sendFriendRequestByCode.isPending} />;
   }
 
   return (
     <div className="grid gap-3">
       <div className="grid gap-1.5">
         <Label htmlFor="friend-code-input">Friend code</Label>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <span className="text-sm font-medium text-muted-foreground">BLOOM-</span>
           <Input
             id="friend-code-input"
@@ -379,15 +376,8 @@ function InviteSomeoneView() {
   const { data: codes = [], isLoading } = useMyFriendCodes();
   const createCode = useCreateFriendCode();
   const regenerateCode = useRegenerateFriendCode();
-  const revokeCode = useRevokeFriendCode();
   const { push } = useToast();
-
-  const [expiration, setExpiration] = React.useState<FriendCodeExpiration>("7d");
-  const [maxUses, setMaxUses] = React.useState<FriendCodeMaxUses>(1);
   const [copied, setCopied] = React.useState(false);
-  const [showOptions, setShowOptions] = React.useState(false);
-  // The plaintext code only ever exists here, in memory, for the session
-  // that created or regenerated it — friend_codes never persists it.
   const [plaintext, setPlaintext] = React.useState<string | null>(null);
   const createdRef = React.useRef(false);
 
@@ -396,26 +386,28 @@ function InviteSomeoneView() {
 
   React.useEffect(() => {
     if (isLoading || createdRef.current) return;
-    if (codes.length === 0) {
+    if (!currentCode) {
       createdRef.current = true;
-      createCode.mutate(
-        { expiresIn: expiration, maxUses },
-        { onSuccess: (result) => setPlaintext(result.code) }
-      );
+      createCode.mutate(undefined, { onSuccess: (result) => setPlaintext(result.code) });
+      return;
     }
+    if (currentCode.code_plaintext) {
+      setPlaintext(currentCode.code_plaintext);
+      return;
+    }
+    createdRef.current = true;
+    regenerateCode.mutate(currentCode.id, { onSuccess: (result) => setPlaintext(result.code) });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoading, codes.length]);
+  }, [currentCode, isLoading]);
 
-  const visibleCode = plaintext ? displayCode(plaintext) : currentCode ? `BLOOM-${currentCode.code_hint}` : null;
-  const usesRemaining = currentCode ? Math.max(0, currentCode.max_uses - currentCode.use_count) : 0;
+  const visibleCode = plaintext ? displayCode(plaintext) : null;
 
   async function handleCopy() {
-    if (!plaintext) {
-      push("Regenerate to get a copyable code — this one was already shown once.", "info");
+    if (!visibleCode) {
       return;
     }
     try {
-      await navigator.clipboard.writeText(displayCode(plaintext));
+      await navigator.clipboard.writeText(visibleCode);
       setCopied(true);
       push("Friend code copied.", "success");
       window.setTimeout(() => setCopied(false), 2000);
@@ -425,7 +417,7 @@ function InviteSomeoneView() {
   }
 
   async function handleShare() {
-    if (!plaintext) return;
+    if (!visibleCode || !plaintext) return;
     const text = codeMessage(inviterName, plaintext);
     if (navigator.share) {
       try {
@@ -452,9 +444,7 @@ function InviteSomeoneView() {
 
   async function handleRegenerate() {
     try {
-      const result = currentCode
-        ? await regenerateCode.mutateAsync({ id: currentCode.id, settings: { expiresIn: expiration, maxUses } })
-        : await createCode.mutateAsync({ expiresIn: expiration, maxUses });
+      const result = currentCode ? await regenerateCode.mutateAsync(currentCode.id) : await createCode.mutateAsync();
       setPlaintext(result.code);
       push("A fresh friend code is ready.", "success");
     } catch (err) {
@@ -462,118 +452,44 @@ function InviteSomeoneView() {
     }
   }
 
-  async function handleDisable() {
-    if (!currentCode) return;
-    try {
-      await revokeCode.mutateAsync(currentCode.id);
-      setPlaintext(null);
-      push("Friend code disabled.", "info");
-    } catch (err) {
-      push(err instanceof Error ? err.message : "Couldn't disable that code.", "error");
-    }
-  }
-
-  const busy = createCode.isPending || regenerateCode.isPending || revokeCode.isPending;
-  const canShare = Boolean(plaintext);
+  const busy = createCode.isPending || regenerateCode.isPending;
+  const canShare = Boolean(visibleCode);
 
   return (
     <div className="grid gap-4">
       <div className="grid gap-1.5">
-        <Label>Your code</Label>
-        <div className="flex items-center gap-2">
-          <div className="flex h-11 flex-1 items-center rounded-2xl border border-input/90 bg-card/95 px-3.5 font-mono text-base tracking-wide shadow-soft">
+        <Label>Your Bloom Code</Label>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="flex h-11 min-w-0 flex-1 items-center rounded-2xl border border-input/90 bg-card/95 px-3.5 font-mono text-sm tracking-[0.18em] shadow-soft sm:text-base sm:tracking-wide">
             {isLoading || !visibleCode ? "Generating your code…" : visibleCode}
           </div>
-          <Button type="button" variant="outline" size="icon" onClick={handleCopy} disabled={!visibleCode} aria-label="Copy friend code">
+          <Button type="button" variant="outline" size="icon" onClick={handleCopy} disabled={!visibleCode} aria-label="Copy friend code" className="self-start sm:self-auto">
             {copied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
           </Button>
         </div>
-        {currentCode && (
-          <p className="text-xs text-muted-foreground">
-            {currentCode.is_active ? `${usesRemaining} use${usesRemaining === 1 ? "" : "s"} left` : "This code is disabled."}
-            {currentCode.expires_at ? ` · Expires ${new Date(currentCode.expires_at).toLocaleDateString()}` : " · Never expires"}
-          </p>
-        )}
-        {!plaintext && currentCode && (
-          <p className="text-xs text-muted-foreground">
-            For your security, the full code is only shown once. Open Options to regenerate a fresh one you can share.
-          </p>
-        )}
+        <p className="text-xs text-muted-foreground">
+          This code stays active until you regenerate it. Anyone with it can only send you a friend request.
+        </p>
 
-        <div className="mt-1 flex flex-wrap gap-2">
-          <Button type="button" size="sm" onClick={handleShare} disabled={!canShare}>
+        <div className="mt-1 grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
+          <Button type="button" size="sm" onClick={handleShare} disabled={!canShare} className="w-full sm:w-auto">
             <Share2 className="h-3.5 w-3.5" /> Share
           </Button>
-          <Button type="button" variant="outline" size="sm" onClick={handleText} disabled={!canShare}>
+          <Button type="button" variant="outline" size="sm" onClick={handleText} disabled={!canShare} className="w-full sm:w-auto">
             <MessageSquareText className="h-3.5 w-3.5" /> Text
           </Button>
-          <Button type="button" variant="outline" size="sm" onClick={handleMail} disabled={!canShare}>
+          <Button type="button" variant="outline" size="sm" onClick={handleMail} disabled={!canShare} className="w-full sm:w-auto">
             <Mail className="h-3.5 w-3.5" /> Email
+          </Button>
+          <Button type="button" variant="outline" size="sm" onClick={handleRegenerate} disabled={busy} className="w-full sm:w-auto">
+            <RefreshCw className="h-3.5 w-3.5" /> Regenerate code
           </Button>
         </div>
       </div>
 
-      {/* Progressive disclosure: expiration, max uses, regenerate, and
-          disable are secondary actions — shown only once a code exists and
-          only when the user asks for them. */}
-      {currentCode && (
-        <div className="rounded-xl border border-border/60">
-          <button
-            type="button"
-            onClick={() => setShowOptions((v) => !v)}
-            className="flex w-full items-center gap-2 px-3.5 py-2.5 text-left text-sm font-medium text-muted-foreground hover:text-foreground"
-            aria-expanded={showOptions}
-          >
-            <Settings2 className="h-3.5 w-3.5" />
-            Options
-            <ChevronRight className={`ml-auto h-3.5 w-3.5 transition-transform ${showOptions ? "rotate-90" : ""}`} />
-          </button>
-          {showOptions && (
-            <div className="grid gap-3 border-t border-border/60 p-3.5">
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div className="grid gap-1.5">
-                  <Label>Expiration</Label>
-                  <Select value={expiration} onValueChange={(v) => setExpiration(v as FriendCodeExpiration)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="24h">24 hours</SelectItem>
-                      <SelectItem value="7d">7 days</SelectItem>
-                      <SelectItem value="30d">30 days</SelectItem>
-                      <SelectItem value="never">Never</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid gap-1.5">
-                  <Label>Maximum uses</Label>
-                  <Select value={String(maxUses)} onValueChange={(v) => setMaxUses(Number(v) as FriendCodeMaxUses)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">1</SelectItem>
-                      <SelectItem value="5">5</SelectItem>
-                      <SelectItem value="10">10</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <p className="-mt-1 text-xs text-muted-foreground">Changing these applies the next time you tap Regenerate.</p>
-              <div className="flex flex-wrap gap-2">
-                <Button type="button" variant="outline" size="sm" onClick={handleRegenerate} disabled={busy}>
-                  <RefreshCw className="h-3.5 w-3.5" /> Regenerate
-                </Button>
-                {currentCode.is_active && (
-                  <Button type="button" variant="ghost" size="sm" onClick={handleDisable} disabled={busy} className="text-destructive hover:bg-destructive/10">
-                    <ShieldOff className="h-3.5 w-3.5" /> Disable code
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
       <AuthNotice variant="info">
-        Share this code with someone you trust. They&apos;ll still need to accept the connection before either of you can see
-        shared progress.
+        Sharing your Bloom Code does not create a friendship automatically. It only lets someone send you a friend request,
+        which you can accept or ignore.
       </AuthNotice>
     </div>
   );
