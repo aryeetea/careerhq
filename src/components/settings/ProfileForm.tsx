@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea";
+import { TagInput } from "@/components/ui/tag-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { profileFormSchema, type ProfileFormValues } from "@/lib/validation";
@@ -19,10 +20,6 @@ import { useToast } from "@/components/shared/toast";
 import { initials } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryClient";
-
-function splitTags(value: string): string[] {
-  return value.split(",").map((s) => s.trim()).filter(Boolean);
-}
 
 export function ProfileForm() {
   const { user } = useAuth();
@@ -128,7 +125,7 @@ export function ProfileForm() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="grid gap-6" noValidate>
-      <div className="rounded-[2rem] border border-border/65 bg-[linear-gradient(180deg,rgba(255,255,255,0.82),rgba(255,255,255,0.5))] p-5 shadow-soft sm:p-6">
+      <div className="rounded-[2rem] border border-primary/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.97),rgba(255,255,255,0.84))] p-5 shadow-soft sm:p-6">
         <div className="mb-5">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary/75">Your Profile</p>
           <h2 className="mt-2 font-display text-2xl font-semibold tracking-tight">A steady introduction, with room for today.</h2>
@@ -136,26 +133,26 @@ export function ProfileForm() {
         </div>
 
         <div className="flex items-center gap-4">
-        <div className="relative">
-          <Avatar className="h-16 w-16 border border-border">
-            {avatarUrl && <AvatarImage src={avatarUrl} alt="" />}
-            <AvatarFallback className="text-base">{initials(profile.display_name)}</AvatarFallback>
-          </Avatar>
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-soft"
-          >
-            <Camera className="h-3 w-3" />
-          </button>
-          <input ref={fileInputRef} type="file" accept="image/*" className="sr-only" onChange={onAvatarChange} />
+          <div className="relative">
+            <Avatar className="h-16 w-16 border border-primary/10">
+              {avatarUrl && <AvatarImage src={avatarUrl} alt="" />}
+              <AvatarFallback className="text-base">{initials(profile.display_name)}</AvatarFallback>
+            </Avatar>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-soft"
+            >
+              <Camera className="h-3 w-3" />
+            </button>
+            <input ref={fileInputRef} type="file" accept="image/*" className="sr-only" onChange={onAvatarChange} />
+          </div>
+          {profile.avatar_url && (
+            <Button type="button" variant="ghost" size="sm" onClick={onRemoveAvatar} className="text-muted-foreground">
+              <X className="h-3.5 w-3.5" /> Remove photo
+            </Button>
+          )}
         </div>
-        {profile.avatar_url && (
-          <Button type="button" variant="ghost" size="sm" onClick={onRemoveAvatar} className="text-muted-foreground">
-            <X className="h-3.5 w-3.5" /> Remove photo
-          </Button>
-        )}
-      </div>
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -170,7 +167,7 @@ export function ProfileForm() {
         </div>
       </div>
 
-      <div className="grid gap-4 rounded-[2rem] border border-border/65 bg-card/55 p-5 shadow-soft sm:p-6">
+      <div className="grid gap-4 rounded-[2rem] border border-primary/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(251,243,234,0.82))] p-5 shadow-soft sm:p-6">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary/75">Voice</p>
           <h3 className="mt-2 font-display text-xl font-semibold tracking-tight">Short, human profile details.</h3>
@@ -255,7 +252,7 @@ export function ProfileForm() {
         </ProfileFieldCard>
 
         {draftSuggestion && (
-          <div className="rounded-[1.6rem] border border-primary/20 bg-primary/5 p-4">
+          <div className="rounded-[1.6rem] border border-primary/18 bg-[linear-gradient(180deg,rgba(217,139,147,0.1),rgba(255,255,255,0.75))] p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
                 <p className="text-sm font-semibold">
@@ -282,23 +279,51 @@ export function ProfileForm() {
 
       <div className="grid gap-1.5">
         <Label htmlFor="p-careerGoal">Career goal</Label>
-        <Textarea id="p-careerGoal" rows={2} {...register("careerGoal")} />
+        <AutoResizeTextarea
+          id="p-careerGoal"
+          minRows={2}
+          maxHeight={180}
+          value={watch("careerGoal") ?? ""}
+          onChange={(event) => setValue("careerGoal", event.target.value, { shouldDirty: true, shouldValidate: true })}
+          placeholder="The kind of work you're growing toward."
+          error={!!errors.careerGoal}
+          aria-describedby={errors.careerGoal ? "p-career-goal-error" : undefined}
+        />
+        {errors.careerGoal && <p id="p-career-goal-error" className="text-xs text-destructive">{errors.careerGoal.message}</p>}
       </div>
 
       <div className="grid gap-1.5">
         <Label htmlFor="p-skills">Skills</Label>
-        <Input id="p-skills" placeholder="Figma, User Research, SQL" defaultValue={watch("skills")?.join(", ")} onChange={(e) => setValue("skills", splitTags(e.target.value), { shouldDirty: true })} />
-        <p className="text-xs text-muted-foreground">Comma-separated. Shown as chips on your profile.</p>
+        <TagInput
+          value={watch("skills") ?? []}
+          onChange={(next) => setValue("skills", next, { shouldDirty: true, shouldValidate: true })}
+          placeholder="Type a skill and press Enter"
+          ariaLabel="Skills"
+          maxItems={20}
+        />
+        <p className="text-xs text-muted-foreground">Press Enter or comma to add each one.</p>
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="grid gap-1.5">
           <Label htmlFor="p-jobTitles">Roles you're targeting</Label>
-          <Input id="p-jobTitles" defaultValue={watch("primaryJobTitles")?.join(", ")} onChange={(e) => setValue("primaryJobTitles", splitTags(e.target.value), { shouldDirty: true })} />
+          <TagInput
+            value={watch("primaryJobTitles") ?? []}
+            onChange={(next) => setValue("primaryJobTitles", next, { shouldDirty: true, shouldValidate: true })}
+            placeholder="Type a role and press Enter"
+            ariaLabel="Roles you're targeting"
+            maxItems={10}
+          />
         </div>
         <div className="grid gap-1.5">
           <Label htmlFor="p-locations">Preferred locations</Label>
-          <Input id="p-locations" defaultValue={watch("preferredLocations")?.join(", ")} onChange={(e) => setValue("preferredLocations", splitTags(e.target.value), { shouldDirty: true })} />
+          <TagInput
+            value={watch("preferredLocations") ?? []}
+            onChange={(next) => setValue("preferredLocations", next, { shouldDirty: true, shouldValidate: true })}
+            placeholder="Type a location and press Enter"
+            ariaLabel="Preferred locations"
+            maxItems={10}
+          />
         </div>
       </div>
 
@@ -333,7 +358,7 @@ function ProfileFieldCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-[1.6rem] border border-border/60 bg-background/70 p-4">
+    <div className="rounded-[1.6rem] border border-primary/10 bg-background/92 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <Label htmlFor={fieldId} className="text-sm font-semibold">
