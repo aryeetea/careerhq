@@ -21,6 +21,44 @@ export async function signIn(email: string, password: string) {
   return data;
 }
 
+export async function requestSignInOtp(email: string) {
+  assertSupabaseConfigured();
+  const { data, error } = await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      shouldCreateUser: false,
+      emailRedirectTo: `${window.location.origin}/app`,
+    },
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function requestSignUpOtp(email: string, displayName: string) {
+  assertSupabaseConfigured();
+  const { data, error } = await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      shouldCreateUser: true,
+      emailRedirectTo: `${window.location.origin}/onboarding`,
+      data: { display_name: displayName },
+    },
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function verifyEmailOtp(email: string, token: string) {
+  assertSupabaseConfigured();
+  const { data, error } = await supabase.auth.verifyOtp({
+    email,
+    token,
+    type: "email",
+  });
+  if (error) throw error;
+  return data;
+}
+
 export async function signOut() {
   assertSupabaseConfigured();
   const { error } = await supabase.auth.signOut();
