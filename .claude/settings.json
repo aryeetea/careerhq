@@ -22,7 +22,9 @@
       "Bash(supabase --help)",
       "Bash(brew list *)",
       "Bash(brew upgrade *)",
-      "Bash(supabase inspect *)"
+      "Bash(supabase inspect *)",
+      "Bash(chmod +x \"/private/tmp/claude-501/-Users-naaayele-Downloads-careerhq--1-/d7884d15-a62a-4f22-93f0-b924c15c1c2b/scratchpad/debug_edge_function.sh\")",
+      "Bash(\"/private/tmp/claude-501/-Users-naaayele-Downloads-careerhq--1-/d7884d15-a62a-4f22-93f0-b924c15c1c2b/scratchpad/debug_edge_function.sh\")"
     ]
   }
 }
