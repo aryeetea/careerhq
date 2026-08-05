@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { getVisibleBasicProfiles } from "@/services/profiles";
 import type { FriendCard, FriendRequest } from "@/types/database";
 
 export interface UserSearchResult {
@@ -103,6 +104,41 @@ export async function getFriendCard(friendUserId: string): Promise<FriendCard> {
 }
 
 export async function getFriendCards(friendUserIds: string[]): Promise<FriendCard[]> {
+  if (friendUserIds.length === 0) return [];
+
   const results = await Promise.allSettled(friendUserIds.map((id) => getFriendCard(id)));
-  return results.filter((r): r is PromiseFulfilledResult<FriendCard> => r.status === "fulfilled").map((r) => r.value);
+  const detailedCards = new Map<string, FriendCard>();
+
+  for (const result of results) {
+    if (result.status === "fulfilled") {
+      detailedCards.set(result.value.user_id, result.value);
+    }
+  }
+
+  const missingIds = friendUserIds.filter((id) => !detailedCards.has(id));
+
+  if (missingIds.length > 0) {
+    const basicProfiles = await getVisibleBasicProfiles(missingIds).catch(() => []);
+
+    for (const profile of basicProfiles) {
+      detailedCards.set(profile.id, {
+        user_id: profile.id,
+        username: profile.username,
+        display_name: profile.display_name,
+        avatar_url: profile.avatar_url,
+        status_message: null,
+        career_status: null,
+        applications_this_week: null,
+        applications_this_month: null,
+        weekly_goal: null,
+        interviews_count: null,
+        offers_count: null,
+        current_streak: null,
+        certification_name: null,
+        certification_percentage: null,
+      });
+    }
+  }
+
+  return friendUserIds.map((id) => detailedCards.get(id)).filter((card): card is FriendCard => Boolean(card));
 }
