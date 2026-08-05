@@ -125,16 +125,16 @@ export function ProfileForm() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="grid gap-6" noValidate>
-      <div className="rounded-[2rem] border border-primary/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.97),rgba(255,255,255,0.84))] p-5 shadow-soft sm:p-6">
+      <div className="rounded-[2rem] border border-border/65 bg-[linear-gradient(180deg,rgba(255,255,255,0.82),rgba(255,255,255,0.5))] p-5 shadow-soft sm:p-6">
         <div className="mb-5">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary/75">Your Profile</p>
-          <h2 className="mt-2 font-display text-2xl font-semibold tracking-tight">A steady introduction, with room for today.</h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-foreground/72">Keep it brief, clear, and easy to revisit.</p>
+          <h2 className="mt-2 font-display text-2xl font-semibold tracking-tight text-slate-900">A steady introduction, with room for today.</h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-700">Keep it brief, clear, and easy to revisit.</p>
         </div>
 
         <div className="flex items-center gap-4">
           <div className="relative">
-            <Avatar className="h-16 w-16 border border-primary/10">
+            <Avatar className="h-16 w-16 border border-border">
               {avatarUrl && <AvatarImage src={avatarUrl} alt="" />}
               <AvatarFallback className="text-base">{initials(profile.display_name)}</AvatarFallback>
             </Avatar>
@@ -148,7 +148,7 @@ export function ProfileForm() {
             <input ref={fileInputRef} type="file" accept="image/*" className="sr-only" onChange={onAvatarChange} />
           </div>
           {profile.avatar_url && (
-            <Button type="button" variant="ghost" size="sm" onClick={onRemoveAvatar} className="text-muted-foreground">
+            <Button type="button" variant="ghost" size="sm" onClick={onRemoveAvatar} className="text-slate-700 hover:text-slate-900">
               <X className="h-3.5 w-3.5" /> Remove photo
             </Button>
           )}
@@ -167,7 +167,7 @@ export function ProfileForm() {
         </div>
       </div>
 
-      <div className="grid gap-4 rounded-[2rem] border border-primary/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(251,243,234,0.82))] p-5 shadow-soft sm:p-6">
+      <div className="grid gap-4 rounded-[2rem] border border-border/65 bg-card/55 p-5 shadow-soft sm:p-6">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary/75">Voice</p>
           <h3 className="mt-2 font-display text-xl font-semibold tracking-tight">Short, human profile details.</h3>
@@ -252,7 +252,7 @@ export function ProfileForm() {
         </ProfileFieldCard>
 
         {draftSuggestion && (
-          <div className="rounded-[1.6rem] border border-primary/18 bg-[linear-gradient(180deg,rgba(217,139,147,0.1),rgba(255,255,255,0.75))] p-4">
+          <div className="rounded-[1.6rem] border border-primary/20 bg-primary/5 p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
                 <p className="text-sm font-semibold">
@@ -358,7 +358,7 @@ function ProfileFieldCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-[1.6rem] border border-primary/10 bg-background/92 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]">
+    <div className="rounded-[1.6rem] border border-border/60 bg-background/70 p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <Label htmlFor={fieldId} className="text-sm font-semibold">

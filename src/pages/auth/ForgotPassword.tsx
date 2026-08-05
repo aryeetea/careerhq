@@ -51,8 +51,8 @@ export default function ForgotPassword() {
     <AuthLayout title="Reset your password" subtitle="We'll email you a link to choose a new one.">
       <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4" noValidate>
         <div className="grid gap-1.5">
-          <Label htmlFor="email">Email</Label>
-          <Input id="email" type="email" autoComplete="email" {...register("email")} aria-invalid={!!errors.email} />
+          <Label htmlFor="email">Email *</Label>
+          <Input id="email" type="email" autoComplete="email" required aria-required="true" {...register("email")} aria-invalid={!!errors.email} />
           {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
         </div>
         <Button type="submit" size="lg" disabled={isSubmitting} className="mt-1">

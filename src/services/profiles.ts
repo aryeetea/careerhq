@@ -110,6 +110,13 @@ export async function getSharedContextProfiles(userIds: string[]): Promise<Share
   return data as SharedContextProfile[];
 }
 
+export async function getVisibleBasicProfiles(userIds: string[]): Promise<SharedContextProfile[]> {
+  if (userIds.length === 0) return [];
+  const { data, error } = await supabase.rpc("get_visible_basic_profiles", { p_user_ids: userIds });
+  if (error) throw error;
+  return data as SharedContextProfile[];
+}
+
 export async function listSelectedFriends(ownerId: string): Promise<string[]> {
   const { data, error } = await supabase.from("privacy_selected_friends").select("friend_id").eq("owner_id", ownerId);
   if (error) throw error;

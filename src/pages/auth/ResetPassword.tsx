@@ -37,13 +37,13 @@ export default function ResetPassword() {
     <AuthLayout title="Choose a new password" subtitle="Make it something you'll remember.">
       <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4" noValidate>
         <div className="grid gap-1.5">
-          <Label htmlFor="password">New password</Label>
-          <PasswordInput id="password" autoComplete="new-password" {...register("password")} aria-invalid={!!errors.password} />
+          <Label htmlFor="password">New password *</Label>
+          <PasswordInput id="password" autoComplete="new-password" required aria-required="true" {...register("password")} aria-invalid={!!errors.password} />
           {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
         </div>
         <div className="grid gap-1.5">
-          <Label htmlFor="confirmPassword">Confirm password</Label>
-          <PasswordInput id="confirmPassword" autoComplete="new-password" {...register("confirmPassword")} aria-invalid={!!errors.confirmPassword} />
+          <Label htmlFor="confirmPassword">Confirm password *</Label>
+          <PasswordInput id="confirmPassword" autoComplete="new-password" required aria-required="true" {...register("confirmPassword")} aria-invalid={!!errors.confirmPassword} />
           {errors.confirmPassword && <p className="text-xs text-destructive">{errors.confirmPassword.message}</p>}
         </div>
         <Button type="submit" size="lg" disabled={isSubmitting} className="mt-1">

@@ -50,12 +50,14 @@ export default function SignIn() {
     <AuthLayout title="Welcome back" subtitle="Take a breath. Let's see where things stand.">
       <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4" noValidate aria-busy={isSubmitting}>
         <div className="grid gap-1.5">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email">Email *</Label>
           <Input
             id="email"
             type="email"
             autoComplete="email"
             placeholder="you@example.com"
+            required
+            aria-required="true"
             {...register("email")}
             aria-invalid={!!errors.email}
             aria-describedby={errors.email ? "signin-email-error" : undefined}
@@ -68,7 +70,7 @@ export default function SignIn() {
         </div>
         <div className="grid gap-1.5">
           <div className="flex items-center justify-between gap-3">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">Password *</Label>
             <Link
               to={params.get("next") ? `/forgot-password?next=${encodeURIComponent(params.get("next") as string)}` : "/forgot-password"}
               className="rounded-full px-1.5 py-1 text-sm font-medium text-primary/90 transition-colors hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -79,6 +81,8 @@ export default function SignIn() {
           <PasswordInput
             id="password"
             autoComplete="current-password"
+            required
+            aria-required="true"
             {...register("password")}
             aria-invalid={!!errors.password}
             aria-describedby={errors.password ? "signin-password-error" : undefined}

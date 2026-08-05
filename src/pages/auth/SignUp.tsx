@@ -130,11 +130,13 @@ export default function SignUp() {
     <AuthLayout title="Start your search, gently" subtitle="A calm home base for everything job-search related.">
       <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4" noValidate aria-busy={isSubmitting}>
         <div className="grid gap-1.5">
-          <Label htmlFor="displayName">What should we call you?</Label>
+          <Label htmlFor="displayName">What should we call you? *</Label>
           <Input
             id="displayName"
             autoComplete="name"
             placeholder="Jane Doe"
+            required
+            aria-required="true"
             {...register("displayName")}
             aria-invalid={!!errors.displayName}
             aria-describedby={errors.displayName ? "signup-display-name-error" : undefined}
@@ -146,12 +148,14 @@ export default function SignUp() {
           )}
         </div>
         <div className="grid gap-1.5">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email">Email *</Label>
           <Input
             id="email"
             type="email"
             autoComplete="email"
             placeholder="you@example.com"
+            required
+            aria-required="true"
             {...register("email")}
             aria-invalid={!!errors.email}
             aria-describedby={errors.email ? "signup-email-error" : undefined}
@@ -163,10 +167,12 @@ export default function SignUp() {
           )}
         </div>
         <div className="grid gap-1.5">
-          <Label htmlFor="password">Password</Label>
+          <Label htmlFor="password">Password *</Label>
           <PasswordInput
             id="password"
             autoComplete="new-password"
+            required
+            aria-required="true"
             {...register("password")}
             aria-invalid={!!errors.password}
             aria-describedby={errors.password ? "signup-password-error" : "signup-password-hint"}
@@ -182,10 +188,12 @@ export default function SignUp() {
           )}
         </div>
         <div className="grid gap-1.5">
-          <Label htmlFor="confirmPassword">Confirm password</Label>
+          <Label htmlFor="confirmPassword">Confirm password *</Label>
           <PasswordInput
             id="confirmPassword"
             autoComplete="new-password"
+            required
+            aria-required="true"
             {...register("confirmPassword")}
             aria-invalid={!!errors.confirmPassword}
             aria-describedby={errors.confirmPassword ? "signup-confirm-password-error" : undefined}

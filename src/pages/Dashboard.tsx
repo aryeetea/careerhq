@@ -19,11 +19,14 @@ import { useJobs } from "@/hooks/queries/useJobs";
 import { useResumes } from "@/hooks/queries/useResumes";
 import { useCertifications } from "@/hooks/queries/useCertifications";
 import { useProfile } from "@/hooks/queries/useProfile";
+import { useAuth } from "@/hooks/useAuth";
 import { computeDashboardStats, getUpcomingInterviews } from "@/lib/stats";
 import { CERTIFICATION_STATUS_META } from "@/lib/constants";
 import type { Job } from "@/types/database";
+import { WelcomeTutorialDialog } from "@/components/shared/WelcomeTutorialDialog";
 
 export default function Dashboard() {
+  const { user } = useAuth();
   const { data: jobs = [], isLoading, isError, refetch } = useJobs();
   const { data: resumes = [] } = useResumes();
   const { data: certifications = [] } = useCertifications();
@@ -32,6 +35,13 @@ export default function Dashboard() {
 
   const [addOpen, setAddOpen] = React.useState(false);
   const [selectedJob, setSelectedJob] = React.useState<Job | null>(null);
+  const [tutorialOpen, setTutorialOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!user?.id || !profile?.onboarded_at) return;
+    const seen = localStorage.getItem(`bloom-welcome-tour:v1:${user.id}`);
+    if (!seen) setTutorialOpen(true);
+  }, [profile?.onboarded_at, user?.id]);
 
   const stats = React.useMemo(() => computeDashboardStats(jobs), [jobs]);
 
@@ -222,6 +232,7 @@ export default function Dashboard() {
 
       <AddJobDialog open={addOpen} onOpenChange={setAddOpen} resumes={resumes} />
       <JobDetailDialog job={selectedJob} resumes={resumes} open={Boolean(selectedJob)} onOpenChange={(open) => !open && setSelectedJob(null)} />
+      {user?.id && <WelcomeTutorialDialog userId={user.id} open={tutorialOpen} onOpenChange={setTutorialOpen} />}
     </div>
   );
 }

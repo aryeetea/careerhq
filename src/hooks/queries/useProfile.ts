@@ -104,6 +104,16 @@ export function useSharedContextProfiles(userIds: string[]) {
   });
 }
 
+export function useVisibleBasicProfiles(userIds: string[]) {
+  const sorted = [...userIds].sort();
+  return useQuery({
+    queryKey: ["visible-basic-profiles", sorted],
+    queryFn: () => profilesService.getVisibleBasicProfiles(sorted),
+    enabled: sorted.length > 0,
+    select: (rows) => new Map(rows.map((r) => [r.id, r])),
+  });
+}
+
 export function useSetSelectedFriends() {
   const { user } = useAuth();
   const qc = useQueryClient();

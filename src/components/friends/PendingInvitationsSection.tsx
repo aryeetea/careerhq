@@ -10,7 +10,7 @@ import {
   useIncomingRequests,
   useOutgoingRequests,
 } from "@/hooks/queries/useFriends";
-import { useSharedContextProfiles } from "@/hooks/queries/useProfile";
+import { useVisibleBasicProfiles } from "@/hooks/queries/useProfile";
 import { useSignedAvatarUrl } from "@/hooks/useSignedAvatarUrl";
 import { useToast } from "@/components/shared/toast";
 import { useCelebration } from "@/components/ambient/Celebration";
@@ -33,7 +33,7 @@ export function PendingInvitationsSection() {
     () => [...incoming.map((r) => r.requester_id), ...outgoing.map((r) => r.recipient_id)],
     [incoming, outgoing]
   );
-  const { data: profiles } = useSharedContextProfiles(profileIds);
+  const { data: profiles } = useVisibleBasicProfiles(profileIds);
 
   const hasOutgoing = outgoing.length > 0;
   const hasIncoming = incoming.length > 0;

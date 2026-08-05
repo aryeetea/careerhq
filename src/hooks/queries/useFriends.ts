@@ -26,9 +26,9 @@ export function useFriendCards() {
   const userId = user?.id ?? "";
   const friendIdsQuery = useFriendIds();
   return useQuery({
-    queryKey: queryKeys.friendCards(userId),
+    queryKey: [...queryKeys.friendCards(userId), friendIdsQuery.data ?? []],
     queryFn: () => friendsService.getFriendCards(friendIdsQuery.data ?? []),
-    enabled: Boolean(userId) && Boolean(friendIdsQuery.data),
+    enabled: Boolean(userId) && !friendIdsQuery.isLoading,
   });
 }
 

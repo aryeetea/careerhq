@@ -14,7 +14,7 @@ export default function SettingsPage() {
     <div className="flex flex-1 flex-col">
       <TopBar title="Settings" subtitle="Make Bloom feel like yours" />
       <div className="flex-1 overflow-y-auto px-4 pb-10 sm:px-8">
-        <Card className="overflow-hidden border-primary/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.9),rgba(255,255,255,0.72))] shadow-soft">
+        <Card className="glass-subtle border-border/60">
           <CardContent className="p-4 sm:p-6">
             <Tabs defaultValue="profile">
               <TabsList className="flex-wrap">

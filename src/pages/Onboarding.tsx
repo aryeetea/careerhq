@@ -195,6 +195,7 @@ export default function Onboarding() {
               <div>
                 <h2 className="font-display text-lg font-semibold">A little about you</h2>
                 <p className="text-sm text-muted-foreground">This is how friends will find and recognize you.</p>
+                <p className="mt-1 text-xs font-medium text-primary/80">Display name and username are required to continue.</p>
               </div>
 
               <div className="flex items-center gap-4">
@@ -212,14 +213,14 @@ export default function Onboarding() {
               </div>
 
               <div className="grid gap-1.5">
-                <Label htmlFor="displayName">Display name</Label>
-                <Input id="displayName" placeholder="Jane Doe" {...register("displayName")} aria-invalid={!!errors.displayName} />
+                <Label htmlFor="displayName">Display name *</Label>
+                <Input id="displayName" placeholder="Jane Doe" required aria-required="true" {...register("displayName")} aria-invalid={!!errors.displayName} />
                 {errors.displayName && <p className="text-xs text-destructive">{errors.displayName.message}</p>}
               </div>
 
               <div className="grid gap-1.5">
-                <Label htmlFor="username">Username</Label>
-                <Input id="username" placeholder="jane_doe" {...register("username")} aria-invalid={!!errors.username} />
+                <Label htmlFor="username">Username *</Label>
+                <Input id="username" placeholder="jane_doe" required aria-required="true" {...register("username")} aria-invalid={!!errors.username} />
                 {errors.username && <p className="text-xs text-destructive">{errors.username.message}</p>}
                 {!errors.username && usernameStatus === "checking" && <p className="text-xs text-muted-foreground">Checking…</p>}
                 {!errors.username && usernameStatus === "available" && <p className="text-xs text-success">Available</p>}
