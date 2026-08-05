@@ -88,22 +88,21 @@ export function AddJobDialog({ open, onOpenChange, resumes }: AddJobDialogProps)
       });
       const next = result.analysis;
       setAnalysis(next);
-      setValue("company", next.extracted_job.company ?? "", { shouldDirty: true });
-      setValue("title", next.extracted_job.title ?? "", { shouldDirty: true });
-      setValue("location", next.extracted_job.location ?? "", { shouldDirty: true });
-      setValue("salary", next.extracted_job.salary ?? "", { shouldDirty: true });
-      setValue("workArrangement", next.extracted_job.work_arrangement ?? "", { shouldDirty: true });
-      setValue("deadline", toDateInputValue(next.extracted_job.deadline), { shouldDirty: true });
-      setValue("jobDescription", next.extracted_job.raw_job_text, { shouldDirty: true });
-      setValue("fitScore", next.fit_score, { shouldDirty: true });
-      setValue("verdict", next.verdict, { shouldDirty: true });
-      setValue("priority", next.priority, { shouldDirty: true });
-      setValue("strengths", next.matching_strengths.join("\n"), { shouldDirty: true });
+      setValue("company", next.jobExtraction.company ?? "", { shouldDirty: true });
+      setValue("title", next.jobExtraction.jobTitle ?? "", { shouldDirty: true });
+      setValue("location", next.jobExtraction.location ?? "", { shouldDirty: true });
+      setValue("salary", next.jobExtraction.salary ?? "", { shouldDirty: true });
+      setValue("workArrangement", next.jobExtraction.workArrangement ?? "", { shouldDirty: true });
+      setValue("deadline", toDateInputValue(next.jobExtraction.applicationDeadline), { shouldDirty: true });
+      setValue("jobDescription", next.jobExtraction.rawJobText, { shouldDirty: true });
+      setValue("fitScore", next.analysis.fitScore, { shouldDirty: true });
+      setValue("verdict", next.analysis.verdict, { shouldDirty: true });
+      setValue("strengths", next.analysis.strongMatches.join("\n"), { shouldDirty: true });
       setValue(
         "missingQualifications",
         [
-          ...next.missing_required_qualifications.map((item) => `Required: ${item}`),
-          ...next.missing_preferred_qualifications.map((item) => `Preferred: ${item}`),
+          ...next.analysis.criticalGaps.map((item) => `Critical: ${item}`),
+          ...next.analysis.preferredGaps.map((item) => `Preferred: ${item}`),
         ].join("\n"),
         { shouldDirty: true },
       );
@@ -141,10 +140,11 @@ export function AddJobDialog({ open, onOpenChange, resumes }: AddJobDialogProps)
       strengths: values.strengths?.trim() || null,
       missing_qualifications: values.missingQualifications?.trim() || null,
       notes: values.notes?.trim() || null,
-      ai_extracted_data: analysis?.extracted_job,
+      ai_extracted_data: analysis?.jobExtraction,
       ai_analysis: analysis,
-      ai_recommended_resume_id: analysis?.recommended_resume_id ?? null,
+      ai_recommended_resume_id: analysis?.recommendedResumeId ?? null,
       ai_last_analyzed_at: analysis ? new Date().toISOString() : null,
+      ai_prompt_version: analysis?.promptVersion ?? null,
     };
 
     try {

@@ -10,6 +10,11 @@ const verdictSchema = z.enum([
   "not_recommended",
 ]);
 const confidenceLevelSchema = z.enum(["low", "medium", "high"]);
+const importStatusSchema = z.enum(["success", "manual_fallback"]);
+const analysisSourceSchema = z.enum(["url", "manual", "url_plus_manual"]);
+const applicationPrioritySchema = z.enum(["apply_now", "apply_soon", "consider", "skip"]);
+const resumeSuggestionTypeSchema = z.enum(["safe_wording", "reorder", "confirm_with_user", "genuine_gap"]);
+const dealBreakerStatusSchema = z.enum(["confirmed", "possible", "insufficient_information"]);
 
 export const extractedJobSchema = z.object({
   company: z.string().nullable(),
@@ -29,37 +34,73 @@ export const extractedJobSchema = z.object({
   raw_job_text: z.string(),
 });
 
+export const dealBreakerSchema = z.object({
+  label: z.string(),
+  status: dealBreakerStatusSchema,
+});
+
+export const aiJobExtractionSchema = z.object({
+  company: z.string().nullable(),
+  jobTitle: z.string().nullable(),
+  location: z.string().nullable(),
+  salary: z.string().nullable(),
+  employmentType: z.string().nullable(),
+  workArrangement: workArrangementSchema,
+  requiredQualifications: z.array(z.string()),
+  preferredQualifications: z.array(z.string()),
+  requiredSkills: z.array(z.string()),
+  preferredSkills: z.array(z.string()),
+  responsibilities: z.array(z.string()),
+  educationRequirements: z.array(z.string()),
+  experienceRequirements: z.array(z.string()),
+  certifications: z.array(z.string()),
+  dealBreakers: z.array(dealBreakerSchema),
+  applicationDeadline: z.string().nullable(),
+  rawJobText: z.string(),
+});
+
+export const analysisResultSchema = z.object({
+  fitScore: z.number().int().min(0).max(10),
+  confidence: confidenceLevelSchema,
+  verdict: verdictSchema,
+  verdictExplanation: z.string(),
+  strongMatches: z.array(z.string()),
+  transferableStrengths: z.array(z.string()),
+  criticalGaps: z.array(z.string()),
+  preferredGaps: z.array(z.string()),
+  unknowns: z.array(z.string()),
+  scoreIncreases: z.array(z.string()),
+  scoreReductions: z.array(z.string()),
+  applicationPriority: applicationPrioritySchema,
+  careerCoachAdvice: z.string(),
+  nextStep: z.string(),
+});
+
 export const resumeRecommendationSchema = z.object({
-  resume_id: z.string(),
-  resume_name: z.string(),
-  score: z.number().int().min(0).max(10),
-  explanation: z.string(),
-  matching_strengths: z.array(z.string()),
+  resumeId: z.string().uuid(),
+  resumeName: z.string(),
+  compatibilityScore: z.number().int().min(0).max(100),
+  strengths: z.array(z.string()),
   gaps: z.array(z.string()),
+  recommendationReason: z.string(),
+});
+
+export const resumeSuggestionSchema = z.object({
+  type: resumeSuggestionTypeSchema,
+  suggestion: z.string(),
+  reason: z.string(),
 });
 
 export const jobAnalysisPayloadSchema = z.object({
-  import_status: z.enum(["success", "manual_fallback"]),
-  source: z.enum(["url", "manual", "url_plus_manual"]),
-  fetched_url: z.string().url().nullable(),
-  extracted_job: extractedJobSchema,
-  fit_score: z.number().int().min(0).max(10),
-  verdict: verdictSchema,
-  confidence_level: confidenceLevelSchema,
-  verdict_explanation: z.string(),
-  priority: z.union([z.literal(1), z.literal(2), z.literal(3)]),
-  deal_breakers: z.array(z.string()),
-  matching_strengths: z.array(z.string()),
-  missing_required_qualifications: z.array(z.string()),
-  missing_preferred_qualifications: z.array(z.string()),
-  gaps_that_matter: z.array(z.string()),
-  gaps_that_dont_matter: z.array(z.string()),
-  highest_impact_next_step: z.string(),
-  resume_rankings: z.array(resumeRecommendationSchema),
-  recommended_resume_id: z.string().nullable(),
-  recommended_resume_reason: z.string().nullable(),
-  resume_improvement_suggestions: z.array(z.string()),
-  career_coach_advice: z.string(),
+  importStatus: importStatusSchema,
+  source: analysisSourceSchema,
+  fetchedUrl: z.string().url().nullable(),
+  jobExtraction: aiJobExtractionSchema,
+  analysis: analysisResultSchema,
+  resumeRanking: z.array(resumeRecommendationSchema),
+  recommendedResumeId: z.string().uuid().nullable(),
+  resumeSuggestions: z.array(resumeSuggestionSchema),
+  promptVersion: z.string(),
 });
 export type JobAnalysisPayload = z.infer<typeof jobAnalysisPayloadSchema>;
 

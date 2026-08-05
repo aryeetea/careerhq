@@ -80,6 +80,46 @@ export const CONFIDENCE_META: Record<"low" | "medium" | "high", { label: string;
   high: { label: "High confidence", className: "text-foreground" },
 };
 
+export const ANALYSIS_SOURCE_META: Record<"url" | "manual" | "url_plus_manual", string> = {
+  url: "URL",
+  manual: "pasted description",
+  url_plus_manual: "URL + pasted description",
+};
+
+export const IMPORT_STATUS_META: Record<"success" | "manual_fallback", { label: string; className: string }> = {
+  success: { label: "Imported successfully", className: "text-success" },
+  manual_fallback: { label: "Used pasted fallback", className: "text-gold" },
+};
+
+export const APPLICATION_PRIORITY_META: Record<
+  "apply_now" | "apply_soon" | "consider" | "skip",
+  { label: string; className: string }
+> = {
+  apply_now: { label: "Apply now", className: "bg-success/15 text-success" },
+  apply_soon: { label: "Apply soon", className: "bg-sky/15 text-sky" },
+  consider: { label: "Consider carefully", className: "bg-gold/15 text-gold" },
+  skip: { label: "Skip for now", className: "bg-destructive/15 text-destructive" },
+};
+
+export const DEAL_BREAKER_STATUS_META: Record<
+  "confirmed" | "possible" | "insufficient_information",
+  { label: string; className: string }
+> = {
+  confirmed: { label: "Confirmed", className: "bg-destructive/15 text-destructive" },
+  possible: { label: "Possible", className: "bg-gold/15 text-gold" },
+  insufficient_information: { label: "Needs confirmation", className: "bg-muted text-muted-foreground" },
+};
+
+export const RESUME_SUGGESTION_TYPE_META: Record<
+  "safe_wording" | "reorder" | "confirm_with_user" | "genuine_gap",
+  string
+> = {
+  safe_wording: "Safe wording",
+  reorder: "Reorder",
+  confirm_with_user: "Confirm with you",
+  genuine_gap: "Genuine gap",
+};
+
 export const WORK_ARRANGEMENT_META: Record<WorkArrangement, string> = {
   remote: "Remote",
   hybrid: "Hybrid",

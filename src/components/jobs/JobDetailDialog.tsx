@@ -155,22 +155,21 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
     try {
       const result = await analyzeJob.mutateAsync({ jobId: job.id });
       setAnalysisState(result.analysis);
-      setValue("company", result.analysis.extracted_job.company ?? watch("company"), { shouldDirty: true });
-      setValue("title", result.analysis.extracted_job.title ?? watch("title"), { shouldDirty: true });
-      setValue("location", result.analysis.extracted_job.location ?? watch("location"), { shouldDirty: true });
-      setValue("salary", result.analysis.extracted_job.salary ?? watch("salary"), { shouldDirty: true });
-      setValue("workArrangement", result.analysis.extracted_job.work_arrangement ?? watch("workArrangement"), { shouldDirty: true });
-      setValue("deadline", toDateInputValue(result.analysis.extracted_job.deadline), { shouldDirty: true });
-      setValue("jobDescription", result.analysis.extracted_job.raw_job_text, { shouldDirty: true });
-      setValue("fitScore", result.analysis.fit_score, { shouldDirty: true });
-      setValue("verdict", result.analysis.verdict, { shouldDirty: true });
-      setValue("priority", result.analysis.priority, { shouldDirty: true });
-      setValue("strengths", result.analysis.matching_strengths.join("\n"), { shouldDirty: true });
+      setValue("company", result.analysis.jobExtraction.company ?? watch("company"), { shouldDirty: true });
+      setValue("title", result.analysis.jobExtraction.jobTitle ?? watch("title"), { shouldDirty: true });
+      setValue("location", result.analysis.jobExtraction.location ?? watch("location"), { shouldDirty: true });
+      setValue("salary", result.analysis.jobExtraction.salary ?? watch("salary"), { shouldDirty: true });
+      setValue("workArrangement", result.analysis.jobExtraction.workArrangement ?? watch("workArrangement"), { shouldDirty: true });
+      setValue("deadline", toDateInputValue(result.analysis.jobExtraction.applicationDeadline), { shouldDirty: true });
+      setValue("jobDescription", result.analysis.jobExtraction.rawJobText, { shouldDirty: true });
+      setValue("fitScore", result.analysis.analysis.fitScore, { shouldDirty: true });
+      setValue("verdict", result.analysis.analysis.verdict, { shouldDirty: true });
+      setValue("strengths", result.analysis.analysis.strongMatches.join("\n"), { shouldDirty: true });
       setValue(
         "missingQualifications",
         [
-          ...result.analysis.missing_required_qualifications.map((item) => `Required: ${item}`),
-          ...result.analysis.missing_preferred_qualifications.map((item) => `Preferred: ${item}`),
+          ...result.analysis.analysis.criticalGaps.map((item) => `Critical: ${item}`),
+          ...result.analysis.analysis.preferredGaps.map((item) => `Preferred: ${item}`),
         ].join("\n"),
         { shouldDirty: true },
       );

@@ -53,37 +53,73 @@ export interface JobAiExtraction {
   raw_job_text: string;
 }
 
-export interface ResumeRecommendation {
-  resume_id: string;
-  resume_name: string;
-  score: number;
-  explanation: string;
-  matching_strengths: string[];
+export interface JobAiDealBreaker {
+  label: string;
+  status: "confirmed" | "possible" | "insufficient_information";
+}
+
+export interface JobAiJobExtraction {
+  company: string | null;
+  jobTitle: string | null;
+  location: string | null;
+  salary: string | null;
+  employmentType: string | null;
+  workArrangement: WorkArrangement | null;
+  requiredQualifications: string[];
+  preferredQualifications: string[];
+  requiredSkills: string[];
+  preferredSkills: string[];
+  responsibilities: string[];
+  educationRequirements: string[];
+  experienceRequirements: string[];
+  certifications: string[];
+  dealBreakers: JobAiDealBreaker[];
+  applicationDeadline: string | null;
+  rawJobText: string;
+}
+
+export interface JobAiAnalysisResult {
+  fitScore: number;
+  confidence: ConfidenceLevel;
+  verdict: JobVerdict;
+  verdictExplanation: string;
+  strongMatches: string[];
+  transferableStrengths: string[];
+  criticalGaps: string[];
+  preferredGaps: string[];
+  unknowns: string[];
+  scoreIncreases: string[];
+  scoreReductions: string[];
+  applicationPriority: "apply_now" | "apply_soon" | "consider" | "skip";
+  careerCoachAdvice: string;
+  nextStep: string;
+}
+
+export interface JobAiResumeRecommendation {
+  resumeId: string;
+  resumeName: string;
+  compatibilityScore: number;
+  strengths: string[];
   gaps: string[];
+  recommendationReason: string;
+}
+
+export interface JobAiResumeSuggestion {
+  type: "safe_wording" | "reorder" | "confirm_with_user" | "genuine_gap";
+  suggestion: string;
+  reason: string;
 }
 
 export interface JobAiAnalysis {
-  import_status: "success" | "manual_fallback";
+  importStatus: "success" | "manual_fallback";
   source: "url" | "manual" | "url_plus_manual";
-  fetched_url: string | null;
-  extracted_job: JobAiExtraction;
-  fit_score: number;
-  verdict: JobVerdict;
-  confidence_level: ConfidenceLevel;
-  verdict_explanation: string;
-  priority: 1 | 2 | 3;
-  recommended_resume_id: string | null;
-  recommended_resume_reason: string | null;
-  deal_breakers: string[];
-  matching_strengths: string[];
-  missing_required_qualifications: string[];
-  missing_preferred_qualifications: string[];
-  gaps_that_matter: string[];
-  gaps_that_dont_matter: string[];
-  highest_impact_next_step: string;
-  resume_rankings: ResumeRecommendation[];
-  resume_improvement_suggestions: string[];
-  career_coach_advice: string;
+  fetchedUrl: string | null;
+  jobExtraction: JobAiJobExtraction;
+  analysis: JobAiAnalysisResult;
+  resumeRanking: JobAiResumeRecommendation[];
+  recommendedResumeId: string | null;
+  resumeSuggestions: JobAiResumeSuggestion[];
+  promptVersion: string;
 }
 
 export interface Profile {
@@ -159,11 +195,12 @@ export interface Job {
   strengths: string | null;
   missing_qualifications: string | null;
   notes: string | null;
-  ai_extracted_data: JobAiExtraction;
+  ai_extracted_data: JobAiJobExtraction | null;
   ai_analysis: JobAiAnalysis | null;
   ai_recommended_resume_id: string | null;
   ai_cover_letter: string | null;
   ai_last_analyzed_at: string | null;
+  ai_prompt_version: string | null;
   created_at: string;
   updated_at: string;
 }

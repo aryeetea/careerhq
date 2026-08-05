@@ -4,66 +4,88 @@ export const analyzeJobRequestSchema = z
   .object({
     jobId: z.string().uuid().optional(),
     jobUrl: z.string().trim().url().optional(),
-    manualJobDescription: z.string().trim().min(1).optional(),
+    manualJobDescription: z.string().trim().min(1).max(20000).optional(),
   })
   .refine((value) => Boolean(value.jobUrl || value.manualJobDescription || value.jobId), {
     message: "Provide a job URL, a pasted description, or a saved job id.",
   });
 
-export const resumeRecommendationSchema = z.object({
-  resume_id: z.string().uuid(),
-  resume_name: z.string(),
-  score: z.number().int().min(0).max(10),
-  explanation: z.string(),
-  matching_strengths: z.array(z.string()),
+const verdictEnum = z.enum([
+  "excellent_match",
+  "strong_match",
+  "worth_applying",
+  "stretch_opportunity",
+  "high_risk",
+  "not_recommended",
+]);
+
+export const dealBreakerSchema = z.object({
+  label: z.string(),
+  status: z.enum(["confirmed", "possible", "insufficient_information"]),
+});
+
+export const resumeRankingSchema = z.object({
+  resumeId: z.string().uuid(),
+  resumeName: z.string(),
+  compatibilityScore: z.number().int().min(0).max(100),
+  strengths: z.array(z.string()),
   gaps: z.array(z.string()),
+  recommendationReason: z.string(),
+});
+
+export const resumeSuggestionSchema = z.object({
+  type: z.enum(["safe_wording", "reorder", "confirm_with_user", "genuine_gap"]),
+  suggestion: z.string(),
+  reason: z.string(),
+});
+
+export const jobExtractionSchema = z.object({
+  company: z.string().nullable(),
+  jobTitle: z.string().nullable(),
+  location: z.string().nullable(),
+  salary: z.string().nullable(),
+  employmentType: z.string().nullable(),
+  workArrangement: z.enum(["remote", "hybrid", "onsite"]).nullable(),
+  requiredQualifications: z.array(z.string()),
+  preferredQualifications: z.array(z.string()),
+  requiredSkills: z.array(z.string()),
+  preferredSkills: z.array(z.string()),
+  responsibilities: z.array(z.string()),
+  educationRequirements: z.array(z.string()),
+  experienceRequirements: z.array(z.string()),
+  certifications: z.array(z.string()),
+  dealBreakers: z.array(dealBreakerSchema),
+  applicationDeadline: z.string().nullable(),
+  rawJobText: z.string(),
+});
+
+export const analysisResultSchema = z.object({
+  fitScore: z.number().int().min(0).max(10),
+  confidence: z.enum(["high", "medium", "low"]),
+  verdict: verdictEnum,
+  verdictExplanation: z.string(),
+  strongMatches: z.array(z.string()),
+  transferableStrengths: z.array(z.string()),
+  criticalGaps: z.array(z.string()),
+  preferredGaps: z.array(z.string()),
+  unknowns: z.array(z.string()),
+  scoreIncreases: z.array(z.string()),
+  scoreReductions: z.array(z.string()),
+  applicationPriority: z.enum(["apply_now", "apply_soon", "consider", "skip"]),
+  careerCoachAdvice: z.string(),
+  nextStep: z.string(),
 });
 
 export const analysisResponseSchema = z.object({
-  import_status: z.enum(["success", "manual_fallback"]),
+  importStatus: z.enum(["success", "manual_fallback"]),
   source: z.enum(["url", "manual", "url_plus_manual"]),
-  fetched_url: z.string().url().nullable(),
-  extracted_job: z.object({
-    company: z.string().nullable(),
-    title: z.string().nullable(),
-    location: z.string().nullable(),
-    salary: z.string().nullable(),
-    work_arrangement: z.enum(["remote", "hybrid", "onsite"]).nullable(),
-    deadline: z.string().nullable(),
-    requirements: z.array(z.string()),
-    required_qualifications: z.array(z.string()),
-    preferred_qualifications: z.array(z.string()),
-    skills: z.array(z.string()),
-    education: z.array(z.string()),
-    experience: z.array(z.string()),
-    certifications: z.array(z.string()),
-    responsibilities: z.array(z.string()),
-    raw_job_text: z.string(),
-  }),
-  fit_score: z.number().int().min(0).max(10),
-  verdict: z.enum([
-    "excellent_match",
-    "strong_match",
-    "worth_applying",
-    "stretch_opportunity",
-    "high_risk",
-    "not_recommended",
-  ]),
-  confidence_level: z.enum(["low", "medium", "high"]),
-  verdict_explanation: z.string(),
-  priority: z.union([z.literal(1), z.literal(2), z.literal(3)]),
-  deal_breakers: z.array(z.string()),
-  matching_strengths: z.array(z.string()),
-  missing_required_qualifications: z.array(z.string()),
-  missing_preferred_qualifications: z.array(z.string()),
-  gaps_that_matter: z.array(z.string()),
-  gaps_that_dont_matter: z.array(z.string()),
-  highest_impact_next_step: z.string(),
-  resume_rankings: z.array(resumeRecommendationSchema),
-  recommended_resume_id: z.string().uuid().nullable(),
-  recommended_resume_reason: z.string().nullable(),
-  resume_improvement_suggestions: z.array(z.string()),
-  career_coach_advice: z.string(),
+  fetchedUrl: z.string().url().nullable(),
+  jobExtraction: jobExtractionSchema,
+  analysis: analysisResultSchema,
+  resumeRanking: z.array(resumeRankingSchema),
+  recommendedResumeId: z.string().uuid().nullable(),
+  resumeSuggestions: z.array(resumeSuggestionSchema),
+  promptVersion: z.string(),
 });
 
 export const coverLetterRequestSchema = z.object({

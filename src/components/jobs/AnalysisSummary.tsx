@@ -3,7 +3,15 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { CONFIDENCE_META, VERDICT_META } from "@/lib/constants";
+import {
+  ANALYSIS_SOURCE_META,
+  APPLICATION_PRIORITY_META,
+  CONFIDENCE_META,
+  DEAL_BREAKER_STATUS_META,
+  IMPORT_STATUS_META,
+  RESUME_SUGGESTION_TYPE_META,
+  VERDICT_META,
+} from "@/lib/constants";
 import type { JobAnalysisPayload } from "@/lib/ai";
 
 function ListBlock({ title, items, empty, muted }: { title: string; items: string[]; empty: string; muted?: boolean }) {
@@ -34,9 +42,12 @@ export function AnalysisSummary({
   selectedResumeId?: string | null;
   onApplyRecommendation?: (resumeId: string) => void;
 }) {
-  const verdict = VERDICT_META[analysis.verdict];
-  const confidence = CONFIDENCE_META[analysis.confidence_level];
-  const recommended = analysis.resume_rankings.find((resume) => resume.resume_id === analysis.recommended_resume_id) ?? null;
+  const verdict = VERDICT_META[analysis.analysis.verdict];
+  const confidence = CONFIDENCE_META[analysis.analysis.confidence];
+  const importStatus = IMPORT_STATUS_META[analysis.importStatus];
+  const applicationPriority = APPLICATION_PRIORITY_META[analysis.analysis.applicationPriority];
+  const recommendedResumeId = analysis.recommendedResumeId;
+  const recommended = analysis.resumeRanking.find((resume) => resume.resumeId === recommendedResumeId) ?? null;
 
   return (
     <div className="grid gap-3">
@@ -49,30 +60,34 @@ export function AnalysisSummary({
                 <p className="text-sm font-semibold">AI analysis</p>
               </div>
               <p className="mt-1 text-sm text-muted-foreground">
-                Imported from {analysis.source === "url_plus_manual" ? "URL + pasted description" : analysis.source === "url" ? "URL" : "pasted description"}.
+                Imported from {ANALYSIS_SOURCE_META[analysis.source]}.
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <Badge className={cn("border-0", verdict.className)}>{verdict.emoji} {verdict.label}</Badge>
-              <Badge variant="outline">{analysis.fit_score}/10 fit</Badge>
+              <Badge variant="outline">{analysis.analysis.fitScore}/10 fit</Badge>
+              <Badge className={cn("border-0", applicationPriority.className)}>{applicationPriority.label}</Badge>
               <span className={cn("text-xs", confidence.className)}>{confidence.label}</span>
             </div>
           </div>
 
           {/* The "why" behind the verdict — every analysis explains itself, never just a number. */}
-          <p className="mt-3 rounded-xl bg-secondary/40 p-3 text-sm leading-6 text-foreground/85">{analysis.verdict_explanation}</p>
+          <p className="mt-3 rounded-xl bg-secondary/40 p-3 text-sm leading-6 text-foreground/85">{analysis.analysis.verdictExplanation}</p>
+
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            <span className={cn("font-medium", importStatus.className)}>{importStatus.label}</span>
+            <span>Prompt v{analysis.promptVersion}</span>
+          </div>
 
           {recommended && (
             <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-3">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="text-sm font-medium">Recommended resume: {recommended.resume_name}</p>
-                  {analysis.recommended_resume_reason && (
-                    <p className="mt-1 text-sm text-muted-foreground">{analysis.recommended_resume_reason}</p>
-                  )}
+                  <p className="text-sm font-medium">Recommended resume: {recommended.resumeName}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">{recommended.recommendationReason}</p>
                 </div>
-                {onApplyRecommendation && analysis.recommended_resume_id && selectedResumeId !== analysis.recommended_resume_id && (
-                  <Button size="sm" variant="outline" onClick={() => onApplyRecommendation(analysis.recommended_resume_id!)}>
+                {onApplyRecommendation && recommendedResumeId && selectedResumeId !== recommendedResumeId && (
+                  <Button size="sm" variant="outline" onClick={() => onApplyRecommendation(recommendedResumeId)}>
                     Use recommendation
                   </Button>
                 )}
@@ -83,13 +98,17 @@ export function AnalysisSummary({
       </Card>
 
       <div className="grid gap-3 lg:grid-cols-2">
-        <ListBlock title="What's working in your favor" items={analysis.matching_strengths} empty="No strong matches were identified from the available resume evidence." />
-        <ListBlock title="Deal breakers" items={analysis.deal_breakers} empty="No explicit deal breakers were identified from the available evidence." />
+        <ListBlock title="Strong matches" items={analysis.analysis.strongMatches} empty="No strong matches were identified from the available resume evidence." />
+        <ListBlock
+          title="Transferable strengths"
+          items={analysis.analysis.transferableStrengths}
+          empty="No major transferable strengths were highlighted from the available evidence."
+        />
       </div>
 
       <div className="grid gap-3 lg:grid-cols-2">
-        <ListBlock title="Gaps that matter" items={analysis.gaps_that_matter} empty="No gaps identified that would meaningfully hurt your chances." />
-        <ListBlock title="Gaps you can set aside" items={analysis.gaps_that_dont_matter} empty="Nothing here worth setting aside — see the gaps above instead." />
+        <ListBlock title="Critical gaps" items={analysis.analysis.criticalGaps} empty="No gaps identified that would meaningfully hurt your chances." />
+        <ListBlock title="Preferred gaps" items={analysis.analysis.preferredGaps} empty="No preferred-only gaps stood out from the available evidence." />
       </div>
 
       <Card className="border-primary/25 bg-primary/5">
@@ -97,44 +116,74 @@ export function AnalysisSummary({
           <Target className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-primary">Highest-impact next step</p>
-            <p className="mt-1 text-sm leading-6 text-foreground/85">{analysis.highest_impact_next_step}</p>
+            <p className="mt-1 text-sm leading-6 text-foreground/85">{analysis.analysis.nextStep}</p>
           </div>
         </CardContent>
       </Card>
 
-      {(analysis.missing_required_qualifications.length > 0 || analysis.missing_preferred_qualifications.length > 0) && (
+      {analysis.jobExtraction.dealBreakers.length > 0 && (
+        <Card className="border-border/60 bg-card/60">
+          <CardContent className="p-4">
+            <p className="text-sm font-semibold">Potential deal breakers</p>
+            <div className="mt-3 grid gap-2.5">
+              {analysis.jobExtraction.dealBreakers.map((item) => {
+                const status = DEAL_BREAKER_STATUS_META[item.status];
+                return (
+                  <div key={`${item.status}-${item.label}`} className="rounded-xl border border-border/60 bg-card/50 px-3 py-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge className={cn("border-0", status.className)}>{status.label}</Badge>
+                      <p className="text-sm">{item.label}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {(analysis.analysis.unknowns.length > 0 || analysis.analysis.scoreIncreases.length > 0 || analysis.analysis.scoreReductions.length > 0) && (
         <div className="grid gap-3 lg:grid-cols-2">
           <ListBlock
-            title="Missing required qualifications (reference)"
-            items={analysis.missing_required_qualifications}
-            empty="No required gaps were identified."
+            title="What raised the score"
+            items={analysis.analysis.scoreIncreases}
+            empty="No specific score increases were called out."
             muted
           />
           <ListBlock
-            title="Missing preferred qualifications (reference)"
-            items={analysis.missing_preferred_qualifications}
-            empty="No preferred gaps were identified."
+            title="What lowered the score"
+            items={analysis.analysis.scoreReductions}
+            empty="No specific score reductions were called out."
             muted
           />
         </div>
       )}
 
+      {analysis.analysis.unknowns.length > 0 && (
+        <ListBlock
+          title="Unknowns to confirm"
+          items={analysis.analysis.unknowns}
+          empty="No major unknowns were identified."
+          muted
+        />
+      )}
+
       <Card className="border-border/60 bg-card/60">
         <CardContent className="p-4">
           <p className="text-sm font-semibold">Resume ranking</p>
-          {analysis.resume_rankings.length === 0 ? (
+          {analysis.resumeRanking.length === 0 ? (
             <p className="mt-2 text-sm text-muted-foreground">No active resumes with extractable text were available to compare.</p>
           ) : (
             <div className="mt-3 grid gap-2.5">
-              {analysis.resume_rankings.map((resume, index) => (
-                <div key={resume.resume_id} className={cn("rounded-xl border px-3 py-3", selectedResumeId === resume.resume_id ? "border-primary/40 bg-primary/5" : "border-border/60 bg-card/50")}>
+              {analysis.resumeRanking.map((resume, index) => (
+                <div key={resume.resumeId} className={cn("rounded-xl border px-3 py-3", selectedResumeId === resume.resumeId ? "border-primary/40 bg-primary/5" : "border-border/60 bg-card/50")}>
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="text-sm font-medium">
-                      {index + 1}. {resume.resume_name}
+                      {index + 1}. {resume.resumeName}
                     </p>
-                    <Badge variant="outline">{resume.score}/10</Badge>
+                    <Badge variant="outline">{resume.compatibilityScore}/100</Badge>
                   </div>
-                  <p className="mt-1 text-sm text-muted-foreground">{resume.explanation}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">{resume.recommendationReason}</p>
                 </div>
               ))}
             </div>
@@ -142,11 +191,26 @@ export function AnalysisSummary({
         </CardContent>
       </Card>
 
-      <ListBlock
-        title="Resume improvement suggestions"
-        items={analysis.resume_improvement_suggestions}
-        empty="No resume-improvement suggestions were needed from the available evidence."
-      />
+      <Card className="border-border/60 bg-card/60">
+        <CardContent className="p-4">
+          <p className="text-sm font-semibold">Resume improvement suggestions</p>
+          {analysis.resumeSuggestions.length === 0 ? (
+            <p className="mt-2 text-sm text-muted-foreground">No resume-improvement suggestions were needed from the available evidence.</p>
+          ) : (
+            <div className="mt-3 grid gap-2.5">
+              {analysis.resumeSuggestions.map((suggestion, index) => (
+                <div key={`${suggestion.type}-${index}`} className="rounded-xl border border-border/60 bg-card/50 px-3 py-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="outline">{RESUME_SUGGESTION_TYPE_META[suggestion.type]}</Badge>
+                  </div>
+                  <p className="mt-2 text-sm text-foreground/90">{suggestion.suggestion}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">{suggestion.reason}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Bloom's signature moment — always the last word on an analysis. */}
       <Card className="border-gold/30 bg-gradient-to-br from-gold/10 via-card/60 to-primary/5">
@@ -154,7 +218,7 @@ export function AnalysisSummary({
           <Compass className="mt-0.5 h-4 w-4 shrink-0 text-gold" />
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-gold">Career coach's advice</p>
-            <p className="mt-1.5 text-sm leading-6 text-foreground/85">{analysis.career_coach_advice}</p>
+            <p className="mt-1.5 text-sm leading-6 text-foreground/85">{analysis.analysis.careerCoachAdvice}</p>
           </div>
         </CardContent>
       </Card>

@@ -38,8 +38,8 @@ Deno.serve(async (request) => {
         : null,
       analysis: job.ai_extracted_data,
       rawJobText:
-        typeof job.ai_extracted_data?.raw_job_text === "string"
-          ? job.ai_extracted_data.raw_job_text
+        typeof job.ai_extracted_data?.rawJobText === "string"
+          ? job.ai_extracted_data.rawJobText
           : job.job_description ?? "",
       careerGoal,
     });
