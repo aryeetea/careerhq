@@ -34,6 +34,15 @@ export type FriendRequestStatus = "pending" | "accepted" | "declined" | "cancell
 export type ReactionType = "proud" | "keep_going" | "you_got_this" | "congrats" | "cheering";
 export type ReactionContext = "weekly_progress" | "goal" | "group" | "general";
 export type ThemeName = "floral" | "neutral" | "sunrise" | "meadow" | "dark" | "midnight";
+export type JobAiScoringCategory =
+  | "required_qualifications"
+  | "relevant_experience"
+  | "relevant_skills"
+  | "education_certifications"
+  | "projects_portfolio"
+  | "preferred_qualifications"
+  | "seniority_alignment"
+  | "location_logistics";
 
 export interface JobAiExtraction {
   company: string | null;
@@ -59,7 +68,7 @@ export interface JobAiDealBreaker {
 }
 
 export interface JobAiCategoryScore {
-  category: string;
+  category: JobAiScoringCategory;
   label: string;
   rawScore: number;
   weight: number;
@@ -90,8 +99,8 @@ export interface JobAiJobExtraction {
 
 export interface JobAiAnalysisResult {
   fitScore: number;
-  rubricVersion?: string;
-  categoryScores?: JobAiCategoryScore[];
+  rubricVersion: string;
+  categoryScores: JobAiCategoryScore[];
   confidence: ConfidenceLevel;
   verdict: JobVerdict;
   verdictExplanation: string;
@@ -132,7 +141,6 @@ export interface JobAiAnalysis {
   recommendedResumeId: string | null;
   resumeSuggestions: JobAiResumeSuggestion[];
   promptVersion: string;
-  rubricVersion?: string;
 }
 
 export interface Profile {
