@@ -38,6 +38,8 @@ export function ProfileForm() {
           displayName: profile.display_name,
           bio: profile.bio ?? "",
           careerGoal: profile.career_goal ?? "",
+          careerStatus: profile.career_status ?? "",
+          skills: profile.skills,
           primaryJobTitles: profile.primary_job_titles,
           preferredLocations: profile.preferred_locations,
           weeklyApplicationGoal: profile.weekly_application_goal,
@@ -52,6 +54,8 @@ export function ProfileForm() {
         display_name: values.displayName.trim(),
         bio: values.bio?.trim() || null,
         career_goal: values.careerGoal?.trim() || null,
+        career_status: values.careerStatus?.trim() || null,
+        skills: values.skills,
         primary_job_titles: values.primaryJobTitles,
         preferred_locations: values.preferredLocations,
         weekly_application_goal: values.weeklyApplicationGoal,
@@ -129,14 +133,29 @@ export function ProfileForm() {
       </div>
 
       <div className="grid gap-1.5">
-        <Label htmlFor="p-statusMessage">Daily reflection</Label>
-        <Input id="p-statusMessage" placeholder="What's on your mind today?" {...register("statusMessage")} maxLength={140} />
-        <p className="text-xs text-muted-foreground">A quick thought for today — friends who follow your progress can see this.</p>
+        <Label htmlFor="p-careerStatus">Career status</Label>
+        <Input id="p-careerStatus" placeholder="Open to Product Design opportunities" {...register("careerStatus")} maxLength={120} />
+        <p className="text-xs text-muted-foreground">Your current focus — changes every so often, not daily. Different from the quick thought below.</p>
+      </div>
+
+      <div className="grid gap-1.5">
+        <Label htmlFor="p-statusMessage">Today's thought</Label>
+        <Input id="p-statusMessage" placeholder="Preparing for tomorrow's interview" {...register("statusMessage")} maxLength={140} />
+        <p className="text-xs text-muted-foreground">
+          A quick, temporary note — friends who follow your progress can see this. You can also update just this from your Profile
+          page without opening Settings.
+        </p>
       </div>
 
       <div className="grid gap-1.5">
         <Label htmlFor="p-careerGoal">Career goal</Label>
         <Textarea id="p-careerGoal" rows={2} {...register("careerGoal")} />
+      </div>
+
+      <div className="grid gap-1.5">
+        <Label htmlFor="p-skills">Skills</Label>
+        <Input id="p-skills" placeholder="Figma, User Research, SQL" defaultValue={watch("skills")?.join(", ")} onChange={(e) => setValue("skills", splitTags(e.target.value), { shouldDirty: true })} />
+        <p className="text-xs text-muted-foreground">Comma-separated. Shown as chips on your profile.</p>
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

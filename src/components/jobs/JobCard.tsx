@@ -5,6 +5,7 @@ import type { Job, Resume } from "@/types/database";
 import { VerdictBadge } from "@/components/jobs/StatusBadge";
 import { WORK_ARRANGEMENT_META, PRIORITY_META } from "@/lib/constants";
 import { formatDate, initials, cn } from "@/lib/utils";
+import { useSettings } from "@/hooks/queries/useProfile";
 
 interface JobCardProps {
   job: Job;
@@ -18,6 +19,8 @@ interface JobCardProps {
 
 export const JobCard = React.forwardRef<HTMLDivElement, JobCardProps>(
   ({ job, resume, onClick, isDragging, dragAttributes, dragListeners, style }, ref) => {
+    const { data: settings } = useSettings();
+    const showAiFit = settings?.show_ai_fit_score ?? true;
     return (
       <div
         ref={ref}
@@ -69,10 +72,10 @@ export const JobCard = React.forwardRef<HTMLDivElement, JobCardProps>(
           </div>
         )}
 
-        {(job.verdict || typeof job.fit_score === "number" || job.priority === 3) && (
+        {((showAiFit && (job.verdict || typeof job.fit_score === "number")) || job.priority === 3) && (
           <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-            {job.verdict && <VerdictBadge verdict={job.verdict} />}
-            {typeof job.fit_score === "number" && (
+            {showAiFit && job.verdict && <VerdictBadge verdict={job.verdict} />}
+            {showAiFit && typeof job.fit_score === "number" && (
               <span className="inline-flex items-center rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
                 {job.fit_score}/10 fit
               </span>

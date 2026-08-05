@@ -13,6 +13,7 @@ import {
 import { useSharedContextProfiles } from "@/hooks/queries/useProfile";
 import { useSignedAvatarUrl } from "@/hooks/useSignedAvatarUrl";
 import { useToast } from "@/components/shared/toast";
+import { useCelebration } from "@/components/ambient/Celebration";
 import { initials, timeAgo } from "@/lib/utils";
 
 // Outgoing/Incoming both reflect friend_requests regardless of how the
@@ -26,6 +27,7 @@ export function PendingInvitationsSection() {
   const decline = useDeclineFriendRequest();
   const cancel = useCancelFriendRequest();
   const { push } = useToast();
+  const { celebrate } = useCelebration();
 
   const profileIds = React.useMemo(
     () => [...incoming.map((r) => r.requester_id), ...outgoing.map((r) => r.recipient_id)],
@@ -72,7 +74,18 @@ export function PendingInvitationsSection() {
               {incoming.map((req) => {
                 const p = profiles?.get(req.requester_id);
                 const avatarUrl = p?.avatar_url ?? null;
-                return <IncomingRow key={req.id} requestId={req.id} name={p?.display_name || p?.username || "Someone"} avatarPath={avatarUrl} onAccept={accept} onDecline={decline} push={push} />;
+                return (
+                  <IncomingRow
+                    key={req.id}
+                    requestId={req.id}
+                    name={p?.display_name || p?.username || "Someone"}
+                    avatarPath={avatarUrl}
+                    onAccept={accept}
+                    onDecline={decline}
+                    push={push}
+                    celebrate={celebrate}
+                  />
+                );
               })}
             </div>
           )}
@@ -89,6 +102,7 @@ function IncomingRow({
   onAccept,
   onDecline,
   push,
+  celebrate,
 }: {
   requestId: string;
   name: string;
@@ -96,6 +110,7 @@ function IncomingRow({
   onAccept: ReturnType<typeof useAcceptFriendRequest>;
   onDecline: ReturnType<typeof useDeclineFriendRequest>;
   push: ReturnType<typeof useToast>["push"];
+  celebrate: (message?: string) => void;
 }) {
   const avatarUrl = useSignedAvatarUrl(avatarPath);
   return (
@@ -110,9 +125,18 @@ function IncomingRow({
           size="sm"
           variant="outline"
           aria-label={`Accept ${name}'s friend request`}
+          disabled={onAccept.isPending}
           onClick={async () => {
-            await onAccept.mutateAsync(requestId);
-            push("You're now friends", "success");
+            try {
+              await onAccept.mutateAsync(requestId);
+              // A toast alone was easy to miss and left the accept feeling
+              // like a dead end — this is a genuinely exciting moment, so
+              // it gets the same visible celebration as an offer or a
+              // completed weekly goal, not just a line of text that fades.
+              celebrate(`You and ${name} are now friends 🌸`);
+            } catch (err) {
+              push(err instanceof Error ? err.message : "Couldn't accept that request.", "error");
+            }
           }}
         >
           <Check className="h-3.5 w-3.5" />

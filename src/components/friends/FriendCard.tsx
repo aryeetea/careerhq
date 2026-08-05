@@ -44,6 +44,7 @@ export function FriendCard({ friend }: { friend: FriendCardData }) {
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold">{friend.display_name || friend.username}</p>
             <p className="truncate text-xs text-muted-foreground">@{friend.username}</p>
+            {friend.career_status && <p className="mt-0.5 truncate text-xs font-medium text-primary">{friend.career_status}</p>}
             {friend.status_message && (
               <div className="mt-2">
                 <ThoughtBubble className="px-3 py-2">

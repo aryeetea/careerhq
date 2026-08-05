@@ -6,7 +6,7 @@ import { useMutualConnections } from "@/hooks/queries/useFriendConnections";
 import { useSignedAvatarUrl } from "@/hooks/useSignedAvatarUrl";
 import { initials } from "@/lib/utils";
 import type { FriendCard as FriendCardData } from "@/types/database";
-import { Flame, Users2 } from "lucide-react";
+import { Flame, Target, Users2 } from "lucide-react";
 
 export function FriendProfileDialog({
   friend,
@@ -39,6 +39,12 @@ export function FriendProfileDialog({
             <p className="truncate text-sm text-muted-foreground">@{friend.username}</p>
           </div>
         </div>
+
+        {friend.career_status && (
+          <p className="mt-2 flex items-center gap-1.5 text-sm font-medium text-primary">
+            <Target className="h-3.5 w-3.5 shrink-0" /> {friend.career_status}
+          </p>
+        )}
 
         {friend.status_message && (
           <ThoughtBubble className="mt-2">

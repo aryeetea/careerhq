@@ -12,15 +12,16 @@ import { initials } from "@/lib/utils";
 import type { PrivacySettings, VisibilityLevel } from "@/types/database";
 
 const FIELDS: { key: keyof Omit<PrivacySettings, "user_id" | "created_at" | "updated_at">; label: string; help: string }[] = [
-  { key: "profile_visibility", label: "Profile visibility", help: "Whether friends can see your card at all" },
-  { key: "weekly_count_visibility", label: "Weekly application count", help: "" },
-  { key: "monthly_count_visibility", label: "Monthly application count", help: "" },
-  { key: "interview_count_visibility", label: "Interview count", help: "" },
-  { key: "offer_count_visibility", label: "Offer count", help: "" },
-  { key: "goal_progress_visibility", label: "Weekly goal progress", help: "" },
-  { key: "certification_visibility", label: "Certification progress", help: "" },
-  { key: "streak_visibility", label: "Activity streak", help: "" },
-  { key: "status_message_visibility", label: "Status message", help: "" },
+  { key: "profile_visibility", label: "Profile visibility", help: "Whether friends can see your card at all — the master switch for everything below." },
+  { key: "weekly_count_visibility", label: "Weekly application count", help: "How many applications you've sent this week." },
+  { key: "monthly_count_visibility", label: "Monthly application count", help: "How many applications you've sent this month." },
+  { key: "interview_count_visibility", label: "Interview count", help: "How many interviews you currently have." },
+  { key: "offer_count_visibility", label: "Offer count", help: "How many offers you've received." },
+  { key: "goal_progress_visibility", label: "Weekly goal progress", help: "How close you are to your weekly application goal." },
+  { key: "certification_visibility", label: "Certification progress", help: "The certification you're currently working on, if any." },
+  { key: "streak_visibility", label: "Activity streak", help: "Your current consecutive-day application streak." },
+  { key: "status_message_visibility", label: "Today's thought", help: "Your quick, temporary daily note." },
+  { key: "career_status_visibility", label: "Career status", help: "Your current professional focus, e.g. \"Open to Product Design opportunities.\"" },
 ];
 
 function FriendAvatarRow({ id, checked, onToggle }: { id: string; checked: boolean; onToggle: (id: string, checked: boolean) => void }) {
@@ -90,7 +91,10 @@ export function PrivacyForm() {
       <div className={profile.sharing_enabled ? "grid gap-3" : "grid gap-3 opacity-50"}>
         {FIELDS.map((f) => (
           <div key={f.key} className="flex items-center justify-between gap-3 rounded-xl border border-border/60 px-3.5 py-2.5">
-            <span className="text-sm">{f.label}</span>
+            <div className="min-w-0 pr-2">
+              <p className="text-sm">{f.label}</p>
+              {f.help && <p className="mt-0.5 text-xs text-muted-foreground">{f.help}</p>}
+            </div>
             <Select
               value={privacy[f.key] as string}
               onValueChange={(v) => handleFieldChange(f.key, v as VisibilityLevel)}

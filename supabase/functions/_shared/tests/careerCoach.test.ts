@@ -2,13 +2,25 @@
 // Tests for the Bloom Career Coach system: prompt structure, schema
 // validation, verdict guardrails, and malformed model responses.
 // Run with: deno test --allow-env
+//
+// This file was previously stale relative to schemas.ts/utils.ts — it
+// referenced a nonexistent assertVerdictFollowsInstructions export and a
+// flat analysis shape (fitScore/verdictExplanation/scoreIncreases/
+// applicationPriority/careerCoachAdvice at the top level) from an earlier
+// contract iteration, while schemas.ts/utils.ts had already moved to the
+// nested { opportunityAssessment, candidateFit, applicationRecommendation,
+// verdict, nextStep } shape, with the real guard living in
+// normalizeAndValidateAnalysis. `deno check` on this file is how that
+// mismatch was caught — run it after any contract change here.
 // =====================================================================
 
 import { assertEquals, assertThrows } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import { ZodError } from "npm:zod";
 import { analysisResponseSchema, jobExtractionSchema, resumeRankingSchema, resumeSuggestionSchema, type AnalysisResponse } from "../schemas.ts";
-import { AppError, assertVerdictFollowsInstructions } from "../utils.ts";
+import { AppError, normalizeAndValidateAnalysis, type CandidateEvidenceContext } from "../utils.ts";
 import { CAREER_COACH_PROMPT_VERSION, buildAnalysisPrompt, buildCoverLetterPrompt } from "../prompts/careerCoach.ts";
+
+const HAS_EVIDENCE: CandidateEvidenceContext = { hasResumeEvidence: true, hasProfileEvidence: true };
 
 function validAnalysisResponse(): AnalysisResponse {
   return {
@@ -36,19 +48,19 @@ function validAnalysisResponse(): AnalysisResponse {
       rawJobText: "Job description text here",
     },
     analysis: {
-      fitScore: 7.4,
-      confidence: "high",
+      opportunityAssessment: "promising",
+      candidateFit: {
+        fitScore: 7.4,
+        confidence: "high",
+        explanation: "Candidate meets most required qualifications, strongest evidence is direct TypeScript experience.",
+        strongMatches: ["TypeScript", "React"],
+        transferableStrengths: ["Agile team experience"],
+        criticalGaps: [],
+        preferredGaps: ["React Native"],
+        unknowns: [],
+      },
+      applicationRecommendation: "apply_now",
       verdict: "strong_match",
-      verdictExplanation: "Candidate meets most required qualifications.",
-      strongMatches: ["TypeScript", "React"],
-      transferableStrengths: ["Agile team experience"],
-      criticalGaps: [],
-      preferredGaps: ["React Native"],
-      unknowns: [],
-      scoreIncreases: ["Demonstrated TypeScript proficiency"],
-      scoreReductions: [],
-      applicationPriority: "apply_now",
-      careerCoachAdvice: "Your TypeScript background is your strongest asset here.",
       nextStep: "Submit application and tailor the summary to highlight TypeScript depth.",
     },
     resumeRanking: [
@@ -81,24 +93,20 @@ Deno.test("buildAnalysisPrompt includes required-vs-preferred distinction", () =
 
 Deno.test("buildAnalysisPrompt includes fitScore guidance", () => {
   const prompt = buildAnalysisPrompt();
-  assertEquals(prompt.includes("Return a single fitScore from 0.0 to 10.0"), true);
-  assertEquals(prompt.includes("The score represents current alignment with the available evidence"), true);
+  assertEquals(prompt.includes("fitScore must be a number from 0.0 to 10.0"), true);
+  assertEquals(prompt.includes("The score represents current alignment with available candidate evidence"), true);
 });
 
-Deno.test("buildAnalysisPrompt includes all six verdict values", () => {
+Deno.test("buildAnalysisPrompt includes all seven verdict values", () => {
   const prompt = buildAnalysisPrompt();
-  for (const v of ["excellent_match", "strong_match", "worth_applying", "stretch_opportunity", "high_risk", "not_recommended"]) {
+  for (const v of ["excellent_match", "strong_match", "worth_applying", "stretch_opportunity", "high_risk", "not_recommended", "not_yet_assessed"]) {
     assertEquals(prompt.includes(v), true, `Verdict "${v}" missing from prompt`);
   }
 });
 
-Deno.test("buildAnalysisPrompt includes fitScore-verdict consistency rules", () => {
+Deno.test("buildAnalysisPrompt includes the explicit weighted rubric categories", () => {
   const prompt = buildAnalysisPrompt();
-  for (const phrase of [
-    "fitScore, verdict, and verdictExplanation must tell the same overall story",
-    "excellent_match usually belongs in the 8.5 to 10.0 range",
-    "If the nature of the gaps justifies an exception",
-  ]) {
+  for (const phrase of ["Required skills — 30%", "Relevant experience and responsibilities — 25%", "Career progression"]) {
     assertEquals(prompt.includes(phrase), true, `Missing phrase: "${phrase}"`);
   }
 });
@@ -122,34 +130,45 @@ Deno.test("analysisResponseSchema rejects invented UUID for recommendedResumeId"
 });
 
 Deno.test("analysisResponseSchema rejects fitScore above 10", () => {
+  const base = validAnalysisResponse();
   assertThrows(
-    () => analysisResponseSchema.parse({ ...validAnalysisResponse(), analysis: { ...validAnalysisResponse().analysis, fitScore: 11 } }),
+    () => analysisResponseSchema.parse({ ...base, analysis: { ...base.analysis, candidateFit: { ...base.analysis.candidateFit, fitScore: 11 } } }),
     ZodError,
   );
 });
 
 Deno.test("analysisResponseSchema rejects fitScore below 0", () => {
+  const base = validAnalysisResponse();
   assertThrows(
-    () => analysisResponseSchema.parse({ ...validAnalysisResponse(), analysis: { ...validAnalysisResponse().analysis, fitScore: -1 } }),
+    () => analysisResponseSchema.parse({ ...base, analysis: { ...base.analysis, candidateFit: { ...base.analysis.candidateFit, fitScore: -1 } } }),
     ZodError,
   );
 });
 
 Deno.test("analysisResponseSchema accepts float fitScore", () => {
-  const r = analysisResponseSchema.parse({ ...validAnalysisResponse(), analysis: { ...validAnalysisResponse().analysis, fitScore: 7.5 } });
-  assertEquals(r.analysis.fitScore, 7.5);
+  const base = validAnalysisResponse();
+  const r = analysisResponseSchema.parse({ ...base, analysis: { ...base.analysis, candidateFit: { ...base.analysis.candidateFit, fitScore: 7.5 } } });
+  assertEquals(r.analysis.candidateFit.fitScore, 7.5);
+});
+
+Deno.test("analysisResponseSchema accepts null fitScore", () => {
+  const base = validAnalysisResponse();
+  const r = analysisResponseSchema.parse({ ...base, analysis: { ...base.analysis, candidateFit: { ...base.analysis.candidateFit, fitScore: null } } });
+  assertEquals(r.analysis.candidateFit.fitScore, null);
 });
 
 Deno.test("analysisResponseSchema rejects unknown verdict", () => {
+  const base = validAnalysisResponse();
   assertThrows(
-    () => analysisResponseSchema.parse({ ...validAnalysisResponse(), analysis: { ...validAnalysisResponse().analysis, verdict: "great_fit" } }),
+    () => analysisResponseSchema.parse({ ...base, analysis: { ...base.analysis, verdict: "great_fit" } }),
     ZodError,
   );
 });
 
-Deno.test("analysisResponseSchema rejects unknown applicationPriority", () => {
+Deno.test("analysisResponseSchema rejects unknown applicationRecommendation", () => {
+  const base = validAnalysisResponse();
   assertThrows(
-    () => analysisResponseSchema.parse({ ...validAnalysisResponse(), analysis: { ...validAnalysisResponse().analysis, applicationPriority: "urgent" } }),
+    () => analysisResponseSchema.parse({ ...base, analysis: { ...base.analysis, applicationRecommendation: "urgent" } }),
     ZodError,
   );
 });
@@ -203,54 +222,63 @@ Deno.test("dealBreaker schema rejects invented status", () => {
   );
 });
 
-Deno.test("verdict guard rejects excellent_match when critical gaps exist", () => {
+Deno.test("normalizeAndValidateAnalysis rejects excellent_match when critical gaps exist", () => {
+  const base = validAnalysisResponse();
   assertThrows(
     () =>
-      assertVerdictFollowsInstructions({
-        ...validAnalysisResponse(),
-        analysis: {
-          ...validAnalysisResponse().analysis,
-          verdict: "excellent_match",
-          criticalGaps: ["Missing required certification"],
+      normalizeAndValidateAnalysis(
+        {
+          ...base,
+          analysis: {
+            ...base.analysis,
+            verdict: "excellent_match",
+            candidateFit: { ...base.analysis.candidateFit, criticalGaps: ["Missing required certification"] },
+          },
         },
-      }),
+        HAS_EVIDENCE,
+      ),
     Error,
   );
 });
 
-Deno.test("verdict guard rejects positive verdict when confirmed deal breaker exists", () => {
+Deno.test("normalizeAndValidateAnalysis rejects positive verdict when confirmed deal breaker exists", () => {
+  const base = validAnalysisResponse();
   assertThrows(
     () =>
-      assertVerdictFollowsInstructions({
-        ...validAnalysisResponse(),
-        analysis: {
-          ...validAnalysisResponse().analysis,
-          verdict: "worth_applying",
+      normalizeAndValidateAnalysis(
+        {
+          ...base,
+          analysis: { ...base.analysis, verdict: "worth_applying" },
+          jobExtraction: { ...base.jobExtraction, dealBreakers: [{ label: "Requires active RN license", status: "confirmed" }] },
         },
-        jobExtraction: {
-          ...validAnalysisResponse().jobExtraction,
-          dealBreakers: [{ label: "Requires active RN license", status: "confirmed" }],
-        },
-      }),
+        HAS_EVIDENCE,
+      ),
     Error,
   );
 });
 
-Deno.test("verdict guard allows high_risk when confirmed deal breaker exists", () => {
-  assertEquals(
-    assertVerdictFollowsInstructions({
-      ...validAnalysisResponse(),
-      analysis: {
-        ...validAnalysisResponse().analysis,
-        verdict: "high_risk",
-      },
-      jobExtraction: {
-        ...validAnalysisResponse().jobExtraction,
-        dealBreakers: [{ label: "Requires active RN license", status: "confirmed" }],
-      },
-    }),
-    undefined,
+Deno.test("normalizeAndValidateAnalysis allows high_risk when confirmed deal breaker exists", () => {
+  const base = validAnalysisResponse();
+  // apply_now is itself guarded against confirmed deal breakers (correctly —
+  // see the "rejects positive verdict" case above), so this fixture also
+  // needs a recommendation that's actually consistent with high_risk.
+  const result = normalizeAndValidateAnalysis(
+    {
+      ...base,
+      analysis: { ...base.analysis, verdict: "high_risk", applicationRecommendation: "consider" },
+      jobExtraction: { ...base.jobExtraction, dealBreakers: [{ label: "Requires active RN license", status: "confirmed" }] },
+    },
+    HAS_EVIDENCE,
   );
+  assertEquals(result.analysis.verdict, "high_risk");
+});
+
+Deno.test("normalizeAndValidateAnalysis forces not_yet_assessed and nulls fitScore when there is no candidate evidence", () => {
+  const base = validAnalysisResponse();
+  const result = normalizeAndValidateAnalysis(base, { hasResumeEvidence: false, hasProfileEvidence: false });
+  assertEquals(result.analysis.verdict, "not_yet_assessed");
+  assertEquals(result.analysis.candidateFit.fitScore, null);
+  assertEquals(result.analysis.applicationRecommendation, "upload_resume_first");
 });
 
 Deno.test("analysisResponseSchema throws ZodError on empty object", () => {
@@ -286,7 +314,7 @@ Deno.test("AppError unauthenticated: status 401", () => {
 
 Deno.test("validAnalysisResponse passes end-to-end schema validation", () => {
   const parsed = analysisResponseSchema.parse(validAnalysisResponse());
-  assertEquals(parsed.analysis.fitScore, 7.4);
+  assertEquals(parsed.analysis.candidateFit.fitScore, 7.4);
   assertEquals(parsed.analysis.verdict, "strong_match");
   assertEquals(parsed.promptVersion, CAREER_COACH_PROMPT_VERSION);
   assertEquals(parsed.resumeRanking[0].compatibilityScore, 82);

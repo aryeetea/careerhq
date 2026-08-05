@@ -1,12 +1,12 @@
 import * as React from "react";
 import { Link } from "react-router-dom";
-import { CalendarClock, MapPin, Pencil, Sparkles, UserRound } from "lucide-react";
+import { CalendarClock, MapPin, Pencil, Sparkles, Target, UserRound } from "lucide-react";
 import { TopBar } from "@/components/layout/TopBar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { ThoughtBubble } from "@/components/shared/ThoughtBubble";
+import { QuickThoughtEditor } from "@/components/profile/QuickThoughtEditor";
 import { CareerGoalCard } from "@/components/profile/CareerGoalCard";
 import { WeeklyProgressCard } from "@/components/profile/WeeklyProgressCard";
 import { SearchHealthCard } from "@/components/profile/SearchHealthCard";
@@ -118,22 +118,28 @@ export default function ProfilePage() {
                     )}
                   </p>
 
+                  {profile.career_status && (
+                    <p className="mt-2 flex items-center gap-1.5 text-sm font-medium text-primary">
+                      <Target className="h-3.5 w-3.5 shrink-0" /> {profile.career_status}
+                    </p>
+                  )}
+
                   <div className="mt-3 max-w-lg">
                     <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Today</p>
-                    {profile.status_message ? (
-                      <ThoughtBubble tone="accent">
-                        <p className="text-sm leading-6 text-foreground/82">{profile.status_message}</p>
-                      </ThoughtBubble>
-                    ) : (
-                      <ThoughtBubble>
-                        <p className="text-sm leading-6 text-muted-foreground">
-                          Nothing jotted down today — add a quick thought whenever you like.
-                        </p>
-                      </ThoughtBubble>
-                    )}
+                    <QuickThoughtEditor value={profile.status_message} />
                   </div>
                 </div>
               </div>
+
+              {profile.skills.length > 0 && (
+                <div className="mt-5 flex flex-wrap gap-1.5">
+                  {profile.skills.map((skill) => (
+                    <span key={skill} className="rounded-full bg-secondary px-2.5 py-1 text-xs font-medium text-secondary-foreground">
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              )}
 
               {(profile.primary_job_titles.length > 0 || profile.preferred_locations.length > 0) && (
                 <div className="mt-6 grid gap-3 sm:grid-cols-2">

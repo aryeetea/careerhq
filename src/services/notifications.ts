@@ -1,23 +1,18 @@
 import { supabase } from "@/lib/supabase";
 import type { ActivityEvent } from "@/types/database";
 
-export async function listNotifications(userId: string, limit = 30): Promise<ActivityEvent[]> {
-  const { data, error } = await supabase
-    .from("activity_events")
-    .select("*")
-    .eq("recipient_id", userId)
-    .order("created_at", { ascending: false })
-    .limit(limit);
+export async function listNotifications(userId: string, mutedTypes: string[] = [], limit = 30): Promise<ActivityEvent[]> {
+  let query = supabase.from("activity_events").select("*").eq("recipient_id", userId);
+  if (mutedTypes.length > 0) query = query.not("type", "in", `(${mutedTypes.join(",")})`);
+  const { data, error } = await query.order("created_at", { ascending: false }).limit(limit);
   if (error) throw error;
   return data as ActivityEvent[];
 }
 
-export async function unreadCount(userId: string): Promise<number> {
-  const { count, error } = await supabase
-    .from("activity_events")
-    .select("id", { count: "exact", head: true })
-    .eq("recipient_id", userId)
-    .is("read_at", null);
+export async function unreadCount(userId: string, mutedTypes: string[] = []): Promise<number> {
+  let query = supabase.from("activity_events").select("id", { count: "exact", head: true }).eq("recipient_id", userId).is("read_at", null);
+  if (mutedTypes.length > 0) query = query.not("type", "in", `(${mutedTypes.join(",")})`);
+  const { count, error } = await query;
   if (error) throw error;
   return count ?? 0;
 }

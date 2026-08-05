@@ -19,6 +19,7 @@ import { jobFormSchema, type JobFormValues } from "@/lib/validation";
 import type { NewJob, Resume } from "@/types/database";
 import { useCreateJob } from "@/hooks/queries/useJobs";
 import { useAnalyzeJob } from "@/hooks/queries/useJobAi";
+import { useSettings } from "@/hooks/queries/useProfile";
 import { useToast } from "@/components/shared/toast";
 import { JOB_STATUSES, UNSET_SELECT_VALUE, VERDICT_OPTIONS } from "@/lib/constants";
 import { AnalysisSummary } from "@/components/jobs/AnalysisSummary";
@@ -60,6 +61,7 @@ const DEFAULT_VALUES: Partial<JobFormValues> = {
 export function AddJobDialog({ open, onOpenChange, resumes }: AddJobDialogProps) {
   const createJob = useCreateJob();
   const analyzeJob = useAnalyzeJob();
+  const { data: settings } = useSettings();
   const { push } = useToast();
   const [analysis, setAnalysis] = React.useState<JobAnalysisPayload | null>(null);
   const [openSections, setOpenSections] = React.useState<string[]>([]);
@@ -72,6 +74,16 @@ export function AddJobDialog({ open, onOpenChange, resumes }: AddJobDialogProps)
     watch,
     formState: { errors, isSubmitting },
   } = useForm<JobFormValues>({ resolver: zodResolver(jobFormSchema), defaultValues: DEFAULT_VALUES });
+
+  // Pre-fill the resume picker with the user's chosen default (Settings →
+  // AI & Resumes) so most job saves need one less click. AI's own
+  // per-job recommendation, set later via handleAnalyze, still wins.
+  React.useEffect(() => {
+    if (open && settings?.default_resume_id && !watch("resumeId")) {
+      setValue("resumeId", settings.default_resume_id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, settings?.default_resume_id]);
 
   function close(nextOpen: boolean) {
     if (!nextOpen) {

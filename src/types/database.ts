@@ -132,6 +132,8 @@ export interface Profile {
   avatar_url: string | null;
   bio: string | null;
   career_goal: string | null;
+  career_status: string | null;
+  skills: string[];
   primary_job_titles: string[];
   preferred_locations: string[];
   weekly_application_goal: number;
@@ -146,6 +148,9 @@ export interface Settings {
   user_id: string;
   theme: ThemeName;
   hidden_statuses: JobStatus[];
+  default_resume_id: string | null;
+  show_ai_fit_score: boolean;
+  muted_notification_types: string[];
   created_at: string;
   updated_at: string;
 }
@@ -249,6 +254,7 @@ export interface PrivacySettings {
   certification_visibility: VisibilityLevel;
   streak_visibility: VisibilityLevel;
   status_message_visibility: VisibilityLevel;
+  career_status_visibility: VisibilityLevel;
   created_at: string;
   updated_at: string;
 }
@@ -281,6 +287,7 @@ export interface FriendCard {
   display_name: string;
   avatar_url: string | null;
   status_message: string | null;
+  career_status: string | null;
   applications_this_week: number | null;
   applications_this_month: number | null;
   weekly_goal: number | null;
