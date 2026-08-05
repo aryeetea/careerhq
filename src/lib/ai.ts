@@ -8,11 +8,13 @@ const verdictSchema = z.enum([
   "stretch_opportunity",
   "high_risk",
   "not_recommended",
+  "not_yet_assessed",
 ]);
 const confidenceLevelSchema = z.enum(["low", "medium", "high"]);
 const importStatusSchema = z.enum(["success", "manual_fallback"]);
 const analysisSourceSchema = z.enum(["url", "manual", "url_plus_manual"]);
-const applicationPrioritySchema = z.enum(["apply_now", "apply_soon", "consider", "skip"]);
+const opportunityAssessmentSchema = z.enum(["promising", "neutral", "risky", "ineligible"]);
+const applicationRecommendationSchema = z.enum(["apply_now", "tailor_first", "consider", "skip", "upload_resume_first"]);
 const resumeSuggestionTypeSchema = z.enum(["safe_wording", "reorder", "confirm_with_user", "genuine_gap"]);
 const dealBreakerStatusSchema = z.enum(["confirmed", "possible", "insufficient_information"]);
 
@@ -59,21 +61,22 @@ export const aiJobExtractionSchema = z.object({
   rawJobText: z.string(),
 });
 
-export const analysisResultSchema = z.object({
-  // fitScore is model-provided and bounded to the same 0-10 scale shown in the UI.
-  fitScore: z.number().min(0).max(10),
+export const candidateFitSchema = z.object({
+  fitScore: z.number().min(0).max(10).nullable(),
   confidence: confidenceLevelSchema,
-  verdict: verdictSchema,
-  verdictExplanation: z.string(),
+  explanation: z.string(),
   strongMatches: z.array(z.string()),
   transferableStrengths: z.array(z.string()),
   criticalGaps: z.array(z.string()),
   preferredGaps: z.array(z.string()),
   unknowns: z.array(z.string()),
-  scoreIncreases: z.array(z.string()),
-  scoreReductions: z.array(z.string()),
-  applicationPriority: applicationPrioritySchema,
-  careerCoachAdvice: z.string(),
+});
+
+export const analysisResultSchema = z.object({
+  opportunityAssessment: opportunityAssessmentSchema,
+  candidateFit: candidateFitSchema,
+  applicationRecommendation: applicationRecommendationSchema,
+  verdict: verdictSchema,
   nextStep: z.string(),
 });
 

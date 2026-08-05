@@ -43,7 +43,10 @@ Deno.serve(async (request) => {
       Boolean(resume.extracted_text)
     );
 
-    const analysis = await analyzeJobAndResumes(openai, jobSource, readyResumes);
+    const analysis = await analyzeJobAndResumes(openai, jobSource, readyResumes, {
+      hasResumeEvidence: readyResumes.length > 0,
+      hasProfileEvidence: false,
+    });
 
     if (savedJob) {
       const recommendedResumeId = analysis.recommendedResumeId;
@@ -59,16 +62,16 @@ Deno.serve(async (request) => {
           deadline: analysis.jobExtraction.applicationDeadline ?? savedJob.deadline,
           job_url: jobUrl ?? savedJob.job_url,
           job_description: analysis.jobExtraction.rawJobText,
-          fit_score: analysis.analysis.fitScore,
-          verdict: analysis.analysis.verdict,
+          fit_score: analysis.analysis.candidateFit.fitScore,
+          verdict: analysis.analysis.verdict === "not_yet_assessed" ? null : analysis.analysis.verdict,
           // Note: jobs.priority is the user's own manual urgency ranking
           // (1-3) — a different concept from the AI's applicationPriority
           // (apply_now/apply_soon/consider/skip, stored only inside
           // ai_analysis). We never overwrite the user's priority here.
-          strengths: analysis.analysis.strongMatches.join("\n"),
+          strengths: analysis.analysis.candidateFit.strongMatches.join("\n"),
           missing_qualifications: [
-            ...analysis.analysis.criticalGaps.map((item) => `Critical: ${item}`),
-            ...analysis.analysis.preferredGaps.map((item) => `Preferred: ${item}`),
+            ...analysis.analysis.candidateFit.criticalGaps.map((item) => `Critical: ${item}`),
+            ...analysis.analysis.candidateFit.preferredGaps.map((item) => `Preferred: ${item}`),
           ].join("\n"),
           ai_extracted_data: analysis.jobExtraction,
           ai_analysis: analysis,

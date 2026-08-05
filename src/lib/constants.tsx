@@ -1,6 +1,9 @@
 import type {
+  AiJobVerdict,
+  ApplicationRecommendation,
   JobStatus,
   JobVerdict,
+  OpportunityAssessment,
   WorkArrangement,
   EmploymentType,
   ReactionType,
@@ -70,6 +73,11 @@ export const VERDICT_META: Record<JobVerdict, { label: string; emoji: string; cl
   not_recommended: { label: "Not Recommended", emoji: "🔴", className: "bg-destructive/15 text-destructive" },
 };
 
+export const ANALYSIS_VERDICT_META: Record<AiJobVerdict, { label: string; emoji: string; className: string }> = {
+  ...VERDICT_META,
+  not_yet_assessed: { label: "Not Yet Assessed", emoji: "⏳", className: "bg-muted text-muted-foreground" },
+};
+
 // Single source for every verdict <Select> in the app (JobDetailDialog,
 // AddJobDialog, FiltersBar) so the option list is never hand-duplicated.
 export const VERDICT_OPTIONS: { value: JobVerdict; label: string; emoji: string }[] = (
@@ -94,13 +102,21 @@ export const IMPORT_STATUS_META: Record<"success" | "manual_fallback", { label: 
 };
 
 export const APPLICATION_PRIORITY_META: Record<
-  "apply_now" | "apply_soon" | "consider" | "skip",
+  ApplicationRecommendation,
   { label: string; className: string }
 > = {
   apply_now: { label: "Apply now", className: "bg-success/15 text-success" },
-  apply_soon: { label: "Apply soon", className: "bg-sky/15 text-sky" },
+  tailor_first: { label: "Tailor first", className: "bg-sky/15 text-sky" },
   consider: { label: "Consider carefully", className: "bg-gold/15 text-gold" },
   skip: { label: "Skip for now", className: "bg-destructive/15 text-destructive" },
+  upload_resume_first: { label: "Upload résumé first", className: "bg-muted text-muted-foreground" },
+};
+
+export const OPPORTUNITY_ASSESSMENT_META: Record<OpportunityAssessment, { label: string; className: string }> = {
+  promising: { label: "Promising", className: "bg-success/15 text-success" },
+  neutral: { label: "Neutral", className: "bg-sky/15 text-sky" },
+  risky: { label: "Risky", className: "bg-gold/15 text-gold" },
+  ineligible: { label: "Ineligible", className: "bg-destructive/15 text-destructive" },
 };
 
 export const DEAL_BREAKER_STATUS_META: Record<

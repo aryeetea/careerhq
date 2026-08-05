@@ -78,6 +78,7 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
   const [confirmOpen, setConfirmOpen] = React.useState(false);
   const [analysisState, setAnalysisState] = React.useState<JobAnalysisPayload | null>(job?.ai_analysis ?? null);
   const [coverLetter, setCoverLetter] = React.useState(job?.ai_cover_letter ?? "");
+  const [activeTab, setActiveTab] = React.useState("overview");
 
   const {
     register,
@@ -95,9 +96,15 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
   React.useEffect(() => {
     setAnalysisState(job?.ai_analysis ?? null);
     setCoverLetter(job?.ai_cover_letter ?? "");
+    setActiveTab("overview");
   }, [job]);
 
   if (!job) return null;
+
+  function focusResumeSelection() {
+    setActiveTab("evaluation");
+    setTimeout(() => document.getElementById("detail-resume-select-trigger")?.focus(), 0);
+  }
 
   async function onSubmit(values: JobFormValues) {
     if (!job) return;
@@ -162,14 +169,14 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
       setValue("workArrangement", result.analysis.jobExtraction.workArrangement ?? watch("workArrangement"), { shouldDirty: true });
       setValue("deadline", toDateInputValue(result.analysis.jobExtraction.applicationDeadline), { shouldDirty: true });
       setValue("jobDescription", result.analysis.jobExtraction.rawJobText, { shouldDirty: true });
-      setValue("fitScore", result.analysis.analysis.fitScore, { shouldDirty: true });
-      setValue("verdict", result.analysis.analysis.verdict, { shouldDirty: true });
-      setValue("strengths", result.analysis.analysis.strongMatches.join("\n"), { shouldDirty: true });
+      setValue("fitScore", result.analysis.analysis.candidateFit.fitScore, { shouldDirty: true });
+      setValue("verdict", result.analysis.analysis.verdict === "not_yet_assessed" ? "" : result.analysis.analysis.verdict, { shouldDirty: true });
+      setValue("strengths", result.analysis.analysis.candidateFit.strongMatches.join("\n"), { shouldDirty: true });
       setValue(
         "missingQualifications",
         [
-          ...result.analysis.analysis.criticalGaps.map((item) => `Critical: ${item}`),
-          ...result.analysis.analysis.preferredGaps.map((item) => `Preferred: ${item}`),
+          ...result.analysis.analysis.candidateFit.criticalGaps.map((item) => `Critical: ${item}`),
+          ...result.analysis.analysis.candidateFit.preferredGaps.map((item) => `Preferred: ${item}`),
         ].join("\n"),
         { shouldDirty: true },
       );
@@ -226,7 +233,7 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} noValidate>
-          <Tabs defaultValue="overview">
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="flex-wrap">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="evaluation">Evaluation</TabsTrigger>
@@ -352,7 +359,7 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
               <div className="grid gap-1.5">
                 <Label>Resume used</Label>
                 <Select value={watch("resumeId") || ""} onValueChange={(v) => setValue("resumeId", v, { shouldDirty: true })}>
-                  <SelectTrigger><SelectValue placeholder="Not set" /></SelectTrigger>
+                  <SelectTrigger id="detail-resume-select-trigger"><SelectValue placeholder="Not set" /></SelectTrigger>
                   <SelectContent>
                     {resumes.map((r) => (
                       <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
@@ -462,6 +469,7 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
                   analysis={analysisState}
                   selectedResumeId={watch("resumeId") || null}
                   onApplyRecommendation={(resumeId) => setValue("resumeId", resumeId, { shouldDirty: true })}
+                  onRequestResumeEvidence={focusResumeSelection}
                 />
               ) : (
                 <div className="rounded-xl border border-dashed border-border/70 px-4 py-8 text-center text-sm text-muted-foreground">

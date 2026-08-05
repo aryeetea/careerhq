@@ -27,7 +27,10 @@ export type JobVerdict =
   | "stretch_opportunity"
   | "high_risk"
   | "not_recommended";
+export type AiJobVerdict = JobVerdict | "not_yet_assessed";
 export type ConfidenceLevel = "low" | "medium" | "high";
+export type OpportunityAssessment = "promising" | "neutral" | "risky" | "ineligible";
+export type ApplicationRecommendation = "apply_now" | "tailor_first" | "consider" | "skip" | "upload_resume_first";
 export type CertificationStatus = "not_started" | "in_progress" | "completed" | "expired";
 export type VisibilityLevel = "private" | "friends_only" | "selected_friends" | "hidden";
 export type FriendRequestStatus = "pending" | "accepted" | "declined" | "cancelled";
@@ -79,19 +82,19 @@ export interface JobAiJobExtraction {
 }
 
 export interface JobAiAnalysisResult {
-  fitScore: number;
-  confidence: ConfidenceLevel;
-  verdict: JobVerdict;
-  verdictExplanation: string;
-  strongMatches: string[];
-  transferableStrengths: string[];
-  criticalGaps: string[];
-  preferredGaps: string[];
-  unknowns: string[];
-  scoreIncreases: string[];
-  scoreReductions: string[];
-  applicationPriority: "apply_now" | "apply_soon" | "consider" | "skip";
-  careerCoachAdvice: string;
+  opportunityAssessment: OpportunityAssessment;
+  candidateFit: {
+    fitScore: number | null;
+    confidence: ConfidenceLevel;
+    explanation: string;
+    strongMatches: string[];
+    transferableStrengths: string[];
+    criticalGaps: string[];
+    preferredGaps: string[];
+    unknowns: string[];
+  };
+  applicationRecommendation: ApplicationRecommendation;
+  verdict: AiJobVerdict;
   nextStep: string;
 }
 

@@ -62,6 +62,7 @@ export function AddJobDialog({ open, onOpenChange, resumes }: AddJobDialogProps)
   const analyzeJob = useAnalyzeJob();
   const { push } = useToast();
   const [analysis, setAnalysis] = React.useState<JobAnalysisPayload | null>(null);
+  const [openSections, setOpenSections] = React.useState<string[]>([]);
 
   const {
     register,
@@ -76,8 +77,14 @@ export function AddJobDialog({ open, onOpenChange, resumes }: AddJobDialogProps)
     if (!nextOpen) {
       reset(DEFAULT_VALUES);
       setAnalysis(null);
+      setOpenSections([]);
     }
     onOpenChange(nextOpen);
+  }
+
+  function focusResumeSelection() {
+    setOpenSections((prev) => Array.from(new Set([...prev, "evaluation"])));
+    setTimeout(() => document.getElementById("add-resume-select-trigger")?.focus(), 0);
   }
 
   async function handleAnalyze() {
@@ -95,14 +102,14 @@ export function AddJobDialog({ open, onOpenChange, resumes }: AddJobDialogProps)
       setValue("workArrangement", next.jobExtraction.workArrangement ?? "", { shouldDirty: true });
       setValue("deadline", toDateInputValue(next.jobExtraction.applicationDeadline), { shouldDirty: true });
       setValue("jobDescription", next.jobExtraction.rawJobText, { shouldDirty: true });
-      setValue("fitScore", next.analysis.fitScore, { shouldDirty: true });
-      setValue("verdict", next.analysis.verdict, { shouldDirty: true });
-      setValue("strengths", next.analysis.strongMatches.join("\n"), { shouldDirty: true });
+      setValue("fitScore", next.analysis.candidateFit.fitScore, { shouldDirty: true });
+      setValue("verdict", next.analysis.verdict === "not_yet_assessed" ? "" : next.analysis.verdict, { shouldDirty: true });
+      setValue("strengths", next.analysis.candidateFit.strongMatches.join("\n"), { shouldDirty: true });
       setValue(
         "missingQualifications",
         [
-          ...next.analysis.criticalGaps.map((item) => `Critical: ${item}`),
-          ...next.analysis.preferredGaps.map((item) => `Preferred: ${item}`),
+          ...next.analysis.candidateFit.criticalGaps.map((item) => `Critical: ${item}`),
+          ...next.analysis.candidateFit.preferredGaps.map((item) => `Preferred: ${item}`),
         ].join("\n"),
         { shouldDirty: true },
       );
@@ -223,10 +230,11 @@ export function AddJobDialog({ open, onOpenChange, resumes }: AddJobDialogProps)
               analysis={analysis}
               selectedResumeId={watch("resumeId") || null}
               onApplyRecommendation={(resumeId) => setValue("resumeId", resumeId, { shouldDirty: true })}
+              onRequestResumeEvidence={focusResumeSelection}
             />
           )}
 
-          <Accordion type="multiple" className="rounded-xl border border-border/70 bg-card/40 px-3.5">
+          <Accordion type="multiple" value={openSections} onValueChange={setOpenSections} className="rounded-xl border border-border/70 bg-card/40 px-3.5">
             <AccordionItem value="evaluation">
               <AccordionTrigger>Evaluation</AccordionTrigger>
               <AccordionContent className="grid gap-3">
@@ -272,7 +280,7 @@ export function AddJobDialog({ open, onOpenChange, resumes }: AddJobDialogProps)
                   <div className="grid gap-1.5">
                     <Label>Resume to use</Label>
                     <Select value={watch("resumeId") || ""} onValueChange={(v) => setValue("resumeId", v)}>
-                      <SelectTrigger><SelectValue placeholder="Not yet decided" /></SelectTrigger>
+                      <SelectTrigger id="add-resume-select-trigger"><SelectValue placeholder="Not yet decided" /></SelectTrigger>
                       <SelectContent>
                         {resumes.map((r) => (
                           <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>

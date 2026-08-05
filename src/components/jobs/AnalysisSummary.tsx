@@ -1,16 +1,17 @@
-import { Compass, Sparkles, Target } from "lucide-react";
+import { AlertCircle, Sparkles, Target } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   ANALYSIS_SOURCE_META,
+  ANALYSIS_VERDICT_META,
   APPLICATION_PRIORITY_META,
   CONFIDENCE_META,
   DEAL_BREAKER_STATUS_META,
   IMPORT_STATUS_META,
+  OPPORTUNITY_ASSESSMENT_META,
   RESUME_SUGGESTION_TYPE_META,
-  VERDICT_META,
 } from "@/lib/constants";
 import type { JobAnalysisPayload } from "@/lib/ai";
 
@@ -37,17 +38,22 @@ export function AnalysisSummary({
   analysis,
   selectedResumeId,
   onApplyRecommendation,
+  onRequestResumeEvidence,
 }: {
   analysis: JobAnalysisPayload;
   selectedResumeId?: string | null;
   onApplyRecommendation?: (resumeId: string) => void;
+  onRequestResumeEvidence?: () => void;
 }) {
-  const verdict = VERDICT_META[analysis.analysis.verdict];
-  const confidence = CONFIDENCE_META[analysis.analysis.confidence];
+  const verdict = ANALYSIS_VERDICT_META[analysis.analysis.verdict];
+  const confidence = CONFIDENCE_META[analysis.analysis.candidateFit.confidence];
   const importStatus = IMPORT_STATUS_META[analysis.importStatus];
-  const applicationPriority = APPLICATION_PRIORITY_META[analysis.analysis.applicationPriority];
+  const applicationPriority = APPLICATION_PRIORITY_META[analysis.analysis.applicationRecommendation];
+  const opportunityAssessment = OPPORTUNITY_ASSESSMENT_META[analysis.analysis.opportunityAssessment];
   const recommendedResumeId = analysis.recommendedResumeId;
   const recommended = analysis.resumeRanking.find((resume) => resume.resumeId === recommendedResumeId) ?? null;
+  const fitScore = analysis.analysis.candidateFit.fitScore;
+  const fitNotAssessed = fitScore === null;
 
   return (
     <div className="grid gap-3">
@@ -65,19 +71,38 @@ export function AnalysisSummary({
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <Badge className={cn("border-0", verdict.className)}>{verdict.emoji} {verdict.label}</Badge>
-              <Badge variant="outline">{analysis.analysis.fitScore}/10 fit</Badge>
+              <Badge className={cn("border-0", opportunityAssessment.className)}>{opportunityAssessment.label}</Badge>
+              <Badge variant="outline">{fitNotAssessed ? "Fit not assessed yet" : `${fitScore}/10 fit`}</Badge>
               <Badge className={cn("border-0", applicationPriority.className)}>{applicationPriority.label}</Badge>
               <span className={cn("text-xs", confidence.className)}>{confidence.label}</span>
             </div>
           </div>
 
-          {/* The "why" behind the verdict — every analysis explains itself, never just a number. */}
-          <p className="mt-3 rounded-xl bg-secondary/40 p-3 text-sm leading-6 text-foreground/85">{analysis.analysis.verdictExplanation}</p>
+          <p className="mt-3 rounded-xl bg-secondary/40 p-3 text-sm leading-6 text-foreground/85">{analysis.analysis.candidateFit.explanation}</p>
 
           <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             <span className={cn("font-medium", importStatus.className)}>{importStatus.label}</span>
             <span>Prompt v{analysis.promptVersion}</span>
           </div>
+
+          {fitNotAssessed && (
+            <div className="mt-4 rounded-xl border border-gold/30 bg-gold/10 p-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="mt-0.5 h-4 w-4 text-gold" />
+                  <div>
+                    <p className="text-sm font-medium">Fit not assessed yet</p>
+                    <p className="mt-1 text-sm text-muted-foreground">Upload or select a resume to assess fit. Missing information should not be treated as zero fit.</p>
+                  </div>
+                </div>
+                {onRequestResumeEvidence && (
+                  <Button size="sm" variant="outline" onClick={onRequestResumeEvidence}>
+                    Upload or select a resume
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
 
           {recommended && (
             <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-3">
@@ -98,17 +123,17 @@ export function AnalysisSummary({
       </Card>
 
       <div className="grid gap-3 lg:grid-cols-2">
-        <ListBlock title="Strong matches" items={analysis.analysis.strongMatches} empty="No strong matches were identified from the available resume evidence." />
+        <ListBlock title="Strong matches" items={analysis.analysis.candidateFit.strongMatches} empty="No strong matches were identified from the available evidence." />
         <ListBlock
           title="Transferable strengths"
-          items={analysis.analysis.transferableStrengths}
+          items={analysis.analysis.candidateFit.transferableStrengths}
           empty="No major transferable strengths were highlighted from the available evidence."
         />
       </div>
 
       <div className="grid gap-3 lg:grid-cols-2">
-        <ListBlock title="Critical gaps" items={analysis.analysis.criticalGaps} empty="No gaps identified that would meaningfully hurt your chances." />
-        <ListBlock title="Preferred gaps" items={analysis.analysis.preferredGaps} empty="No preferred-only gaps stood out from the available evidence." />
+        <ListBlock title="Critical gaps" items={analysis.analysis.candidateFit.criticalGaps} empty="No gaps identified that would meaningfully hurt your chances." />
+        <ListBlock title="Preferred gaps" items={analysis.analysis.candidateFit.preferredGaps} empty="No preferred-only gaps stood out from the available evidence." />
       </div>
 
       <Card className="border-primary/25 bg-primary/5">
@@ -142,27 +167,10 @@ export function AnalysisSummary({
         </Card>
       )}
 
-      {(analysis.analysis.unknowns.length > 0 || analysis.analysis.scoreIncreases.length > 0 || analysis.analysis.scoreReductions.length > 0) && (
-        <div className="grid gap-3 lg:grid-cols-2">
-          <ListBlock
-            title="What raised the score"
-            items={analysis.analysis.scoreIncreases}
-            empty="No specific score increases were called out."
-            muted
-          />
-          <ListBlock
-            title="What lowered the score"
-            items={analysis.analysis.scoreReductions}
-            empty="No specific score reductions were called out."
-            muted
-          />
-        </div>
-      )}
-
-      {analysis.analysis.unknowns.length > 0 && (
+      {analysis.analysis.candidateFit.unknowns.length > 0 && (
         <ListBlock
-          title="Unknowns to confirm"
-          items={analysis.analysis.unknowns}
+          title="Missing information"
+          items={analysis.analysis.candidateFit.unknowns}
           empty="No major unknowns were identified."
           muted
         />
@@ -212,16 +220,6 @@ export function AnalysisSummary({
         </CardContent>
       </Card>
 
-      {/* Bloom's signature moment — always the last word on an analysis. */}
-      <Card className="border-gold/30 bg-gradient-to-br from-gold/10 via-card/60 to-primary/5">
-        <CardContent className="flex items-start gap-3 p-4">
-          <Compass className="mt-0.5 h-4 w-4 shrink-0 text-gold" />
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-gold">Career coach's advice</p>
-            <p className="mt-1.5 text-sm leading-6 text-foreground/85">{analysis.analysis.careerCoachAdvice}</p>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

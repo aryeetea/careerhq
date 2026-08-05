@@ -15,6 +15,7 @@ const COVER_LETTER_TIMEOUT_MS = 60_000;
 const MAX_RETRIES = 2;
 const RETRY_DELAY_MS = [1_000, 2_000];
 const POSITIVE_VERDICTS = new Set(["excellent_match", "strong_match", "worth_applying"]);
+const HIGH_MATCH_VERDICTS = new Set(["excellent_match", "strong_match"]);
 
 export interface ResumeRow {
   id: string;
@@ -123,25 +124,93 @@ export function getOpenAIClient() {
   };
 }
 
-export function assertVerdictFollowsInstructions(response: AnalysisResponse): void {
-  const verdict = response.analysis.verdict;
+export interface CandidateEvidenceContext {
+  hasResumeEvidence: boolean;
+  hasProfileEvidence: boolean;
+}
+
+function withMissingEvidenceUnknowns(existing: string[], context: CandidateEvidenceContext): string[] {
+  const unknowns = [...existing];
+  if (!context.hasResumeEvidence) unknowns.push("No resume evidence was available to assess your fit.");
+  if (!context.hasProfileEvidence) unknowns.push("No profile evidence was available to assess your fit.");
+  return Array.from(new Set(unknowns));
+}
+
+export function normalizeAndValidateAnalysis(response: AnalysisResponse, context: CandidateEvidenceContext): AnalysisResponse {
+  const hasCandidateEvidence = context.hasResumeEvidence || context.hasProfileEvidence;
+  const normalized = structuredClone(response) as AnalysisResponse;
+  const verdict = normalized.analysis.verdict;
   const confirmedDealBreakers = response.jobExtraction.dealBreakers.filter((item) => item.status === "confirmed");
-  const criticalGapCount = response.analysis.criticalGaps.length;
+  const criticalGapCount = normalized.analysis.candidateFit.criticalGaps.length;
   const issues: string[] = [];
 
-  if (verdict === "excellent_match" && criticalGapCount > 0) {
+  if (!hasCandidateEvidence) {
+    normalized.analysis.candidateFit.fitScore = null;
+    normalized.analysis.candidateFit.confidence = "low";
+    normalized.analysis.candidateFit.explanation =
+      "Fit not assessed yet because no resume or profile evidence was available. Upload or select a resume to assess your fit against this role.";
+    normalized.analysis.candidateFit.strongMatches = [];
+    normalized.analysis.candidateFit.transferableStrengths = [];
+    normalized.analysis.candidateFit.criticalGaps = [];
+    normalized.analysis.candidateFit.preferredGaps = [];
+    normalized.analysis.candidateFit.unknowns = withMissingEvidenceUnknowns(normalized.analysis.candidateFit.unknowns, context);
+    normalized.analysis.verdict = "not_yet_assessed";
+    normalized.analysis.applicationRecommendation = "upload_resume_first";
+  }
+
+  if (normalized.analysis.candidateFit.fitScore === null) {
+    normalized.analysis.verdict = "not_yet_assessed";
+    if (!hasCandidateEvidence) normalized.analysis.applicationRecommendation = "upload_resume_first";
+  }
+
+  if (normalized.analysis.verdict === "excellent_match" && criticalGapCount > 0) {
     issues.push("excellent_match cannot include criticalGaps because the prompt defines it as meeting nearly all required qualifications");
   }
 
-  if (POSITIVE_VERDICTS.has(verdict) && confirmedDealBreakers.length > 0) {
+  if (POSITIVE_VERDICTS.has(normalized.analysis.verdict) && confirmedDealBreakers.length > 0) {
     issues.push(
-      `positive verdict "${verdict}" conflicts with confirmed deal breakers: ${confirmedDealBreakers.map((item) => item.label).join(", ")}`,
+      `positive verdict "${normalized.analysis.verdict}" conflicts with confirmed deal breakers: ${confirmedDealBreakers.map((item) => item.label).join(", ")}`,
     );
+  }
+
+  if (HIGH_MATCH_VERDICTS.has(normalized.analysis.verdict) && !hasCandidateEvidence) {
+    issues.push(`${normalized.analysis.verdict} requires actual resume or profile evidence`);
+  }
+
+  if (normalized.analysis.verdict === "not_recommended" && confirmedDealBreakers.length === 0 && criticalGapCount === 0) {
+    issues.push("not_recommended requires confirmed hard gaps or clear critical misalignment");
+  }
+
+  if (
+    normalized.analysis.applicationRecommendation === "skip" &&
+    confirmedDealBreakers.length === 0 &&
+    normalized.analysis.opportunityAssessment !== "ineligible" &&
+    criticalGapCount === 0
+  ) {
+    issues.push("skip recommendation requires confirmed ineligibility or critical gaps");
+  }
+
+  if (normalized.analysis.applicationRecommendation === "apply_now" && confirmedDealBreakers.length > 0) {
+    issues.push("apply_now cannot coexist with confirmed ineligibility");
+  }
+
+  if (
+    normalized.analysis.verdict === "worth_applying" &&
+    normalized.analysis.candidateFit.fitScore !== null &&
+    normalized.analysis.candidateFit.fitScore <= 0
+  ) {
+    issues.push("worth_applying cannot appear with a 0/10 score");
+  }
+
+  if (normalized.analysis.candidateFit.fitScore === 0 && normalized.analysis.candidateFit.unknowns.length > 0 && criticalGapCount === 0) {
+    issues.push("unknowns must reduce confidence, not collapse fit to zero");
   }
 
   if (issues.length > 0) {
     throw new Error(`Verdict does not follow prompt instructions: ${issues.join("; ")}`);
   }
+
+  return normalized;
 }
 
 function normalizeWhitespace(text: string): string {
@@ -471,38 +540,43 @@ const analysisResultJsonSchema = {
   type: "object",
   additionalProperties: false,
   required: [
-    "fitScore",
-    "confidence",
+    "opportunityAssessment",
+    "candidateFit",
+    "applicationRecommendation",
     "verdict",
-    "verdictExplanation",
-    "strongMatches",
-    "transferableStrengths",
-    "criticalGaps",
-    "preferredGaps",
-    "unknowns",
-    "scoreIncreases",
-    "scoreReductions",
-    "applicationPriority",
-    "careerCoachAdvice",
     "nextStep",
   ],
   properties: {
-    fitScore: { type: "number", minimum: 0, maximum: 10 },
-    confidence: { type: "string", enum: ["high", "medium", "low"] },
+    opportunityAssessment: { type: "string", enum: ["promising", "neutral", "risky", "ineligible"] },
+    candidateFit: {
+      type: "object",
+      additionalProperties: false,
+      required: [
+        "fitScore",
+        "confidence",
+        "explanation",
+        "strongMatches",
+        "transferableStrengths",
+        "criticalGaps",
+        "preferredGaps",
+        "unknowns",
+      ],
+      properties: {
+        fitScore: { type: ["number", "null"], minimum: 0, maximum: 10 },
+        confidence: { type: "string", enum: ["high", "medium", "low"] },
+        explanation: { type: "string" },
+        strongMatches: { type: "array", items: { type: "string" } },
+        transferableStrengths: { type: "array", items: { type: "string" } },
+        criticalGaps: { type: "array", items: { type: "string" } },
+        preferredGaps: { type: "array", items: { type: "string" } },
+        unknowns: { type: "array", items: { type: "string" } },
+      },
+    },
+    applicationRecommendation: { type: "string", enum: ["apply_now", "tailor_first", "consider", "skip", "upload_resume_first"] },
     verdict: {
       type: "string",
-      enum: ["excellent_match", "strong_match", "worth_applying", "stretch_opportunity", "high_risk", "not_recommended"],
+      enum: ["excellent_match", "strong_match", "worth_applying", "stretch_opportunity", "high_risk", "not_recommended", "not_yet_assessed"],
     },
-    verdictExplanation: { type: "string" },
-    strongMatches: { type: "array", items: { type: "string" } },
-    transferableStrengths: { type: "array", items: { type: "string" } },
-    criticalGaps: { type: "array", items: { type: "string" } },
-    preferredGaps: { type: "array", items: { type: "string" } },
-    unknowns: { type: "array", items: { type: "string" } },
-    scoreIncreases: { type: "array", items: { type: "string" } },
-    scoreReductions: { type: "array", items: { type: "string" } },
-    applicationPriority: { type: "string", enum: ["apply_now", "apply_soon", "consider", "skip"] },
-    careerCoachAdvice: { type: "string" },
     nextStep: { type: "string" },
   },
 } as const;
@@ -553,6 +627,7 @@ export async function analyzeJobAndResumes(
   client: ReturnType<typeof getOpenAIClient>,
   jobSource: { rawText: string; importStatus: "success" | "manual_fallback"; source: "url" | "manual" | "url_plus_manual"; fetchedUrl: string | null },
   resumes: Array<{ id: string; name: string; target_role: string | null; extracted_text: string }>,
+  candidateEvidence: CandidateEvidenceContext,
 ) {
   const resumePayload = resumes.map((resume) => ({
     resume_id: resume.id,
@@ -574,6 +649,10 @@ export async function analyzeJobAndResumes(
           text: JSON.stringify(
             {
               job_source: jobSource,
+              candidate_evidence: {
+                resume_evidence_available: candidateEvidence.hasResumeEvidence,
+                profile_evidence_available: candidateEvidence.hasProfileEvidence,
+              },
               resumes: resumePayload,
             },
             null,
@@ -614,8 +693,7 @@ export async function analyzeJobAndResumes(
       fetchedUrl: jobSource.fetchedUrl,
       promptVersion: CAREER_COACH_PROMPT_VERSION,
     });
-    assertVerdictFollowsInstructions(response);
-    return response;
+    return normalizeAndValidateAnalysis(response, candidateEvidence);
   }
 
   try {
