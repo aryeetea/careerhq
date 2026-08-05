@@ -3,6 +3,7 @@ import { KanbanSquare, Users2, GraduationCap, ArrowRight } from "lucide-react";
 import { AmbientBackground } from "@/components/ambient/AmbientBackground";
 import { BotanicalAccent } from "@/components/ambient/BotanicalAccent";
 import { BrandMark } from "@/components/shared/BrandMark";
+import { AuthIntentButton } from "@/components/shared/AuthIntentButton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -41,9 +42,9 @@ export default function Landing() {
           <Button asChild variant="ghost">
             <Link to="/login">Sign in</Link>
           </Button>
-          <Button asChild>
-            <Link to="/signup">Get started</Link>
-          </Button>
+          <AuthIntentButton destination="/signup" signedInLabel="Opening sign up…">
+            Get started
+          </AuthIntentButton>
         </div>
       </header>
 
@@ -61,11 +62,11 @@ export default function Landing() {
             keep growing, one small step at a time.
           </p>
           <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Button asChild size="lg" className="gap-1.5">
-              <Link to="/signup">
+            <AuthIntentButton destination="/signup" size="lg" className="gap-1.5" signedInLabel="Opening sign up…">
+              <>
                 Start growing <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
+              </>
+            </AuthIntentButton>
             <Button asChild size="lg" variant="outline">
               <Link to="/login">I already have an account</Link>
             </Button>

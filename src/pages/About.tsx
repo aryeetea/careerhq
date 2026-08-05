@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { Sparkles, ShieldCheck, HeartHandshake, Leaf } from "lucide-react";
 import { AmbientBackground } from "@/components/ambient/AmbientBackground";
 import { BotanicalAccent } from "@/components/ambient/BotanicalAccent";
+import { AuthIntentButton } from "@/components/shared/AuthIntentButton";
 import { BrandMark } from "@/components/shared/BrandMark";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -38,9 +39,9 @@ export default function About() {
           <Button asChild variant="ghost">
             <Link to="/login">Sign in</Link>
           </Button>
-          <Button asChild>
-            <Link to="/signup">Get started</Link>
-          </Button>
+          <AuthIntentButton destination="/signup" signedInLabel="Opening sign up…">
+            Get started
+          </AuthIntentButton>
         </div>
       </header>
 
@@ -77,9 +78,9 @@ export default function About() {
 
         <div className="mt-14 text-center">
           <p className="text-sm text-muted-foreground">Ready to give your search a calmer home?</p>
-          <Button asChild size="lg" className="mt-4">
-            <Link to="/signup">Start growing with Bloom</Link>
-          </Button>
+          <AuthIntentButton destination="/signup" size="lg" className="mt-4" signedInLabel="Opening sign up…">
+            Start growing with Bloom
+          </AuthIntentButton>
         </div>
       </main>
     </div>
