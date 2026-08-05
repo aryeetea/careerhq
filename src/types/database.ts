@@ -58,6 +58,16 @@ export interface JobAiDealBreaker {
   status: "confirmed" | "possible" | "insufficient_information";
 }
 
+export interface JobAiCategoryScore {
+  category: string;
+  label: string;
+  rawScore: number;
+  weight: number;
+  weightedContribution: number;
+  evidence: string[];
+  notes: string;
+}
+
 export interface JobAiJobExtraction {
   company: string | null;
   jobTitle: string | null;
@@ -80,6 +90,8 @@ export interface JobAiJobExtraction {
 
 export interface JobAiAnalysisResult {
   fitScore: number;
+  rubricVersion?: string;
+  categoryScores?: JobAiCategoryScore[];
   confidence: ConfidenceLevel;
   verdict: JobVerdict;
   verdictExplanation: string;
@@ -120,6 +132,7 @@ export interface JobAiAnalysis {
   recommendedResumeId: string | null;
   resumeSuggestions: JobAiResumeSuggestion[];
   promptVersion: string;
+  rubricVersion?: string;
 }
 
 export interface Profile {
@@ -201,6 +214,7 @@ export interface Job {
   ai_cover_letter: string | null;
   ai_last_analyzed_at: string | null;
   ai_prompt_version: string | null;
+  ai_rubric_version: string | null;
   created_at: string;
   updated_at: string;
 }

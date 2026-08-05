@@ -77,6 +77,7 @@ export function AnalysisSummary({
           <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             <span className={cn("font-medium", importStatus.className)}>{importStatus.label}</span>
             <span>Prompt v{analysis.promptVersion}</span>
+            {analysis.analysis.rubricVersion && <span>Rubric v{analysis.analysis.rubricVersion}</span>}
           </div>
 
           {recommended && (
@@ -105,6 +106,47 @@ export function AnalysisSummary({
           empty="No major transferable strengths were highlighted from the available evidence."
         />
       </div>
+
+      {analysis.analysis.categoryScores && analysis.analysis.categoryScores.length > 0 && (
+        <Card className="border-border/60 bg-card/60">
+          <CardContent className="p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-semibold">Score breakdown</p>
+              <span className="text-xs text-muted-foreground">App-calculated from AI evidence per category</span>
+            </div>
+            <div className="mt-3 grid gap-3">
+              {analysis.analysis.categoryScores.map((cat) => (
+                <div key={cat.category}>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-medium text-foreground/90">{cat.label}</span>
+                    <span className="tabular-nums text-muted-foreground">
+                      {cat.rawScore}/10 × {Math.round(cat.weight * 100)}% → {cat.weightedContribution.toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-secondary">
+                    <div
+                      className={cn(
+                        "h-full rounded-full transition-all",
+                        cat.rawScore >= 8 ? "bg-success" : cat.rawScore >= 5 ? "bg-gold" : "bg-destructive/60",
+                      )}
+                      style={{ width: `${cat.rawScore * 10}%` }}
+                    />
+                  </div>
+                  {cat.evidence.length > 0 && (
+                    <p className="mt-0.5 text-xs text-muted-foreground line-clamp-1">
+                      {cat.evidence.slice(0, 2).join(" · ")}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className="mt-3 flex items-center justify-between border-t border-border/40 pt-3">
+              <span className="text-xs text-muted-foreground">Weighted total</span>
+              <span className="text-sm font-semibold tabular-nums">{analysis.analysis.fitScore}/10</span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-3 lg:grid-cols-2">
         <ListBlock title="Critical gaps" items={analysis.analysis.criticalGaps} empty="No gaps identified that would meaningfully hurt your chances." />

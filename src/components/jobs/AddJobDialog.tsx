@@ -145,6 +145,7 @@ export function AddJobDialog({ open, onOpenChange, resumes }: AddJobDialogProps)
       ai_recommended_resume_id: analysis?.recommendedResumeId ?? null,
       ai_last_analyzed_at: analysis ? new Date().toISOString() : null,
       ai_prompt_version: analysis?.promptVersion ?? null,
+      ai_rubric_version: analysis?.analysis.rubricVersion ?? null,
     };
 
     try {
