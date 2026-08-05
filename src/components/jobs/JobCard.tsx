@@ -51,7 +51,7 @@ export const JobCard = React.forwardRef<HTMLDivElement, JobCardProps>(
             {...dragListeners}
             aria-label={`Reorder ${job.title} at ${job.company}`}
             onClick={(e) => e.stopPropagation()}
-            className="shrink-0 cursor-grab touch-none rounded-md p-1 text-muted-foreground/40 opacity-0 transition-opacity hover:bg-secondary group-hover:opacity-100 active:cursor-grabbing"
+            className="shrink-0 cursor-grab touch-none rounded-md p-1 text-muted-foreground/50 opacity-60 transition-opacity hover:bg-secondary hover:opacity-100 hover:text-foreground active:cursor-grabbing"
           >
             <GripVertical className="h-4 w-4" />
           </button>
