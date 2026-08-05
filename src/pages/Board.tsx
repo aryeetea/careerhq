@@ -8,6 +8,7 @@ import { KanbanColumn } from "@/components/board/KanbanColumn";
 import { MobileJobList } from "@/components/board/MobileJobList";
 import { ColumnVisibilityMenu } from "@/components/board/ColumnVisibilityMenu";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { ErrorState } from "@/components/shared/ErrorState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AddJobDialog } from "@/components/jobs/AddJobDialog";
 import { JobDetailDialog } from "@/components/jobs/JobDetailDialog";
@@ -21,7 +22,7 @@ import { useToast } from "@/components/shared/toast";
 import { useCelebration } from "@/components/ambient/Celebration";
 
 export default function Board() {
-  const { data: jobs = [], isLoading } = useJobs();
+  const { data: jobs = [], isLoading, isError, refetch } = useJobs();
   const { data: resumes = [] } = useResumes();
   const { data: settings } = useSettings();
   const updateSettings = useUpdateSettings();
@@ -93,7 +94,9 @@ export default function Board() {
 
       {hasAnyJobs && <FiltersBar filters={filters} onChange={setFilters} resumes={resumes} />}
 
-      {isLoading ? (
+      {isError ? (
+        <ErrorState className="mx-4 sm:mx-8" description="Your board couldn't load. Your data is safe — try again." onRetry={() => refetch()} />
+      ) : isLoading ? (
         <div className="flex gap-4 px-4 sm:px-8">
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="h-96 w-72 rounded-2xl" />

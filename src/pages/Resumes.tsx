@@ -3,6 +3,7 @@ import { FileText, Plus } from "lucide-react";
 import { TopBar } from "@/components/layout/TopBar";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { ErrorState } from "@/components/shared/ErrorState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ResumeCard } from "@/components/resumes/ResumeCard";
 import { ResumeFormDialog } from "@/components/resumes/ResumeFormDialog";
@@ -12,7 +13,7 @@ import { ENCOURAGING_EMPTY_MESSAGES } from "@/lib/constants";
 import type { Resume } from "@/types/database";
 
 export default function Resumes() {
-  const { data: resumes = [], isLoading } = useResumes();
+  const { data: resumes = [], isLoading, isError, refetch } = useResumes();
   const { data: jobs = [] } = useJobs();
   const [formOpen, setFormOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<Resume | null>(null);
@@ -55,7 +56,9 @@ export default function Resumes() {
       />
 
       <div className="flex-1 overflow-y-auto px-4 pb-10 sm:px-8">
-        {isLoading ? (
+        {isError ? (
+          <ErrorState description="Your resumes couldn't load. Your files are safe — try again." onRetry={() => refetch()} />
+        ) : isLoading ? (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 3 }).map((_, i) => (
               <Skeleton key={i} className="h-44 rounded-2xl" />

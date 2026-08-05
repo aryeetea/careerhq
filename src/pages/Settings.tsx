@@ -10,7 +10,7 @@ import { AccountSection } from "@/components/settings/AccountSection";
 export default function SettingsPage() {
   return (
     <div className="flex flex-1 flex-col">
-      <TopBar title="Settings" subtitle="Make CareerHQ feel like yours" />
+      <TopBar title="Settings" subtitle="Make Bloom feel like yours" />
       <div className="flex-1 overflow-y-auto px-4 pb-10 sm:px-8">
         <Card className="glass-subtle border-border/60">
           <CardContent className="p-4 sm:p-6">

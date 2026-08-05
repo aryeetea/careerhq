@@ -52,7 +52,7 @@ export default function SignIn() {
         </Button>
       </form>
       <p className="mt-5 text-center text-sm text-muted-foreground">
-        New to CareerHQ?{" "}
+        New to Bloom?{" "}
         <Link to="/signup" className="font-medium text-primary hover:underline">
           Create an account
         </Link>

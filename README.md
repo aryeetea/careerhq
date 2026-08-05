@@ -1,8 +1,8 @@
-# CareerHQ
+# Bloom
 
-A warm, calm home base for your job search — save jobs you find elsewhere, decide what's worth applying to, track applications through a kanban board, manage resumes and certifications, and (optionally) share high-level progress with friends who cheer you on.
+A calm, elegant space to grow your career — save roles worth pursuing, decide what's worth applying to, move through a kanban board at your own pace, nurture resumes and certifications, and (optionally) share high-level progress with friends who cheer you on.
 
-CareerHQ is a fully browser-based React + Supabase app. It deploys to Vercel and works on desktop, tablet, and mobile — no installation required.
+Bloom is a fully browser-based React + Supabase app. It deploys to Vercel and works on desktop, tablet, and mobile — no installation required.
 
 ## Stack
 
@@ -18,7 +18,8 @@ src/
     ambient/        AmbientBackground, BotanicalAccent, Celebration
     jobs/, board/   job cards, add/detail dialogs, kanban columns
     resumes/, certifications/, friends/, groups/, goals/, settings/
-    shared/         EmptyState, ConfirmDialog, toast, spinner
+    shared/         BrandMark, EmptyState, ErrorState, ErrorBoundary,
+                     ConfirmDialog, toast, spinner
   hooks/
     queries/        one file per domain — every Supabase read/write goes
                      through TanStack Query here, never directly in a component
@@ -37,11 +38,13 @@ Architecture rule this app follows throughout: **components never call `supabase
 ## 1. Create a Supabase project
 
 1. Go to [supabase.com](https://supabase.com) → New project. Pick any name/region/password (the DB password isn't used by this app directly).
-2. Once it's provisioned, open **SQL Editor** and run the four migration files from `supabase/migrations/` **in order**, each as its own run:
-   - `0001_core_schema.sql`
-   - `0002_social_schema.sql`
-   - `0003_storage.sql`
-   - `0004_shared_profiles.sql`
+2. Once it's provisioned, open **SQL Editor** and run every migration file in `supabase/migrations/` **in order**, each as its own run:
+   - `0001_core_schema.sql` — profiles, jobs, resumes, certifications, settings
+   - `0002_social_schema.sql` — friends, privacy, goals, groups, reactions, notifications
+   - `0003_storage.sql` — private storage buckets + policies
+   - `0004_shared_profiles.sql` — safe cross-user profile lookups for shared goals/groups
+   - `0005_tighten_function_grants.sql` / `0006_fix_anon_function_grants.sql` — locks `SECURITY DEFINER` helper functions down to `authenticated` only, closing a gap where they were reachable anonymously via PostgREST
+   - `0007_fix_user_deletion_cascade.sql` — fixes account deletion so it doesn't fail partway through
 
    Each file is idempotent (safe to re-run) and has comments explaining what it does.
 3. Go to **Authentication → Providers → Email** and confirm Email is enabled (it is by default). Optionally turn off "Confirm email" while testing locally so sign-up logs you straight in — leave it on for production.
@@ -70,7 +73,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173, sign up with a real or disposable email, complete onboarding, and start adding jobs.
+Open http://localhost:5173, sign up with a real or disposable email, complete onboarding, and save your first role.
 
 `npm run build` type-checks and produces a production build in `dist/`. `npm run preview` serves that build locally.
 
@@ -78,9 +81,9 @@ Open http://localhost:5173, sign up with a real or disposable email, complete on
 
 ```bash
 git add -A
-git commit -m "CareerHQ: web app rewrite on Supabase"
+git commit -m "Bloom: web app on Supabase"
 git branch -M main
-git remote add origin https://github.com/<your-username>/careerhq.git
+git remote add origin https://github.com/<your-username>/bloom.git
 git push -u origin main
 ```
 
@@ -107,3 +110,4 @@ Three themes, switchable from Settings → Appearance, stored in `localStorage`:
 - No email notifications yet — in-app only, as scoped.
 - No dedicated group activity feed.
 - AI-assisted fit score / verdict is not built; the fields are there (fit_score, verdict) and entirely manual today, ready for an AI pass later without a schema change.
+- No seeded demo data — the app has no demo mode by design (it's a real personal data tool, not a showcase). Every empty state instead gives a one-line prompt for what to add first.

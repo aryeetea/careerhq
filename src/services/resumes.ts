@@ -29,6 +29,8 @@ export async function createResume(userId: string, input: CreateResumeInput): Pr
       file_path: filePath,
       file_name: input.file?.name ?? null,
       file_type: input.file?.type ?? null,
+      extracted_text: null,
+      extracted_text_updated_at: null,
     })
     .select("*")
     .single();
@@ -46,7 +48,13 @@ export async function replaceResumeFile(userId: string, resume: Resume, file: Fi
   const newPath = await replaceFile("resumes", userId, resume.file_path, file);
   const { data, error } = await supabase
     .from("resumes")
-    .update({ file_path: newPath, file_name: file.name, file_type: file.type })
+    .update({
+      file_path: newPath,
+      file_name: file.name,
+      file_type: file.type,
+      extracted_text: null,
+      extracted_text_updated_at: null,
+    })
     .eq("id", resume.id)
     .select("*")
     .single();

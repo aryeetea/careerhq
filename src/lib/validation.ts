@@ -171,27 +171,48 @@ export const jobExportSchema = z.object({
   recruiter_linkedin: z.string().nullable().optional(),
   strengths: z.string().nullable().optional(),
   missing_qualifications: z.string().nullable().optional(),
+  cover_letter_used: z.string().nullable().optional(),
+  deadline: z.string().nullable().optional(),
+  interview_date: z.string().nullable().optional(),
+  offer_date: z.string().nullable().optional(),
+  rejection_date: z.string().nullable().optional(),
 });
 
-export const backupSchema = z.object({
-  version: z.literal(1),
-  exportedAt: z.string(),
-  jobs: z.array(jobExportSchema),
-  certifications: z
-    .array(
-      z.object({
-        name: z.string(),
-        provider: z.string().nullable().optional(),
-        status: z.string().optional(),
-        progress_percentage: z.number().optional(),
-        start_date: z.string().nullable().optional(),
-        target_completion_date: z.string().nullable().optional(),
-        completion_date: z.string().nullable().optional(),
-        expiration_date: z.string().nullable().optional(),
-        course_link: z.string().nullable().optional(),
-        notes: z.string().nullable().optional(),
-      })
-    )
-    .default([]),
+const certificationExportSchema = z.object({
+  name: z.string(),
+  provider: z.string().nullable().optional(),
+  status: z.string().optional(),
+  progress_percentage: z.number().optional(),
+  start_date: z.string().nullable().optional(),
+  target_completion_date: z.string().nullable().optional(),
+  completion_date: z.string().nullable().optional(),
+  expiration_date: z.string().nullable().optional(),
+  course_link: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
 });
+
+const goalExportSchema = z.object({
+  name: z.string(),
+  description: z.string().nullable().optional(),
+  target_count: z.number().optional(),
+  unit: z.string().optional(),
+  deadline: z.string().nullable().optional(),
+  is_shared: z.boolean().optional(),
+});
+
+export const backupSchema = z.discriminatedUnion("version", [
+  z.object({
+    version: z.literal(1),
+    exportedAt: z.string(),
+    jobs: z.array(jobExportSchema),
+    certifications: z.array(certificationExportSchema).default([]),
+  }),
+  z.object({
+    version: z.literal(2),
+    exportedAt: z.string(),
+    jobs: z.array(jobExportSchema),
+    certifications: z.array(certificationExportSchema).default([]),
+    goals: z.array(goalExportSchema).default([]),
+  }),
+]);
 export type BackupData = z.infer<typeof backupSchema>;

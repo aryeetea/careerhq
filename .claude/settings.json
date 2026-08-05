@@ -6,7 +6,11 @@
       "Bash(node -e \"const db=require\\('better-sqlite3'\\); console.log\\('loaded ok:', typeof db\\)\")",
       "Bash(rm -f src/types/index.ts)",
       "Bash(rm -f src/lib/constants.old.tsx)",
-      "Bash(git commit -q -m ' *)"
+      "Bash(git commit -q -m ' *)",
+      "Bash(supabase --version)",
+      "Bash(env)",
+      "Bash(supabase projects *)",
+      "Bash(echo \"EXIT:$?\")"
     ]
   }
 }

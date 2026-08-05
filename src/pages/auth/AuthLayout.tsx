@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
-import { Briefcase } from "lucide-react";
 import { AmbientBackground } from "@/components/ambient/AmbientBackground";
 import { BotanicalAccent } from "@/components/ambient/BotanicalAccent";
+import { BrandMark } from "@/components/shared/BrandMark";
 
 export function AuthLayout({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
   return (
@@ -9,10 +9,8 @@ export function AuthLayout({ title, subtitle, children }: { title: string; subti
       <AmbientBackground />
       <div className="relative z-10 w-full max-w-md">
         <div className="mb-7 flex items-center justify-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-soft">
-            <Briefcase className="h-4.5 w-4.5" />
-          </div>
-          <span className="font-display text-lg font-semibold tracking-tight">CareerHQ</span>
+          <BrandMark size="lg" />
+          <span className="font-display text-lg font-semibold tracking-tight">Bloom</span>
         </div>
 
         <div className="glass-strong relative overflow-hidden rounded-2xl p-7 sm:p-8">

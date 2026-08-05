@@ -142,7 +142,7 @@ export default function Onboarding() {
               <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
                 <Sparkles className="h-6 w-6" />
               </div>
-              <h1 className="font-display text-2xl font-semibold text-balance">Welcome to CareerHQ</h1>
+              <h1 className="font-display text-2xl font-semibold text-balance">Welcome to Bloom</h1>
               <p className="max-w-sm text-sm text-muted-foreground">
                 A calm place to keep track of everything — the roles you're weighing, the applications you've sent, and the people
                 cheering you on. This takes about a minute.
@@ -258,7 +258,7 @@ export default function Onboarding() {
                   Back
                 </Button>
                 <Button type="submit" size="lg" disabled={isSubmitting}>
-                  {isSubmitting ? "Setting things up…" : "Enter CareerHQ"}
+                  {isSubmitting ? "Setting things up…" : "Enter Bloom"}
                 </Button>
               </div>
             </div>

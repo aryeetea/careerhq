@@ -10,8 +10,10 @@ import { ProtectedRoute, GuestOnlyRoute } from "@/routes/ProtectedRoute";
 import { RequireOnboarding } from "@/routes/RequireOnboarding";
 import { AppShell } from "@/components/layout/AppShell";
 import { FullScreenSpinner } from "@/components/shared/FullScreenSpinner";
+import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
 
 import Landing from "@/pages/Landing";
+import About from "@/pages/About";
 import SignIn from "@/pages/auth/SignIn";
 import SignUp from "@/pages/auth/SignUp";
 import ForgotPassword from "@/pages/auth/ForgotPassword";
@@ -40,8 +42,10 @@ export default function App() {
             <AuthProvider>
               <BrowserRouter>
                 <Suspense fallback={<FullScreenSpinner />}>
+                <ErrorBoundary variant="app">
                   <Routes>
                     <Route path="/" element={<Landing />} />
+                    <Route path="/about" element={<About />} />
 
                     <Route element={<GuestOnlyRoute />}>
                       <Route path="/login" element={<SignIn />} />
@@ -72,6 +76,7 @@ export default function App() {
 
                     <Route path="*" element={<NotFound />} />
                   </Routes>
+                </ErrorBoundary>
                 </Suspense>
               </BrowserRouter>
             </AuthProvider>

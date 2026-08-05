@@ -1,16 +1,14 @@
 import { NavLink } from "react-router-dom";
-import { Briefcase } from "lucide-react";
 import { NAV_ITEMS } from "@/components/layout/nav";
+import { BrandMark } from "@/components/shared/BrandMark";
 import { cn } from "@/lib/utils";
 
 export function Sidebar() {
   return (
     <aside className="glass-subtle sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r-0 px-3 pb-4 pt-6 lg:flex">
       <div className="mb-6 flex items-center gap-2 px-2">
-        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-soft">
-          <Briefcase className="h-4 w-4" />
-        </div>
-        <span className="font-display text-[15px] font-semibold tracking-tight">CareerHQ</span>
+        <BrandMark size="md" />
+        <span className="font-display text-[15px] font-semibold tracking-tight">Bloom</span>
       </div>
 
       <nav className="flex flex-1 flex-col gap-0.5">

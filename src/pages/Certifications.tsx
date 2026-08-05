@@ -3,6 +3,7 @@ import { GraduationCap, Plus } from "lucide-react";
 import { TopBar } from "@/components/layout/TopBar";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { ErrorState } from "@/components/shared/ErrorState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CertificationCard } from "@/components/certifications/CertificationCard";
 import { CertificationFormDialog } from "@/components/certifications/CertificationFormDialog";
@@ -11,7 +12,7 @@ import { ENCOURAGING_EMPTY_MESSAGES } from "@/lib/constants";
 import type { Certification } from "@/types/database";
 
 export default function Certifications() {
-  const { data: certifications = [], isLoading } = useCertifications();
+  const { data: certifications = [], isLoading, isError, refetch } = useCertifications();
   const [formOpen, setFormOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<Certification | null>(null);
 
@@ -38,7 +39,9 @@ export default function Certifications() {
         }
       />
       <div className="flex-1 overflow-y-auto px-4 pb-10 sm:px-8">
-        {isLoading ? (
+        {isError ? (
+          <ErrorState description="Your certifications couldn't load. Your data is safe — try again." onRetry={() => refetch()} />
+        ) : isLoading ? (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-48 rounded-2xl" />)}
           </div>

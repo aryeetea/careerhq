@@ -1,4 +1,5 @@
 import type { Certification, Job } from "@/types/database";
+import type { GoalWithMembers } from "@/services/goals";
 import { backupSchema, type BackupData } from "@/lib/validation";
 
 function downloadBlob(content: string, fileName: string, mime: string) {
@@ -13,9 +14,9 @@ function downloadBlob(content: string, fileName: string, mime: string) {
   URL.revokeObjectURL(url);
 }
 
-export function exportJson(jobs: Job[], certifications: Certification[]) {
+export function exportJson(jobs: Job[], certifications: Certification[], goals: GoalWithMembers[]) {
   const payload: BackupData = {
-    version: 1,
+    version: 2,
     exportedAt: new Date().toISOString(),
     jobs: jobs.map((j) => ({
       company: j.company,
@@ -40,6 +41,11 @@ export function exportJson(jobs: Job[], certifications: Certification[]) {
       recruiter_linkedin: j.recruiter_linkedin,
       strengths: j.strengths,
       missing_qualifications: j.missing_qualifications,
+      cover_letter_used: j.cover_letter_used,
+      deadline: j.deadline,
+      interview_date: j.interview_date,
+      offer_date: j.offer_date,
+      rejection_date: j.rejection_date,
     })),
     certifications: certifications.map((c) => ({
       name: c.name,
@@ -53,8 +59,16 @@ export function exportJson(jobs: Job[], certifications: Certification[]) {
       course_link: c.course_link,
       notes: c.notes,
     })),
+    goals: goals.map((g) => ({
+      name: g.name,
+      description: g.description,
+      target_count: g.target_count,
+      unit: g.unit,
+      deadline: g.deadline,
+      is_shared: g.is_shared,
+    })),
   };
-  downloadBlob(JSON.stringify(payload, null, 2), `careerhq-backup-${Date.now()}.json`, "application/json");
+  downloadBlob(JSON.stringify(payload, null, 2), `bloom-backup-${Date.now()}.json`, "application/json");
 }
 
 export async function parseBackupFile(file: File): Promise<BackupData> {
@@ -94,5 +108,5 @@ const CSV_COLUMNS: (keyof Job)[] = [
 export function exportCsv(jobs: Job[]) {
   const header = CSV_COLUMNS.join(",");
   const rows = jobs.map((job) => CSV_COLUMNS.map((col) => csvEscape(job[col])).join(","));
-  downloadBlob([header, ...rows].join("\n"), `careerhq-jobs-${Date.now()}.csv`, "text/csv");
+  downloadBlob([header, ...rows].join("\n"), `bloom-jobs-${Date.now()}.csv`, "text/csv");
 }

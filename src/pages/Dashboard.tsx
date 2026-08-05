@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { ErrorState } from "@/components/shared/ErrorState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { GoalProgress } from "@/components/dashboard/GoalProgress";
@@ -23,7 +24,7 @@ import { CERTIFICATION_STATUS_META } from "@/lib/constants";
 import type { Job } from "@/types/database";
 
 export default function Dashboard() {
-  const { data: jobs = [], isLoading } = useJobs();
+  const { data: jobs = [], isLoading, isError, refetch } = useJobs();
   const { data: resumes = [] } = useResumes();
   const { data: certifications = [] } = useCertifications();
   const { data: profile } = useProfile();
@@ -60,7 +61,7 @@ export default function Dashboard() {
     <div className="flex flex-1 flex-col">
       <TopBar
         title="Dashboard"
-        subtitle="Your job search, at a glance"
+        subtitle="Your growth, at a glance"
         action={
           <Button onClick={() => setAddOpen(true)} size="sm" className="gap-1.5">
             <Plus className="h-4 w-4" /> <span className="hidden sm:inline">Add job</span>
@@ -69,7 +70,9 @@ export default function Dashboard() {
       />
 
       <div className="flex-1 overflow-y-auto px-4 pb-10 sm:px-8">
-        {isLoading ? (
+        {isError ? (
+          <ErrorState description="Your dashboard couldn't load. Your data is safe — try again." onRetry={() => refetch()} />
+        ) : isLoading ? (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {Array.from({ length: 8 }).map((_, i) => (
               <Skeleton key={i} className="h-[72px] rounded-2xl" />
@@ -79,7 +82,7 @@ export default function Dashboard() {
           <EmptyState
             icon={<Sparkles className="h-5 w-5" />}
             title="Welcome — let's set up your board"
-            description="Save the first role you're considering and CareerHQ will start tracking your progress from here. One step at a time."
+            description="Save the first role you're considering and Bloom will start growing your dashboard from here. One step at a time."
             action={
               <Button onClick={() => setAddOpen(true)}>
                 <Plus className="h-4 w-4" /> Add your first job

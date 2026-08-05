@@ -28,6 +28,45 @@ export type ReactionType = "proud" | "keep_going" | "you_got_this" | "congrats" 
 export type ReactionContext = "weekly_progress" | "goal" | "group" | "general";
 export type ThemeName = "floral" | "neutral" | "dark";
 
+export interface JobAiExtraction {
+  source: "url" | "manual" | "url_plus_manual";
+  import_status: "success" | "manual_fallback";
+  fetched_url: string | null;
+  requirements: string[];
+  required_qualifications: string[];
+  preferred_qualifications: string[];
+  skills: string[];
+  education: string[];
+  experience: string[];
+  certifications: string[];
+  responsibilities: string[];
+  deadline_text: string | null;
+  raw_job_text: string;
+}
+
+export interface ResumeRecommendation {
+  resume_id: string;
+  resume_name: string;
+  score: number;
+  explanation: string;
+  matching_strengths: string[];
+  gaps: string[];
+}
+
+export interface JobAiAnalysis {
+  fit_score: number;
+  verdict: JobVerdict;
+  priority: 1 | 2 | 3;
+  recommended_resume_id: string | null;
+  recommended_resume_reason: string | null;
+  deal_breakers: string[];
+  matching_strengths: string[];
+  missing_required_qualifications: string[];
+  missing_preferred_qualifications: string[];
+  resume_rankings: ResumeRecommendation[];
+  resume_improvement_suggestions: string[];
+}
+
 export interface Profile {
   id: string;
   username: string;
@@ -60,6 +99,9 @@ export interface Resume {
   file_path: string | null;
   file_name: string | null;
   file_type: string | null;
+  extracted_text: string | null;
+  extracted_text_updated_at: string | null;
+  is_active: boolean;
   notes: string | null;
   created_at: string;
   updated_at: string;
@@ -97,6 +139,11 @@ export interface Job {
   strengths: string | null;
   missing_qualifications: string | null;
   notes: string | null;
+  ai_extracted_data: JobAiExtraction;
+  ai_analysis: JobAiAnalysis | null;
+  ai_recommended_resume_id: string | null;
+  ai_cover_letter: string | null;
+  ai_last_analyzed_at: string | null;
   created_at: string;
   updated_at: string;
 }

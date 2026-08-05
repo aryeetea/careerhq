@@ -85,14 +85,20 @@ export function ResumeCard({ resume, stats, onEdit }: { resume: Resume; stats: R
               </span>
             )}
           </Button>
-          <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+          <Button variant="outline" size="sm" aria-label={`Replace file for ${resume.name}`} onClick={() => fileInputRef.current?.click()}>
             <RefreshCw className="h-3.5 w-3.5" />
           </Button>
           <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx" className="sr-only" onChange={handleReplace} />
-          <Button variant="outline" size="sm" onClick={onEdit}>
+          <Button variant="outline" size="sm" aria-label={`Edit ${resume.name}`} onClick={onEdit}>
             <Pencil className="h-3.5 w-3.5" />
           </Button>
-          <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => setConfirmOpen(true)}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+            aria-label={`Delete ${resume.name}`}
+            onClick={() => setConfirmOpen(true)}
+          >
             <Trash2 className="h-3.5 w-3.5" />
           </Button>
         </div>

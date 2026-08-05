@@ -11,7 +11,7 @@ export default function NotFound() {
         We couldn't find what you were looking for. Let's get you back to somewhere familiar.
       </p>
       <Button asChild>
-        <Link to="/app">Back to CareerHQ</Link>
+        <Link to="/app">Back to Bloom</Link>
       </Button>
     </div>
   );

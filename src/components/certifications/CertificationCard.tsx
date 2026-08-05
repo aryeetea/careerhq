@@ -57,10 +57,16 @@ export function CertificationCard({ certification, onEdit }: { certification: Ce
               </a>
             </Button>
           )}
-          <Button variant="outline" size="sm" onClick={onEdit}>
+          <Button variant="outline" size="sm" aria-label={`Edit ${certification.name}`} onClick={onEdit}>
             <Pencil className="h-3.5 w-3.5" />
           </Button>
-          <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => setConfirmOpen(true)}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+            aria-label={`Delete ${certification.name}`}
+            onClick={() => setConfirmOpen(true)}
+          >
             <Trash2 className="h-3.5 w-3.5" />
           </Button>
         </div>

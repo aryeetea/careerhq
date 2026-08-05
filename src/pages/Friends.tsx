@@ -3,6 +3,7 @@ import { UserPlus, Users2 } from "lucide-react";
 import { TopBar } from "@/components/layout/TopBar";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { ErrorState } from "@/components/shared/ErrorState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FriendCard } from "@/components/friends/FriendCard";
 import { FriendRequestsPanel } from "@/components/friends/FriendRequestsPanel";
@@ -13,11 +14,12 @@ import { ENCOURAGING_EMPTY_MESSAGES } from "@/lib/constants";
 
 export default function Friends() {
   const { data: profile } = useProfile();
-  const { isLoading: idsLoading } = useFriendIds();
-  const { data: friends = [], isLoading: cardsLoading } = useFriendCards();
+  const { isLoading: idsLoading, isError: idsError } = useFriendIds();
+  const { data: friends = [], isLoading: cardsLoading, isError: cardsError, refetch } = useFriendCards();
   const [addOpen, setAddOpen] = React.useState(false);
 
   const isLoading = idsLoading || cardsLoading;
+  const isError = idsError || cardsError;
 
   return (
     <div className="flex flex-1 flex-col">
@@ -42,7 +44,9 @@ export default function Friends() {
           <FriendRequestsPanel />
         </div>
 
-        {isLoading ? (
+        {isError ? (
+          <ErrorState description="Your friends list couldn't load. Try again." onRetry={() => refetch()} />
+        ) : isLoading ? (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-56 rounded-2xl" />)}
           </div>

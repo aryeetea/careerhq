@@ -3,6 +3,7 @@ import { Plus, Target } from "lucide-react";
 import { TopBar } from "@/components/layout/TopBar";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { ErrorState } from "@/components/shared/ErrorState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { GoalCard } from "@/components/goals/GoalCard";
 import { CreateGoalDialog } from "@/components/goals/CreateGoalDialog";
@@ -10,7 +11,7 @@ import { useGoals } from "@/hooks/queries/useGoals";
 import { ENCOURAGING_EMPTY_MESSAGES } from "@/lib/constants";
 
 export default function Goals() {
-  const { data: goals = [], isLoading } = useGoals();
+  const { data: goals = [], isLoading, isError, refetch } = useGoals();
   const [createOpen, setCreateOpen] = React.useState(false);
 
   return (
@@ -25,7 +26,9 @@ export default function Goals() {
         }
       />
       <div className="flex-1 overflow-y-auto px-4 pb-10 sm:px-8">
-        {isLoading ? (
+        {isError ? (
+          <ErrorState description="Your goals couldn't load. Your data is safe — try again." onRetry={() => refetch()} />
+        ) : isLoading ? (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-48 rounded-2xl" />)}
           </div>

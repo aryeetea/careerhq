@@ -1,7 +1,7 @@
 import * as React from "react";
 import type { ThemeName } from "@/types/database";
 
-const STORAGE_KEY = "careerhq-theme";
+const STORAGE_KEY = "bloom-theme";
 
 interface ThemeContextValue {
   theme: ThemeName;

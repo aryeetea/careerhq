@@ -41,7 +41,10 @@ export function FriendCard({ friend }: { friend: FriendCardData }) {
             {friend.status_message && <p className="mt-1 text-xs italic text-muted-foreground">"{friend.status_message}"</p>}
           </div>
           <DropdownMenu>
-            <DropdownMenuTrigger className="rounded-full p-1 text-muted-foreground outline-none hover:bg-secondary">
+            <DropdownMenuTrigger
+              className="rounded-full p-1 text-muted-foreground outline-none hover:bg-secondary"
+              aria-label={`More actions for ${friend.display_name || friend.username}`}
+            >
               <MoreVertical className="h-4 w-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">

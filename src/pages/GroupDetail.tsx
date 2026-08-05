@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ErrorState } from "@/components/shared/ErrorState";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { ReactionPicker } from "@/components/friends/ReactionPicker";
 import { InviteToGroupDialog } from "@/components/groups/InviteToGroupDialog";
@@ -54,7 +55,13 @@ function MemberRow({ userId, name, avatarPath, weeklyGoalTarget, groupId, isOwne
       </div>
       {userId !== user?.id && <ReactionPicker recipientId={userId} contextType="group" contextId={groupId} />}
       {isOwnerView && userId !== user?.id && (
-        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={onRemove}>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+          aria-label={`Remove ${name} from group`}
+          onClick={onRemove}
+        >
           <UserMinus className="h-3.5 w-3.5" />
         </Button>
       )}
@@ -66,7 +73,7 @@ export default function GroupDetail() {
   const { groupId } = useParams<{ groupId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { data: group, isLoading } = useGroup(groupId);
+  const { data: group, isLoading, isError, refetch } = useGroup(groupId);
   const leaveGroup = useLeaveGroup();
   const removeMember = useRemoveGroupMember();
   const deleteGroupMutation = useDeleteGroup();
@@ -78,6 +85,17 @@ export default function GroupDetail() {
 
   const memberIds = React.useMemo(() => group?.group_members.map((m) => m.user_id) ?? [], [group]);
   const { data: profileMap } = useSharedContextProfiles(memberIds);
+
+  if (isError) {
+    return (
+      <div className="flex flex-1 flex-col">
+        <TopBar title="Group" />
+        <div className="px-4 pb-10 sm:px-8">
+          <ErrorState description="This group couldn't load. Try again." onRetry={() => refetch()} />
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading || !group) {
     return (

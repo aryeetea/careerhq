@@ -108,7 +108,7 @@ export const ENCOURAGING_EMPTY_MESSAGES = {
   noJobs: "Nothing saved yet — when you find something worth a look, this is where it'll live.",
   noJobsBoard: "Your board is a blank page today. Save a role you found and it'll show up here.",
   noUpcoming: "Nothing on the horizon right now. Enjoy the quiet.",
-  noResumes: "Upload the resume versions you're using so you can track what worked.",
+  noResumes: "Upload the resume versions you're using so you can see what's working.",
   noCertifications: "Add a course or certification you're working toward — small steps count.",
   noFriends: "Invite a friend to search alongside you. You don't have to do this alone.",
   noGoals: "Set a small, doable goal for this week. Progress over perfection.",

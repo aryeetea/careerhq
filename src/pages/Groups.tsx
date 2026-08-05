@@ -4,6 +4,7 @@ import { TopBar } from "@/components/layout/TopBar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { ErrorState } from "@/components/shared/ErrorState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { GroupCard } from "@/components/groups/GroupCard";
 import { CreateGroupDialog } from "@/components/groups/CreateGroupDialog";
@@ -13,7 +14,7 @@ import { ENCOURAGING_EMPTY_MESSAGES } from "@/lib/constants";
 import { timeAgo } from "@/lib/utils";
 
 export default function Groups() {
-  const { data: groups = [], isLoading } = useGroups();
+  const { data: groups = [], isLoading, isError, refetch } = useGroups();
   const { data: invites = [] } = useGroupInvites();
   const acceptInvite = useAcceptGroupInvite();
   const declineInvite = useDeclineGroupInvite();
@@ -55,7 +56,9 @@ export default function Groups() {
           </Card>
         )}
 
-        {isLoading ? (
+        {isError ? (
+          <ErrorState description="Your groups couldn't load. Try again." onRetry={() => refetch()} />
+        ) : isLoading ? (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-32 rounded-2xl" />)}
           </div>

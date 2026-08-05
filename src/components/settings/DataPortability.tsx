@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { useJobs, useCreateJob } from "@/hooks/queries/useJobs";
 import { useCertifications, useCreateCertification } from "@/hooks/queries/useCertifications";
+import { useGoals, useCreateGoal } from "@/hooks/queries/useGoals";
 import { exportCsv, exportJson, parseBackupFile } from "@/lib/dataPortability";
 import { useToast } from "@/components/shared/toast";
 import type { BackupData } from "@/lib/validation";
@@ -12,8 +13,10 @@ import type { BackupData } from "@/lib/validation";
 export function DataPortability() {
   const { data: jobs = [] } = useJobs();
   const { data: certifications = [] } = useCertifications();
+  const { data: goals = [] } = useGoals();
   const createJob = useCreateJob();
   const createCertification = useCreateCertification();
+  const createGoal = useCreateGoal();
   const { push } = useToast();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [pending, setPending] = React.useState<BackupData | null>(null);
@@ -50,13 +53,20 @@ export function DataPortability() {
           verdict: (j.verdict ?? null) as never,
           fit_score: j.fit_score ?? null,
           priority: j.priority ?? 2,
+          date_found: j.date_found ?? undefined,
+          date_applied: j.date_applied ?? null,
+          deadline: j.deadline ?? null,
           notes: j.notes ?? null,
           follow_up_date: j.follow_up_date ?? null,
+          interview_date: j.interview_date ?? null,
+          offer_date: j.offer_date ?? null,
+          rejection_date: j.rejection_date ?? null,
           recruiter_name: j.recruiter_name ?? null,
           recruiter_email: j.recruiter_email ?? null,
           recruiter_linkedin: j.recruiter_linkedin ?? null,
           strengths: j.strengths ?? null,
           missing_qualifications: j.missing_qualifications ?? null,
+          cover_letter_used: j.cover_letter_used ?? null,
         });
       }
       for (const c of pending.certifications) {
@@ -75,7 +85,23 @@ export function DataPortability() {
           },
         });
       }
-      push(`Imported ${pending.jobs.length} job${pending.jobs.length === 1 ? "" : "s"} and ${pending.certifications.length} certification${pending.certifications.length === 1 ? "" : "s"}.`, "success");
+      if (pending.version === 2) {
+        for (const g of pending.goals) {
+          await createGoal.mutateAsync({
+            name: g.name,
+            description: g.description ?? null,
+            target_count: g.target_count ?? 5,
+            unit: g.unit ?? "applications",
+            deadline: g.deadline ?? null,
+            is_shared: g.is_shared ?? false,
+          });
+        }
+      }
+      const goalCount = pending.version === 2 ? pending.goals.length : 0;
+      push(
+        `Imported ${pending.jobs.length} job${pending.jobs.length === 1 ? "" : "s"}, ${pending.certifications.length} certification${pending.certifications.length === 1 ? "" : "s"}${goalCount > 0 ? `, and ${goalCount} goal${goalCount === 1 ? "" : "s"}` : ""}.`,
+        "success"
+      );
       setPending(null);
     } catch (err) {
       push(err instanceof Error ? err.message : "Import failed partway through.", "error");
@@ -89,10 +115,10 @@ export function DataPortability() {
       <Card className="border-border/60 bg-card/60">
         <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
           <div>
-            <p className="text-sm font-medium">Export everything</p>
-            <p className="text-xs text-muted-foreground">A full JSON backup of your jobs and certifications.</p>
+            <p className="text-sm font-medium">Export your data</p>
+            <p className="text-xs text-muted-foreground">A JSON backup of your jobs, certifications, and goals.</p>
           </div>
-          <Button variant="outline" size="sm" onClick={() => exportJson(jobs, certifications)}>
+          <Button variant="outline" size="sm" onClick={() => exportJson(jobs, certifications, goals)}>
             <FileJson className="h-3.5 w-3.5" /> Export JSON
           </Button>
         </CardContent>
@@ -129,7 +155,7 @@ export function DataPortability() {
         title="Import this backup?"
         description={
           pending
-            ? `This will add ${pending.jobs.length} job${pending.jobs.length === 1 ? "" : "s"} and ${pending.certifications.length} certification${pending.certifications.length === 1 ? "" : "s"} to your account. Nothing existing will be changed or removed.`
+            ? `This will add ${pending.jobs.length} job${pending.jobs.length === 1 ? "" : "s"}, ${pending.certifications.length} certification${pending.certifications.length === 1 ? "" : "s"}${pending.version === 2 ? `, and ${pending.goals.length} goal${pending.goals.length === 1 ? "" : "s"}` : ""} to your account. Nothing existing will be changed or removed.`
             : ""
         }
         confirmLabel={importing ? "Importing…" : "Import"}
@@ -138,4 +164,3 @@ export function DataPortability() {
     </div>
   );
 }
-

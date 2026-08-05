@@ -5,6 +5,9 @@ release/
 *.log
 .DS_Store
 
+# Supabase CLI local cache
+supabase/.temp/
+
 # environment
 .env
 .env.local

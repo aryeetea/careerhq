@@ -9,7 +9,7 @@ import { ReactionPicker } from "@/components/friends/ReactionPicker";
 import { useSignedAvatarUrl } from "@/hooks/useSignedAvatarUrl";
 import { useSharedContextProfiles } from "@/hooks/queries/useProfile";
 import { useAuth } from "@/hooks/useAuth";
-import { useDeleteGoal, useJoinGoal, useUpdateGoalProgress } from "@/hooks/queries/useGoals";
+import { useDeleteGoal, useJoinGoal, useLeaveGoal, useUpdateGoalProgress } from "@/hooks/queries/useGoals";
 import { useToast } from "@/components/shared/toast";
 import { formatDate, initials } from "@/lib/utils";
 import type { GoalWithMembers } from "@/services/goals";
@@ -48,6 +48,7 @@ function MemberRow({ userId, displayName, avatarPath, progress, target, unit, is
 export function GoalCard({ goal }: { goal: GoalWithMembers }) {
   const { user } = useAuth();
   const joinGoal = useJoinGoal();
+  const leaveGoal = useLeaveGoal();
   const deleteGoal = useDeleteGoal();
   const { push } = useToast();
   const [confirmOpen, setConfirmOpen] = React.useState(false);
@@ -66,7 +67,13 @@ export function GoalCard({ goal }: { goal: GoalWithMembers }) {
             {goal.description && <p className="mt-0.5 text-xs text-muted-foreground">{goal.description}</p>}
           </div>
           {isOwner && (
-            <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive" onClick={() => setConfirmOpen(true)}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+              aria-label={`Delete ${goal.name}`}
+              onClick={() => setConfirmOpen(true)}
+            >
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
           )}
@@ -109,6 +116,19 @@ export function GoalCard({ goal }: { goal: GoalWithMembers }) {
             }}
           >
             Join this goal
+          </Button>
+        )}
+        {isMember && !isOwner && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="mt-3 w-full"
+            onClick={async () => {
+              await leaveGoal.mutateAsync(goal.id);
+              push("Left goal", "info");
+            }}
+          >
+            Leave goal
           </Button>
         )}
       </CardContent>

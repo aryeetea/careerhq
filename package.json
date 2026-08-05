@@ -1,8 +1,8 @@
 {
-  "name": "careerhq",
+  "name": "bloom",
   "private": true,
   "version": "1.0.0",
-  "description": "Your personal job search operating system — track applications, resumes, certifications, and lean on friends for encouragement.",
+  "description": "Bloom — a calm space to grow your career: save roles worth pursuing, nurture applications, build resumes and certifications, and grow alongside friends.",
   "author": "Mage",
   "type": "module",
   "scripts": {

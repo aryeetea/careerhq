@@ -1,20 +1,21 @@
 import { Link } from "react-router-dom";
-import { Briefcase, KanbanSquare, Users2, GraduationCap, ArrowRight } from "lucide-react";
+import { KanbanSquare, Users2, GraduationCap, ArrowRight } from "lucide-react";
 import { AmbientBackground } from "@/components/ambient/AmbientBackground";
 import { BotanicalAccent } from "@/components/ambient/BotanicalAccent";
+import { BrandMark } from "@/components/shared/BrandMark";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
 const FEATURES = [
   {
     icon: KanbanSquare,
-    title: "A board that actually reflects reality",
-    body: "Save roles from LinkedIn, Indeed, or anywhere else, then drag them through your pipeline — saved, applied, interviewing, offer.",
+    title: "A board that grows with you",
+    body: "Save roles from LinkedIn, Indeed, or anywhere else, then move them through your own pace — saved, applied, interviewing, offer.",
   },
   {
     icon: GraduationCap,
     title: "Resumes and certifications in one place",
-    body: "Track which resume you sent where, and keep certifications and courses moving without a separate spreadsheet.",
+    body: "Know which resume you sent where, and keep the courses and credentials you're building moving without a separate spreadsheet.",
   },
   {
     icon: Users2,
@@ -30,12 +31,13 @@ export default function Landing() {
 
       <header className="relative z-10 flex items-center justify-between px-6 py-6 sm:px-10">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Briefcase className="h-4 w-4" />
-          </div>
-          <span className="font-display text-lg font-semibold tracking-tight">CareerHQ</span>
+          <BrandMark size="md" />
+          <span className="font-display text-lg font-semibold tracking-tight">Bloom</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2">
+          <Button asChild variant="ghost" className="hidden sm:inline-flex">
+            <Link to="/about">About</Link>
+          </Button>
           <Button asChild variant="ghost">
             <Link to="/login">Sign in</Link>
           </Button>
@@ -49,19 +51,19 @@ export default function Landing() {
         <div className="relative mx-auto max-w-2xl text-center">
           <BotanicalAccent className="pointer-events-none absolute -right-10 -top-10 hidden h-40 w-32 rotate-12 sm:block" />
           <p className="mb-3 inline-flex items-center rounded-full bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground">
-            Your job search, held gently
+            Grow your career, gently
           </p>
           <h1 className="font-display text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
-            A calm, warm home base for finding what's next
+            A calm, warm space to grow your career
           </h1>
           <p className="mx-auto mt-4 max-w-lg text-balance text-muted-foreground">
-            CareerHQ doesn't search job boards for you — it helps you organize what you find, decide what's worth applying to,
-            and keep going, one small step at a time.
+            Bloom doesn't search job boards for you — it helps you organize what you find, decide what's worth pursuing, and
+            keep growing, one small step at a time.
           </p>
           <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Button asChild size="lg" className="gap-1.5">
               <Link to="/signup">
-                Start your board <ArrowRight className="h-4 w-4" />
+                Start growing <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
             <Button asChild size="lg" variant="outline">
@@ -84,6 +86,12 @@ export default function Landing() {
           ))}
         </div>
       </main>
+
+      <footer className="relative z-10 mx-auto max-w-5xl px-6 pb-10 pt-4 text-center text-xs text-muted-foreground sm:px-10 sm:text-left">
+        <Link to="/about" className="hover:text-foreground hover:underline">
+          About Bloom
+        </Link>
+      </footer>
     </div>
   );
 }
