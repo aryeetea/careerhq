@@ -51,12 +51,12 @@ export default function ProfilePage() {
   if (!profile) {
     return (
       <div className="flex flex-1 flex-col">
-        <TopBar title="Profile" subtitle="How Bloom knows and represents you" />
+        <TopBar title="Profile" subtitle="A space to share who you are and what you're working toward." />
         <div className="flex-1 overflow-y-auto px-4 pb-10 sm:px-8">
           <EmptyState
             icon={<UserRound className="h-5 w-5" />}
             title="Your profile is still taking shape"
-            description="Finish onboarding first, then your profile will live here with your preferences, sharing settings, and account snapshot."
+            description="Finish onboarding and this space will be ready for your story, your goals, and the parts of your search you want to share."
             action={
               <Button asChild>
                 <Link to="/onboarding">Finish onboarding</Link>
@@ -72,7 +72,7 @@ export default function ProfilePage() {
     <div className="flex flex-1 flex-col">
       <TopBar
         title="Profile"
-        subtitle="A living snapshot of you and your search"
+        subtitle="A place to share who you are and what this season looks like for you."
         action={
           <Button asChild size="sm" className="gap-1.5">
             <Link to="/app/settings">
@@ -110,7 +110,7 @@ export default function ProfilePage() {
                   <p className="mt-2 text-sm leading-6 text-foreground/82">
                     {profile.bio || (
                       <span className="text-muted-foreground">
-                        Add a one-line professional intro in{" "}
+                        Add a few words about yourself in{" "}
                         <Link to="/app/settings" className="font-medium text-primary hover:underline">
                           Settings
                         </Link>
@@ -126,7 +126,7 @@ export default function ProfilePage() {
                   )}
 
                   <div className="mt-3 max-w-lg">
-                    <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Today</p>
+                    <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Today's thought</p>
                     <QuickThoughtEditor value={profile.status_message} />
                   </div>
                 </div>
@@ -226,7 +226,7 @@ function AchievementsAndInterviewsCard({
         <div>
           <h3 className="mb-3 font-semibold">Recent achievements</h3>
           {achievements.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Your next Bloom Garden milestone will show up here.</p>
+            <p className="text-sm text-muted-foreground">When you reach something worth celebrating, it will show up here.</p>
           ) : (
             <ul className="grid gap-2">
               {achievements.map((a) => (
@@ -243,7 +243,7 @@ function AchievementsAndInterviewsCard({
             <CalendarClock className="h-4 w-4 text-gold" /> Upcoming interviews
           </h3>
           {upcomingInterviews.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nothing on the calendar right now.</p>
+            <p className="text-sm text-muted-foreground">Nothing scheduled right now.</p>
           ) : (
             <ul className="grid gap-2">
               {upcomingInterviews.map((j) => (

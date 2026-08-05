@@ -128,8 +128,8 @@ export function ProfileForm() {
       <div className="rounded-[2rem] border border-border/65 bg-[linear-gradient(180deg,rgba(255,255,255,0.82),rgba(255,255,255,0.5))] p-5 shadow-soft sm:p-6">
         <div className="mb-5">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary/75">Your Profile</p>
-          <h2 className="mt-2 font-display text-2xl font-semibold tracking-tight text-slate-900">A steady introduction, with room for today.</h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-700">Keep it brief, clear, and easy to revisit.</p>
+          <h2 className="mt-2 font-display text-2xl font-semibold tracking-tight text-slate-900">Make this feel like you.</h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-700">A few thoughtful details can help people understand who you are and what matters to you.</p>
         </div>
 
         <div className="flex items-center gap-4">
@@ -170,13 +170,13 @@ export function ProfileForm() {
       <div className="grid gap-4 rounded-[2rem] border border-border/65 bg-card/55 p-5 shadow-soft sm:p-6">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary/75">Voice</p>
-          <h3 className="mt-2 font-display text-xl font-semibold tracking-tight">Short, human profile details.</h3>
+          <h3 className="mt-2 font-display text-xl font-semibold tracking-tight">A little more about you.</h3>
         </div>
 
         <ProfileFieldCard
           label="About you"
           fieldId="p-bio"
-          helperText="A short introduction that rarely changes."
+          helperText="Share a little about yourself, your interests, and what you're passionate about."
           action={
             <Button
               type="button"
@@ -206,7 +206,7 @@ export function ProfileForm() {
         <ProfileFieldCard
           label="Career status"
           fieldId="p-careerStatus"
-          helperText="What you're focused on right now."
+          helperText="What you're focused on in your career right now."
           action={
             <Button
               type="button"
@@ -236,7 +236,7 @@ export function ProfileForm() {
         <ProfileFieldCard
           label="Today's thought"
           fieldId="p-statusMessage"
-          helperText="What's on your mind today?"
+          helperText="Share what's on your mind today."
         >
           <AutoResizeTextarea
             id="p-statusMessage"
@@ -261,7 +261,7 @@ export function ProfileForm() {
                 <p className="mt-1 text-sm leading-6 text-foreground/82">{draftSuggestion.suggestion}</p>
                 <p className="mt-2 text-xs leading-5 text-muted-foreground">{draftSuggestion.reason}</p>
                 <p className="mt-2 text-xs text-muted-foreground">
-                  Built from the profile, goals, and {resumes.length > 0 ? "resume evidence" : "current Bloom details"} you already have in Bloom.
+                  Built from what you've already shared in Bloom, including your goals and {resumes.length > 0 ? "resume experience" : "profile details"}.
                 </p>
               </div>
               <div className="flex shrink-0 gap-2">

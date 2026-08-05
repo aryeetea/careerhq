@@ -34,7 +34,7 @@ export function FriendPreviewCard({
           <Users2 className="h-4 w-4 text-primary" />
           <h3 className="font-semibold">Friend preview</h3>
         </div>
-        <p className="mb-3 text-xs text-muted-foreground">This is roughly what friends see on your card.</p>
+        <p className="mb-3 text-xs text-muted-foreground">See how your profile feels to the people you've added on Bloom.</p>
 
         <div className="mb-3 flex flex-wrap gap-2">
           <Button asChild size="sm" variant="outline">
@@ -91,7 +91,7 @@ export function FriendPreviewCard({
             <Heart className="h-3.5 w-3.5" /> Send encouragement
           </Button>
           <p className="mt-1.5 text-center text-[11px] text-muted-foreground">
-            This is the button friends use to send encouragement.
+            Friends can use this to send a little support.
           </p>
         </div>
       </CardContent>
