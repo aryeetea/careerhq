@@ -24,6 +24,7 @@ import ResetPassword from "@/pages/auth/ResetPassword";
 const Onboarding = lazy(() => import("@/pages/Onboarding"));
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
 const Board = lazy(() => import("@/pages/Board"));
+const ProfilePage = lazy(() => import("@/pages/Profile"));
 const Resumes = lazy(() => import("@/pages/Resumes"));
 const Certifications = lazy(() => import("@/pages/Certifications"));
 const Friends = lazy(() => import("@/pages/Friends"));
@@ -63,6 +64,7 @@ export default function App() {
                         <Route path="/app" element={<AppShell />}>
                           <Route index element={<Dashboard />} />
                           <Route path="board" element={<Board />} />
+                          <Route path="profile" element={<ProfilePage />} />
                           <Route path="resumes" element={<Resumes />} />
                           <Route path="certifications" element={<Certifications />} />
                           <Route path="goals" element={<Goals />} />

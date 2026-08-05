@@ -31,10 +31,13 @@ export default function Onboarding() {
   const [avatarFile, setAvatarFile] = React.useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = React.useState<string | null>(null);
   const [usernameStatus, setUsernameStatus] = React.useState<"idle" | "checking" | "available" | "taken">("idle");
+  const [jobTitlesInput, setJobTitlesInput] = React.useState("");
+  const [locationsInput, setLocationsInput] = React.useState("");
 
   const {
     register,
     handleSubmit,
+    reset,
     trigger,
     watch,
     setValue,
@@ -42,7 +45,7 @@ export default function Onboarding() {
   } = useForm<OnboardingValues>({
     resolver: zodResolver(onboardingSchema),
     defaultValues: {
-      displayName: profile?.display_name ?? "",
+      displayName: "",
       username: "",
       careerGoal: "",
       primaryJobTitles: [],
@@ -55,6 +58,22 @@ export default function Onboarding() {
   const username = watch("username");
   const sharingEnabled = watch("sharingEnabled");
   const displayName = watch("displayName");
+
+  React.useEffect(() => {
+    if (!profile) return;
+    const nextValues: OnboardingValues = {
+      displayName: profile.display_name ?? "",
+      username: profile.username ?? "",
+      careerGoal: profile.career_goal ?? "",
+      primaryJobTitles: profile.primary_job_titles ?? [],
+      preferredLocations: profile.preferred_locations ?? [],
+      weeklyApplicationGoal: profile.weekly_application_goal ?? 5,
+      sharingEnabled: profile.sharing_enabled ?? false,
+    };
+    reset(nextValues);
+    setJobTitlesInput(nextValues.primaryJobTitles.join(", "));
+    setLocationsInput(nextValues.preferredLocations.join(", "));
+  }, [profile, reset]);
 
   React.useEffect(() => {
     if (!username || username.length < 3) {
@@ -73,6 +92,12 @@ export default function Onboarding() {
     return () => clearTimeout(t);
   }, [username, user?.id]);
 
+  React.useEffect(() => {
+    return () => {
+      if (avatarPreview) URL.revokeObjectURL(avatarPreview);
+    };
+  }, [avatarPreview]);
+
   function onAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -89,7 +114,7 @@ export default function Onboarding() {
     ];
     const valid = await trigger(fieldsByStep[step]);
     if (!valid) return;
-    if (step === 1 && usernameStatus === "taken") return;
+    if (step === 1 && (usernameStatus === "taken" || usernameStatus === "checking")) return;
     setStep((s) => Math.min(s + 1, STEPS.length - 1));
   }
 
@@ -150,6 +175,11 @@ export default function Onboarding() {
               <Button type="button" size="lg" className="mt-3 w-full" onClick={goNext}>
                 Let's go
               </Button>
+              {profile?.onboarded_at && (
+                <Button type="button" variant="ghost" size="sm" onClick={() => navigate("/app", { replace: true })}>
+                  I&apos;ve already done this
+                </Button>
+              )}
             </div>
           )}
 
@@ -211,7 +241,11 @@ export default function Onboarding() {
                 <Input
                   id="primaryJobTitles"
                   placeholder="Product Designer, UX Researcher"
-                  onChange={(e) => setValue("primaryJobTitles", splitTags(e.target.value))}
+                  value={jobTitlesInput}
+                  onChange={(e) => {
+                    setJobTitlesInput(e.target.value);
+                    setValue("primaryJobTitles", splitTags(e.target.value), { shouldDirty: true });
+                  }}
                 />
                 <p className="text-xs text-muted-foreground">Separate with commas.</p>
               </div>
@@ -221,7 +255,11 @@ export default function Onboarding() {
                 <Input
                   id="preferredLocations"
                   placeholder="Remote, Chicago, IL"
-                  onChange={(e) => setValue("preferredLocations", splitTags(e.target.value))}
+                  value={locationsInput}
+                  onChange={(e) => {
+                    setLocationsInput(e.target.value);
+                    setValue("preferredLocations", splitTags(e.target.value), { shouldDirty: true });
+                  }}
                 />
               </div>
 

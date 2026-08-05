@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { LogOut, Settings } from "lucide-react";
+import { LogOut, Settings, UserRound } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useProfile } from "@/hooks/queries/useProfile";
@@ -28,6 +28,9 @@ export function UserMenu() {
       <DropdownMenuContent align="end" className="w-48">
         <DropdownMenuLabel className="truncate">{profile?.display_name || "Your account"}</DropdownMenuLabel>
         <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={() => navigate("/app/profile")}>
+          <UserRound className="mr-2 h-4 w-4" /> Profile
+        </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => navigate("/app/settings")}>
           <Settings className="mr-2 h-4 w-4" /> Settings
         </DropdownMenuItem>

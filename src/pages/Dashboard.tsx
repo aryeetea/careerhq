@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Send, Bookmark, Users, Trophy, XCircle, Ghost, TrendingUp, CalendarDays, Plus, Sparkles, GraduationCap, CalendarClock } from "lucide-react";
 import { TopBar } from "@/components/layout/TopBar";
 import { Button } from "@/components/ui/button";
@@ -79,16 +79,46 @@ export default function Dashboard() {
             ))}
           </div>
         ) : !hasJobs ? (
-          <EmptyState
-            icon={<Sparkles className="h-5 w-5" />}
-            title="Welcome — let's set up your board"
-            description="Save the first role you're considering and Bloom will start growing your dashboard from here. One step at a time."
-            action={
-              <Button onClick={() => setAddOpen(true)}>
-                <Plus className="h-4 w-4" /> Add your first job
-              </Button>
-            }
-          />
+          <div className="grid gap-4 xl:grid-cols-[1.1fr,0.9fr]">
+            <EmptyState
+              className="glass-subtle border border-border/60"
+              icon={<Sparkles className="h-5 w-5" />}
+              title="Welcome — let's set up your board"
+              description="Save the first role you're considering and Bloom will start growing your dashboard from here. One step at a time."
+              action={
+                <Button onClick={() => setAddOpen(true)}>
+                  <Plus className="h-4 w-4" /> Add your first job
+                </Button>
+              }
+            />
+
+            <Card className="glass-subtle border-border/60">
+              <CardContent className="p-5">
+                <h3 className="font-display text-lg font-semibold">A gentle place to begin</h3>
+                <p className="mt-1.5 text-sm leading-6 text-foreground/72">
+                  The dashboard fills in as you add the first pieces of your search. These are the quickest steps that unlock the rest
+                  of Bloom.
+                </p>
+                <div className="mt-5 grid gap-3">
+                  <QuickStartLink
+                    to="/app/profile"
+                    title="Review your profile"
+                    description="Make sure your goals, target roles, and sharing settings feel right."
+                  />
+                  <QuickStartLink
+                    to="/app/resumes"
+                    title="Upload a resume"
+                    description="Bloom can recommend and compare resumes once at least one version is saved."
+                  />
+                  <QuickStartLink
+                    to="/app/settings"
+                    title="Set preferences"
+                    description="Choose your theme, privacy defaults, and other calm-making details."
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         ) : (
           <>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -191,5 +221,17 @@ export default function Dashboard() {
       <AddJobDialog open={addOpen} onOpenChange={setAddOpen} resumes={resumes} />
       <JobDetailDialog job={selectedJob} resumes={resumes} open={Boolean(selectedJob)} onOpenChange={(open) => !open && setSelectedJob(null)} />
     </div>
+  );
+}
+
+function QuickStartLink({ to, title, description }: { to: string; title: string; description: string }) {
+  return (
+    <Link
+      to={to}
+      className="rounded-2xl border border-border/70 bg-card/70 px-4 py-3 text-left transition-colors hover:border-primary/25 hover:bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      <p className="text-sm font-semibold">{title}</p>
+      <p className="mt-1 text-sm leading-6 text-foreground/68">{description}</p>
+    </Link>
   );
 }
