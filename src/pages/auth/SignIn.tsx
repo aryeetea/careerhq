@@ -19,14 +19,40 @@ import { requestSignInOtp, signIn, verifyEmailOtp } from "@/services/auth";
 import { useToast } from "@/components/shared/toast";
 
 export default function SignIn() {
+  const OTP_RESEND_SECONDS = 45;
   const navigate = useNavigate();
   const location = useLocation();
   const { push } = useToast();
   const [otpEmail, setOtpEmail] = React.useState<string | null>(null);
+  const [resendAvailableAt, setResendAvailableAt] = React.useState<number | null>(null);
+  const [secondsRemaining, setSecondsRemaining] = React.useState(0);
   const redirectTo = (location.state as { from?: string } | null)?.from ?? "/app";
   const passwordForm = useForm<SignInValues>({ resolver: zodResolver(signInSchema) });
   const otpRequestForm = useForm<OtpRequestValues>({ resolver: zodResolver(otpRequestSchema) });
   const otpVerifyForm = useForm<OtpVerificationValues>({ resolver: zodResolver(otpVerificationSchema) });
+
+  React.useEffect(() => {
+    if (!resendAvailableAt) {
+      setSecondsRemaining(0);
+      return;
+    }
+
+    const tick = () => {
+      const next = Math.max(0, Math.ceil((resendAvailableAt - Date.now()) / 1000));
+      setSecondsRemaining(next);
+      if (next === 0) {
+        setResendAvailableAt(null);
+      }
+    };
+
+    tick();
+    const timer = window.setInterval(tick, 1000);
+    return () => window.clearInterval(timer);
+  }, [resendAvailableAt]);
+
+  function startResendCooldown() {
+    setResendAvailableAt(Date.now() + OTP_RESEND_SECONDS * 1000);
+  }
 
   async function onPasswordSubmit(values: SignInValues) {
     try {
@@ -42,6 +68,7 @@ export default function SignIn() {
       await requestSignInOtp(values.email);
       setOtpEmail(values.email);
       otpVerifyForm.reset();
+      startResendCooldown();
       push("Your 6-digit sign-in code is on the way.", "success");
     } catch (err) {
       push(err instanceof Error ? err.message : "Couldn't send a sign-in code right now.", "error");
@@ -61,10 +88,15 @@ export default function SignIn() {
 
   async function resendCode() {
     if (!otpEmail) return;
+    if (secondsRemaining > 0) {
+      push(`Give it ${secondsRemaining}s before asking for another code.`, "info");
+      return;
+    }
 
     try {
       await requestSignInOtp(otpEmail);
       otpVerifyForm.reset();
+      startResendCooldown();
       push("A fresh 6-digit code is on the way.", "success");
     } catch (err) {
       push(err instanceof Error ? err.message : "Couldn't resend the code right now.", "error");
@@ -125,6 +157,9 @@ export default function SignIn() {
               <div className="rounded-2xl border border-border/70 bg-card/70 px-4 py-3 text-sm text-muted-foreground">
                 Enter the 6-digit code we sent to <span className="font-medium text-foreground">{otpEmail}</span>.
               </div>
+              <div className="rounded-2xl border border-secondary/80 bg-secondary/55 px-4 py-3 text-sm text-secondary-foreground">
+                Codes usually arrive quickly. If nothing shows up, check spam or wait a moment before sending a new one.
+              </div>
 
               <form onSubmit={otpVerifyForm.handleSubmit(verifyCode)} className="grid gap-4" noValidate>
                 <div className="grid gap-1.5">
@@ -148,13 +183,19 @@ export default function SignIn() {
               </form>
 
               <div className="flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-between">
-                <button type="button" onClick={resendCode} className="text-left font-medium text-primary hover:underline">
-                  Send a new code
+                <button
+                  type="button"
+                  onClick={resendCode}
+                  disabled={secondsRemaining > 0}
+                  className="text-left font-medium text-primary hover:underline disabled:cursor-not-allowed disabled:text-muted-foreground disabled:no-underline"
+                >
+                  {secondsRemaining > 0 ? `Send a new code in ${secondsRemaining}s` : "Send a new code"}
                 </button>
                 <button
                   type="button"
                   onClick={() => {
                     setOtpEmail(null);
+                    setResendAvailableAt(null);
                     otpRequestForm.reset();
                     otpVerifyForm.reset();
                   }}
@@ -181,6 +222,9 @@ export default function SignIn() {
                 )}
               </div>
               <p className="text-sm text-muted-foreground">We'll send a 6-digit sign-in code to your email.</p>
+              <div className="rounded-2xl border border-secondary/80 bg-secondary/55 px-4 py-3 text-sm text-secondary-foreground">
+                To protect your inbox, Bloom may ask you to wait briefly before requesting another code.
+              </div>
               <Button type="submit" size="lg" disabled={otpRequestForm.formState.isSubmitting} className="mt-1">
                 {otpRequestForm.formState.isSubmitting ? "Sending code…" : "Email me a code"}
               </Button>

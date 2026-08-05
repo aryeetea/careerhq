@@ -25,13 +25,39 @@ interface PendingOtpSignup {
 }
 
 export default function SignUp() {
+  const OTP_RESEND_SECONDS = 45;
   const navigate = useNavigate();
   const { push } = useToast();
   const [sent, setSent] = React.useState<string | null>(null);
   const [otpSignup, setOtpSignup] = React.useState<PendingOtpSignup | null>(null);
+  const [resendAvailableAt, setResendAvailableAt] = React.useState<number | null>(null);
+  const [secondsRemaining, setSecondsRemaining] = React.useState(0);
   const passwordForm = useForm<SignUpValues>({ resolver: zodResolver(signUpSchema) });
   const otpRequestForm = useForm<SignUpOtpRequestValues>({ resolver: zodResolver(signUpOtpRequestSchema) });
   const otpVerifyForm = useForm<OtpVerificationValues>({ resolver: zodResolver(otpVerificationSchema) });
+
+  React.useEffect(() => {
+    if (!resendAvailableAt) {
+      setSecondsRemaining(0);
+      return;
+    }
+
+    const tick = () => {
+      const next = Math.max(0, Math.ceil((resendAvailableAt - Date.now()) / 1000));
+      setSecondsRemaining(next);
+      if (next === 0) {
+        setResendAvailableAt(null);
+      }
+    };
+
+    tick();
+    const timer = window.setInterval(tick, 1000);
+    return () => window.clearInterval(timer);
+  }, [resendAvailableAt]);
+
+  function startResendCooldown() {
+    setResendAvailableAt(Date.now() + OTP_RESEND_SECONDS * 1000);
+  }
 
   async function onPasswordSubmit(values: SignUpValues) {
     try {
@@ -51,6 +77,7 @@ export default function SignUp() {
       await requestSignUpOtp(values.email, values.displayName);
       setOtpSignup(values);
       otpVerifyForm.reset();
+      startResendCooldown();
       push("Your 6-digit sign-up code is on the way.", "success");
     } catch (err) {
       push(err instanceof Error ? err.message : "Couldn't send a sign-up code right now.", "error");
@@ -70,10 +97,15 @@ export default function SignUp() {
 
   async function resendCode() {
     if (!otpSignup) return;
+    if (secondsRemaining > 0) {
+      push(`Give it ${secondsRemaining}s before asking for another code.`, "info");
+      return;
+    }
 
     try {
       await requestSignUpOtp(otpSignup.email, otpSignup.displayName);
       otpVerifyForm.reset();
+      startResendCooldown();
       push("A fresh 6-digit code is on the way.", "success");
     } catch (err) {
       push(err instanceof Error ? err.message : "Couldn't resend the code right now.", "error");
@@ -174,6 +206,9 @@ export default function SignUp() {
               <div className="rounded-2xl border border-border/70 bg-card/70 px-4 py-3 text-sm text-muted-foreground">
                 Enter the 6-digit code we sent to <span className="font-medium text-foreground">{otpSignup.email}</span>.
               </div>
+              <div className="rounded-2xl border border-secondary/80 bg-secondary/55 px-4 py-3 text-sm text-secondary-foreground">
+                We’ll keep your spot. If the code doesn’t show up right away, check spam first, then resend when the timer clears.
+              </div>
 
               <form onSubmit={otpVerifyForm.handleSubmit(verifyCode)} className="grid gap-4" noValidate>
                 <div className="grid gap-1.5">
@@ -197,13 +232,19 @@ export default function SignUp() {
               </form>
 
               <div className="flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-between">
-                <button type="button" onClick={resendCode} className="text-left font-medium text-primary hover:underline">
-                  Send a new code
+                <button
+                  type="button"
+                  onClick={resendCode}
+                  disabled={secondsRemaining > 0}
+                  className="text-left font-medium text-primary hover:underline disabled:cursor-not-allowed disabled:text-muted-foreground disabled:no-underline"
+                >
+                  {secondsRemaining > 0 ? `Send a new code in ${secondsRemaining}s` : "Send a new code"}
                 </button>
                 <button
                   type="button"
                   onClick={() => {
                     setOtpSignup(null);
+                    setResendAvailableAt(null);
                     otpRequestForm.reset();
                     otpVerifyForm.reset();
                   }}
@@ -243,6 +284,9 @@ export default function SignUp() {
                 )}
               </div>
               <p className="text-sm text-muted-foreground">We'll send a 6-digit code so you can create your account without a password.</p>
+              <div className="rounded-2xl border border-secondary/80 bg-secondary/55 px-4 py-3 text-sm text-secondary-foreground">
+                For a smoother experience, we pace code emails a little so one tap doesn’t flood your inbox.
+              </div>
               <Button type="submit" size="lg" disabled={otpRequestForm.formState.isSubmitting} className="mt-1">
                 {otpRequestForm.formState.isSubmitting ? "Sending code…" : "Email me a code"}
               </Button>
