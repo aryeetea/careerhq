@@ -149,6 +149,7 @@ export interface Settings {
   theme: ThemeName;
   hidden_statuses: JobStatus[];
   default_resume_id: string | null;
+  default_application_follow_up_days: 3 | 5 | 7 | 10 | 14 | null;
   show_ai_fit_score: boolean;
   muted_notification_types: string[];
   created_at: string;

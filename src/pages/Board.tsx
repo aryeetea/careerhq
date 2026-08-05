@@ -20,6 +20,7 @@ import { DEFAULT_FILTERS, matchesFilters, type JobFilters } from "@/types/filter
 import type { Job, JobStatus } from "@/types/database";
 import { useToast } from "@/components/shared/toast";
 import { useCelebration } from "@/components/ambient/Celebration";
+import { formatDate } from "@/lib/utils";
 
 export default function Board() {
   const { data: jobs = [], isLoading, isError, refetch } = useJobs();
@@ -65,9 +66,13 @@ export default function Board() {
     if (!job || job.status === nextStatus) return;
 
     try {
-      await moveJob.mutateAsync({ id: jobId, status: nextStatus });
+      const updated = await moveJob.mutateAsync({ id: jobId, status: nextStatus });
       if (nextStatus === "offer") celebrate("An offer! Take a moment — this is worth celebrating. 🎉");
-      else if (nextStatus === "applied" && !job.date_applied) push(`Marked applied — nice work, ${job.company} is in motion.`, "success");
+      else if (nextStatus === "applied" && !job.date_applied && updated.follow_up_date) {
+        push(`Application recorded. We'll remind you to follow up on ${formatDate(updated.follow_up_date)}.`, "success");
+      } else if (nextStatus === "applied" && !job.date_applied) {
+        push(`Marked applied — nice work, ${job.company} is in motion.`, "success");
+      }
     } catch {
       push("Couldn't move that job. Try again.", "error");
     }

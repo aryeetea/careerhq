@@ -23,7 +23,7 @@ import { useSettings } from "@/hooks/queries/useProfile";
 import { useToast } from "@/components/shared/toast";
 import { JOB_STATUSES, UNSET_SELECT_VALUE, VERDICT_OPTIONS } from "@/lib/constants";
 import { AnalysisSummary } from "@/components/jobs/AnalysisSummary";
-import { toDateInputValue } from "@/lib/utils";
+import { formatDate, toDateInputValue } from "@/lib/utils";
 import type { JobAnalysisPayload } from "@/lib/ai";
 
 interface AddJobDialogProps {
@@ -49,7 +49,6 @@ const DEFAULT_VALUES: Partial<JobFormValues> = {
   coverLetterUsed: "",
   priority: 2,
   deadline: "",
-  followUpDate: "",
   recruiterName: "",
   recruiterEmail: "",
   recruiterLinkedin: "",
@@ -152,7 +151,6 @@ export function AddJobDialog({ open, onOpenChange, resumes }: AddJobDialogProps)
       cover_letter_used: values.coverLetterUsed?.trim() || null,
       priority: values.priority,
       deadline: values.deadline || null,
-      follow_up_date: values.followUpDate || null,
       recruiter_name: values.recruiterName?.trim() || null,
       recruiter_email: values.recruiterEmail?.trim() || null,
       recruiter_linkedin: values.recruiterLinkedin?.trim() || null,
@@ -167,8 +165,12 @@ export function AddJobDialog({ open, onOpenChange, resumes }: AddJobDialogProps)
     };
 
     try {
-      await createJob.mutateAsync(input);
-      push(`Saved ${values.title} at ${values.company}`, "success");
+      const created = await createJob.mutateAsync(input);
+      if (created.status === "applied" && created.follow_up_date) {
+        push(`Application recorded. We'll remind you to follow up on ${formatDate(created.follow_up_date)}.`, "success");
+      } else {
+        push(`Saved ${values.title} at ${values.company}`, "success");
+      }
       close(false);
     } catch (err) {
       push(err instanceof Error ? err.message : "Couldn't save that job. Try again.", "error");
@@ -341,16 +343,16 @@ export function AddJobDialog({ open, onOpenChange, resumes }: AddJobDialogProps)
                     <Input id="deadline" type="date" {...register("deadline")} />
                   </div>
                 </div>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <div className="grid gap-1.5">
-                    <Label htmlFor="followUpDate">Follow-up date</Label>
-                    <Input id="followUpDate" type="date" {...register("followUpDate")} />
-                  </div>
-                  <div className="grid gap-1.5">
-                    <Label htmlFor="coverLetterUsed">Cover letter used</Label>
-                    <Input id="coverLetterUsed" placeholder="e.g. Cover letter v2" {...register("coverLetterUsed")} />
-                  </div>
+                <div className="grid gap-1.5">
+                  <Label htmlFor="coverLetterUsed">Cover letter used</Label>
+                  <Input id="coverLetterUsed" placeholder="e.g. Cover letter v2" {...register("coverLetterUsed")} />
                 </div>
+                {watch("status") === "applied" && (
+                  <p className="text-xs text-muted-foreground">
+                    Follow-up reminders are scheduled automatically when a job first reaches Applied, based on your Job Search
+                    preferences.
+                  </p>
+                )}
               </AccordionContent>
             </AccordionItem>
 

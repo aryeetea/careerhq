@@ -209,7 +209,7 @@ function AchievementsAndInterviewsCard({
   achievements,
   upcomingInterviews,
 }: {
-  achievements: { key: string; emoji: string; label: string; description: string }[];
+  achievements: { key: string; growthLabel: string; milestoneLabel: string; description: string }[];
   upcomingInterviews: { id: string; title: string; company: string; date: string; status: import("@/types/database").JobStatus }[];
 }) {
   return (
@@ -222,8 +222,9 @@ function AchievementsAndInterviewsCard({
           ) : (
             <ul className="grid gap-2">
               {achievements.map((a) => (
-                <li key={a.key} className="flex items-center gap-2 text-sm">
-                  <span className="text-lg">{a.emoji}</span> {a.label}
+                <li key={a.key} className="rounded-2xl border border-border/60 bg-card/55 px-3 py-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary/80">{a.growthLabel}</p>
+                  <p className="mt-0.5 text-sm font-medium">{a.milestoneLabel}</p>
                 </li>
               ))}
             </ul>

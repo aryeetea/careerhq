@@ -63,7 +63,7 @@ export function FriendPreviewCard({
           {mostRecentAchievement && (
             <p className="mt-2.5 flex items-center gap-1.5 text-xs text-foreground/78">
               <Sparkles className="h-3.5 w-3.5 text-gold" />
-              Recently: {mostRecentAchievement.emoji} {mostRecentAchievement.label}
+              Recently: {mostRecentAchievement.growthLabel} · {mostRecentAchievement.milestoneLabel}
             </p>
           )}
 

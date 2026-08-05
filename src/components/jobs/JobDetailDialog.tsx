@@ -110,7 +110,7 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
     if (!job) return;
     const wasOffer = job.status === "offer";
     try {
-      await updateJob.mutateAsync({
+      const updated = await updateJob.mutateAsync({
         id: job.id,
         patch: {
           company: values.company.trim(),
@@ -142,7 +142,11 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
           ai_cover_letter: coverLetter.trim() || null,
         },
       });
-      push("Job updated", "success");
+      if (values.status === "applied" && !job.date_applied && updated.follow_up_date) {
+        push(`Application recorded. We'll remind you to follow up on ${formatDate(updated.follow_up_date)}.`, "success");
+      } else {
+        push("Job updated", "success");
+      }
       if (values.status === "offer" && !wasOffer) celebrate("An offer! Take a moment — this is worth celebrating. 🎉");
       onOpenChange(false);
     } catch (err) {
@@ -401,6 +405,9 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
                 <div className="grid gap-1.5">
                   <Label htmlFor="d-followUpDate">Follow-up date</Label>
                   <Input id="d-followUpDate" type="date" {...register("followUpDate")} />
+                  <p className="text-xs text-muted-foreground">
+                    Bloom schedules this automatically when you first apply. Change it here only if you want a different follow-up.
+                  </p>
                 </div>
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
