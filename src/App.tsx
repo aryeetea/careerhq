@@ -20,7 +20,7 @@ import ForgotPassword from "@/pages/auth/ForgotPassword";
 import ResetPassword from "@/pages/auth/ResetPassword";
 import AuthCallback from "@/pages/auth/AuthCallback";
 import JoinGroup from "@/pages/JoinGroup";
-import JoinFriend from "@/pages/JoinFriend";
+import LegacyFriendLink from "@/pages/LegacyFriendLink";
 
 // Route-level code splitting: everything past the marketing/auth pages is
 // lazy-loaded so first paint only ships what a signed-out visitor needs.
@@ -51,7 +51,7 @@ export default function App() {
                     <Route path="/" element={<Landing />} />
                     <Route path="/about" element={<About />} />
                     <Route path="/join/group/:token" element={<JoinGroup />} />
-                    <Route path="/join/friend/:token" element={<JoinFriend />} />
+                    <Route path="/join/friend/:token" element={<LegacyFriendLink />} />
                     <Route path="/auth/callback" element={<AuthCallback />} />
 
                     <Route element={<GuestOnlyRoute />}>

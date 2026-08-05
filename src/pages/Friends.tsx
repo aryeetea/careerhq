@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Link2, UserPlus, Users2 } from "lucide-react";
+import { UserPlus, Users2 } from "lucide-react";
 import { TopBar } from "@/components/layout/TopBar";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -9,17 +9,18 @@ import { FriendCard } from "@/components/friends/FriendCard";
 import { PendingInvitationsSection } from "@/components/friends/PendingInvitationsSection";
 import { SuggestedFriendsRow } from "@/components/friends/SuggestedFriendsRow";
 import { AddFriendDialog } from "@/components/friends/AddFriendDialog";
-import { InviteByLinkDialog } from "@/components/friends/InviteByLinkDialog";
 import { useFriendCards, useFriendIds } from "@/hooks/queries/useFriends";
 import { useProfile } from "@/hooks/queries/useProfile";
 import { ENCOURAGING_EMPTY_MESSAGES } from "@/lib/constants";
 
+// One entry point for every friendship action (search, code entry, invite)
+// lives inside AddFriendDialog — see its header comment. The page itself
+// only ever needs to open it.
 export default function Friends() {
   const { data: profile } = useProfile();
   const { isLoading: idsLoading, isError: idsError } = useFriendIds();
   const { data: friends = [], isLoading: cardsLoading, isError: cardsError, refetch } = useFriendCards();
   const [addOpen, setAddOpen] = React.useState(false);
-  const [inviteOpen, setInviteOpen] = React.useState(false);
 
   const isLoading = idsLoading || cardsLoading;
   const isError = idsError || cardsError;
@@ -30,14 +31,9 @@ export default function Friends() {
         title="Friends"
         subtitle="Encouragement, not competition."
         action={
-          <div className="flex gap-2">
-            <Button onClick={() => setInviteOpen(true)} variant="outline" size="sm" className="gap-1.5">
-              <Link2 className="h-4 w-4" /> <span className="hidden sm:inline">Invite by Link</span>
-            </Button>
-            <Button onClick={() => setAddOpen(true)} size="sm" className="gap-1.5">
-              <UserPlus className="h-4 w-4" /> <span className="hidden sm:inline">Add Friend</span>
-            </Button>
-          </div>
+          <Button onClick={() => setAddOpen(true)} size="sm" className="gap-1.5">
+            <UserPlus className="h-4 w-4" /> Add Friend
+          </Button>
         }
       />
       <div className="flex-1 overflow-y-auto px-4 pb-10 sm:px-8">
@@ -64,14 +60,9 @@ export default function Friends() {
             title="No friends yet"
             description={ENCOURAGING_EMPTY_MESSAGES.noFriends}
             action={
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <Button onClick={() => setInviteOpen(true)}>
-                  <Link2 className="h-4 w-4" /> Invite by Link
-                </Button>
-                <Button variant="outline" onClick={() => setAddOpen(true)}>
-                  <UserPlus className="h-4 w-4" /> Search Bloom Users
-                </Button>
-              </div>
+              <Button onClick={() => setAddOpen(true)}>
+                <UserPlus className="h-4 w-4" /> Add Friend
+              </Button>
             }
           />
         ) : (
@@ -85,7 +76,6 @@ export default function Friends() {
         </div>
       </div>
       <AddFriendDialog open={addOpen} onOpenChange={setAddOpen} />
-      <InviteByLinkDialog open={inviteOpen} onOpenChange={setInviteOpen} />
     </div>
   );
 }

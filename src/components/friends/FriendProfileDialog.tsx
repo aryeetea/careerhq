@@ -2,7 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { ThoughtBubble } from "@/components/shared/ThoughtBubble";
-import { useMutualConnections } from "@/hooks/queries/useFriendInvites";
+import { useMutualConnections } from "@/hooks/queries/useFriendConnections";
 import { useSignedAvatarUrl } from "@/hooks/useSignedAvatarUrl";
 import { initials } from "@/lib/utils";
 import type { FriendCard as FriendCardData } from "@/types/database";

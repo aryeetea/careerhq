@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Link2, LogOut, Trash2, UserPlus, UserMinus } from "lucide-react";
+import { ArrowLeft, LogOut, Trash2, UserPlus, UserMinus } from "lucide-react";
 import { TopBar } from "@/components/layout/TopBar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,7 +12,7 @@ import { ErrorState } from "@/components/shared/ErrorState";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { ReactionPicker } from "@/components/friends/ReactionPicker";
 import { InviteToGroupDialog } from "@/components/groups/InviteToGroupDialog";
-import { useCreateGroupJoinLink, useDeleteGroup, useGroup, useLeaveGroup, useRemoveGroupMember } from "@/hooks/queries/useGroups";
+import { useDeleteGroup, useGroup, useLeaveGroup, useRemoveGroupMember } from "@/hooks/queries/useGroups";
 import { useSharedContextProfiles } from "@/hooks/queries/useProfile";
 import { useSignedAvatarUrl } from "@/hooks/useSignedAvatarUrl";
 import { useAuth } from "@/hooks/useAuth";
@@ -76,7 +76,6 @@ export default function GroupDetail() {
   const { data: group, isLoading, isError, refetch } = useGroup(groupId);
   const leaveGroup = useLeaveGroup();
   const removeMember = useRemoveGroupMember();
-  const createJoinLink = useCreateGroupJoinLink();
   const deleteGroupMutation = useDeleteGroup();
   const { push } = useToast();
   const [inviteOpen, setInviteOpen] = React.useState(false);
@@ -110,17 +109,6 @@ export default function GroupDetail() {
   const activeGroup = group;
   const isOwner = activeGroup.owner_id === user?.id;
 
-  async function copyJoinLink() {
-    try {
-      const link = await createJoinLink.mutateAsync(activeGroup.id);
-      const inviteUrl = `${window.location.origin}/join/group/${link.token}`;
-      await navigator.clipboard.writeText(inviteUrl);
-      push("Group invite link copied", "success");
-    } catch (error) {
-      push(error instanceof Error ? error.message : "Couldn't create a group invite link right now.", "error");
-    }
-  }
-
   return (
     <div className="flex flex-1 flex-col">
       <TopBar
@@ -130,9 +118,6 @@ export default function GroupDetail() {
           <>
             <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => navigate("/app/groups")}>
               <ArrowLeft className="h-4 w-4" /> <span className="hidden sm:inline">All groups</span>
-            </Button>
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={copyJoinLink} disabled={createJoinLink.isPending}>
-              <Link2 className="h-4 w-4" /> <span className="hidden sm:inline">{createJoinLink.isPending ? "Making link…" : "Copy join link"}</span>
             </Button>
             <Button size="sm" className="gap-1.5" onClick={() => setInviteOpen(true)}>
               <UserPlus className="h-4 w-4" /> <span className="hidden sm:inline">Invite</span>

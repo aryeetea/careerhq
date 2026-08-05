@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Check, Link2, RefreshCw, ShieldOff, X } from "lucide-react";
+import { Check, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -10,25 +10,21 @@ import {
   useIncomingRequests,
   useOutgoingRequests,
 } from "@/hooks/queries/useFriends";
-import {
-  useDisableFriendInviteLink,
-  useMyFriendInviteLinks,
-  useRegenerateFriendInviteLink,
-} from "@/hooks/queries/useFriendInvites";
 import { useSharedContextProfiles } from "@/hooks/queries/useProfile";
 import { useSignedAvatarUrl } from "@/hooks/useSignedAvatarUrl";
 import { useToast } from "@/components/shared/toast";
 import { initials, timeAgo } from "@/lib/utils";
 
+// Outgoing/Incoming both reflect friend_requests regardless of how the
+// request originated (direct username search or a friend code) — nothing
+// distinguishes their origin in the schema, which is correct: once a
+// request exists, it doesn't matter how it was created.
 export function PendingInvitationsSection() {
   const { data: incoming = [] } = useIncomingRequests();
   const { data: outgoing = [] } = useOutgoingRequests();
-  const { data: links = [] } = useMyFriendInviteLinks();
   const accept = useAcceptFriendRequest();
   const decline = useDeclineFriendRequest();
   const cancel = useCancelFriendRequest();
-  const disableLink = useDisableFriendInviteLink();
-  const regenerateLink = useRegenerateFriendInviteLink();
   const { push } = useToast();
 
   const profileIds = React.useMemo(
@@ -37,7 +33,7 @@ export function PendingInvitationsSection() {
   );
   const { data: profiles } = useSharedContextProfiles(profileIds);
 
-  const hasOutgoing = outgoing.length > 0 || links.length > 0;
+  const hasOutgoing = outgoing.length > 0;
   const hasIncoming = incoming.length > 0;
   if (!hasOutgoing && !hasIncoming) return null;
 
@@ -50,54 +46,6 @@ export function PendingInvitationsSection() {
             <p className="py-4 text-sm text-muted-foreground">Nothing waiting on someone else right now.</p>
           ) : (
             <div className="grid gap-1.5">
-              {links.map((link) => {
-                const usesLeft = link.max_uses == null ? "Unlimited uses" : `${Math.max(0, link.max_uses - link.use_count)} left`;
-                return (
-                  <div key={link.id} className="flex items-center justify-between gap-2 rounded-lg bg-secondary/50 px-3 py-2 text-sm">
-                    <span className="flex min-w-0 items-center gap-2 text-muted-foreground">
-                      <Link2 className="h-3.5 w-3.5 shrink-0" />
-                      <span className="truncate">
-                        Invite link · {link.is_active ? usesLeft : "Disabled"}
-                        {link.expires_at ? ` · Expires ${new Date(link.expires_at).toLocaleDateString()}` : ""}
-                      </span>
-                    </span>
-                    <div className="flex shrink-0 gap-1">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        aria-label="Copy invite link"
-                        onClick={async () => {
-                          await navigator.clipboard.writeText(`${window.location.origin}/join/friend/${link.token}`);
-                          push("Invite link copied.", "success");
-                        }}
-                      >
-                        Copy
-                      </Button>
-                      {link.is_active && (
-                        <>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            aria-label="Regenerate invite link"
-                            onClick={() => regenerateLink.mutate({ id: link.id, settings: { expiresAt: link.expires_at, maxUses: link.max_uses } })}
-                          >
-                            <RefreshCw className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            aria-label="Revoke invite link"
-                            onClick={() => disableLink.mutate(link.id)}
-                            className="text-destructive hover:bg-destructive/10"
-                          >
-                            <ShieldOff className="h-3.5 w-3.5" />
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
               {outgoing.map((req) => {
                 const p = profiles?.get(req.recipient_id);
                 return (

@@ -3,7 +3,7 @@ import { Sparkles, UserPlus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useSuggestedFriends } from "@/hooks/queries/useFriendInvites";
+import { useSuggestedFriends } from "@/hooks/queries/useFriendConnections";
 import { useSendFriendRequest } from "@/hooks/queries/useFriends";
 import { useSignedAvatarUrl } from "@/hooks/useSignedAvatarUrl";
 import { useToast } from "@/components/shared/toast";

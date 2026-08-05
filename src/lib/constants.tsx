@@ -186,7 +186,7 @@ export const ENCOURAGING_EMPTY_MESSAGES = {
   noUpcoming: "Nothing on the horizon right now. Enjoy the quiet.",
   noResumes: "Upload the resume versions you're using so you can see what's working.",
   noCertifications: "Add a course or certification you're working toward — small steps count.",
-  noFriends: "Invite a friend to search alongside you. You don't have to do this alone.",
+  noFriends: "Job searching doesn't have to be lonely. Invite someone you trust or connect with someone already on Bloom.",
   noGoals: "Set a small, doable goal for this week. Progress over perfection.",
   noGroups: "Start or join a group with people who get what this season feels like.",
   noNotifications: "You're all caught up.",

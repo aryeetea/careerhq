@@ -362,30 +362,38 @@ export interface GroupJoinLinkPreview {
   expires_at: string | null;
 }
 
-export interface FriendInviteLink {
+export type FriendCodeExpiration = "24h" | "7d" | "30d" | "never";
+export type FriendCodeMaxUses = 1 | 5 | 10;
+
+export interface FriendCode {
   id: string;
-  owner_id: string;
-  token: string;
+  created_by: string;
+  code_hint: string;
   is_active: boolean;
   expires_at: string | null;
-  max_uses: number | null;
+  max_uses: FriendCodeMaxUses;
   use_count: number;
-  last_used_at: string | null;
   created_at: string;
   updated_at: string;
 }
 
-export interface FriendInviteLinkPreview {
+// Returned once, only by create/regenerate — the plaintext code is never
+// persisted, so this is the only shape that ever carries it.
+export interface FriendCodeCreated {
+  code: string;
+  id: string;
+  expires_at: string | null;
+  max_uses: FriendCodeMaxUses;
+}
+
+export interface FriendCodePreview {
   owner_id: string;
   display_name: string;
   username: string;
   avatar_url: string | null;
   bio: string | null;
   career_goal: string | null;
-  is_active: boolean;
-  expires_at: string | null;
-  max_uses: number | null;
-  use_count: number;
+  mutual_groups: string[];
 }
 
 export interface MutualConnections {

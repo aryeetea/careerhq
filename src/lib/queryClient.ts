@@ -37,7 +37,7 @@ export const queryKeys = {
   profileActivity: (userId: string) => ["profile-activity", userId] as const,
   unreadCount: (userId: string) => ["unread-count", userId] as const,
   reactions: (contextType: string, contextId: string) => ["reactions", contextType, contextId] as const,
-  friendInviteLinks: (userId: string) => ["friend-invite-links", userId] as const,
+  friendCodes: (userId: string) => ["friend-codes", userId] as const,
   mutualConnections: (friendId: string) => ["mutual-connections", friendId] as const,
   suggestedFriends: (userId: string) => ["suggested-friends", userId] as const,
 };
