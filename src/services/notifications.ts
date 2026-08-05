@@ -33,16 +33,24 @@ export async function markAllRead(userId: string): Promise<void> {
 
 /** Subscribes to new activity_events for this user via Supabase Realtime. Returns an unsubscribe function. */
 export function subscribeToNotifications(userId: string, onInsert: (event: ActivityEvent) => void): () => void {
-  const channel = supabase
-    .channel(`activity-events-${userId}`)
-    .on(
-      "postgres_changes",
-      { event: "INSERT", schema: "public", table: "activity_events", filter: `recipient_id=eq.${userId}` },
-      (payload) => onInsert(payload.new as ActivityEvent)
-    )
-    .subscribe();
+  try {
+    const channel = supabase
+      .channel(`activity-events-${userId}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "activity_events", filter: `recipient_id=eq.${userId}` },
+        (payload) => onInsert(payload.new as ActivityEvent)
+      )
+      .subscribe();
 
-  return () => {
-    supabase.removeChannel(channel);
-  };
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  } catch (error) {
+    // Realtime is a progressive enhancement; polling-backed queries should
+    // keep the UI usable even when CSP or browser policy blocks websockets.
+    // eslint-disable-next-line no-console
+    console.warn("Notifications realtime unavailable:", error);
+    return () => void 0;
+  }
 }
