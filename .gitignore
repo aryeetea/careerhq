@@ -16,3 +16,4 @@ supabase/.temp/
 # editor
 .vscode/*
 !.vscode/extensions.json
+.vercel

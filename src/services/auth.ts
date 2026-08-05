@@ -1,6 +1,7 @@
-import { supabase } from "@/lib/supabase";
+import { assertSupabaseConfigured, supabase } from "@/lib/supabase";
 
 export async function signUp(email: string, password: string, displayName: string) {
+  assertSupabaseConfigured();
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -14,17 +15,20 @@ export async function signUp(email: string, password: string, displayName: strin
 }
 
 export async function signIn(email: string, password: string) {
+  assertSupabaseConfigured();
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) throw error;
   return data;
 }
 
 export async function signOut() {
+  assertSupabaseConfigured();
   const { error } = await supabase.auth.signOut();
   if (error) throw error;
 }
 
 export async function requestPasswordReset(email: string) {
+  assertSupabaseConfigured();
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: `${window.location.origin}/reset-password`,
   });
@@ -32,11 +36,13 @@ export async function requestPasswordReset(email: string) {
 }
 
 export async function updatePassword(newPassword: string) {
+  assertSupabaseConfigured();
   const { error } = await supabase.auth.updateUser({ password: newPassword });
   if (error) throw error;
 }
 
 export async function resendVerificationEmail(email: string) {
+  assertSupabaseConfigured();
   const { error } = await supabase.auth.resend({ type: "signup", email });
   if (error) throw error;
 }
