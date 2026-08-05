@@ -2,11 +2,19 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { ZodError } from "npm:zod";
 import { analysisResponseSchema, coverLetterResponseSchema } from "./schemas.ts";
 import { buildAnalysisPrompt, buildCoverLetterPrompt, CAREER_COACH_PROMPT_VERSION } from "./prompts/careerCoach.ts";
+import { buildScoredRubric, type CategoryInput, type ScoringCategory } from "./rubric.ts";
 
 const ANALYSIS_MODEL = "gpt-5.6-terra";
 const EXTRACTION_MODEL = "gpt-5.6-luna";
 const COVER_LETTER_MODEL = "gpt-5.6-terra";
 const MAX_RESUMES_PER_REQUEST = 10;
+
+const ANALYSIS_TIMEOUT_MS = 120_000;
+const EXTRACTION_TIMEOUT_MS = 45_000;
+const COVER_LETTER_TIMEOUT_MS = 60_000;
+// Maximum 5xx retries; 4xx and auth errors are never retried.
+const MAX_RETRIES = 2;
+const RETRY_DELAY_MS = [1_000, 2_000];
 
 export interface ResumeRow {
   id: string;
@@ -241,30 +249,92 @@ export async function getJobForUser(adminClient: any, userId: string, jobId: str
   return data as JobRow;
 }
 
+/** Logs request metadata (model, action, latency, outcome) without exposing private content. */
+function logAiMeta(meta: {
+  model: string;
+  action: string;
+  latencyMs: number;
+  success: boolean;
+  attempt: number;
+  inputTokens?: number;
+  outputTokens?: number;
+}) {
+  console.log(
+    JSON.stringify({
+      event: "ai_request",
+      model: meta.model,
+      action: meta.action,
+      latency_ms: meta.latencyMs,
+      success: meta.success,
+      attempt: meta.attempt,
+      input_tokens: meta.inputTokens ?? null,
+      output_tokens: meta.outputTokens ?? null,
+    }),
+  );
+}
+
 async function createOpenAIResponse(
   client: ReturnType<typeof getOpenAIClient>,
   body: Record<string, unknown>,
+  options: { timeoutMs?: number; action?: string } = {},
 ) {
-  const response = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${client.apiKey}`,
-    },
-    body: JSON.stringify(body),
-  });
+  const { timeoutMs = ANALYSIS_TIMEOUT_MS, action = "openai_request" } = options;
+  const model = typeof body.model === "string" ? body.model : "unknown";
+  let lastError: unknown;
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    // Never forward the raw upstream error body to the browser — it can
-    // contain implementation details we don't want to expose. Log it
-    // server-side (visible in Supabase function logs) and surface a
-    // generic, user-facing message instead.
-    console.error("OpenAI request failed", response.status, errorText || response.statusText);
-    throw new AppError("The AI service is temporarily unavailable. Please try again in a moment.", 502, "upstream_error");
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    if (attempt > 0) {
+      await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS[attempt - 1] ?? 2_000));
+    }
+
+    const start = Date.now();
+    let response: Response;
+    try {
+      response = await fetch("https://api.openai.com/v1/responses", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${client.apiKey}`,
+        },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+    } catch (fetchError) {
+      // Network-level failure (timeout, DNS, etc.) — always retryable.
+      logAiMeta({ model, action, latencyMs: Date.now() - start, success: false, attempt });
+      lastError = fetchError;
+      continue;
+    }
+
+    const latencyMs = Date.now() - start;
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => "");
+      // Never forward the raw upstream error body to the browser — it can
+      // contain implementation details. Log server-side only.
+      console.error("OpenAI request failed", response.status, errorText || response.statusText);
+      logAiMeta({ model, action, latencyMs, success: false, attempt });
+
+      // 4xx errors (auth, quota, bad request) are not transient — do not retry.
+      if (response.status < 500) {
+        if (response.status === 429) {
+          throw new AppError("AI quota reached. Please try again later.", 429, "rate_limited");
+        }
+        throw new AppError("The AI service is temporarily unavailable. Please try again in a moment.", 502, "upstream_error");
+      }
+
+      lastError = new AppError("The AI service is temporarily unavailable. Please try again in a moment.", 502, "upstream_error");
+      continue;
+    }
+
+    const json = await response.json();
+    const inputTokens = json?.usage?.input_tokens as number | undefined;
+    const outputTokens = json?.usage?.output_tokens as number | undefined;
+    logAiMeta({ model, action, latencyMs, success: true, attempt, inputTokens, outputTokens });
+    return json;
   }
 
-  return await response.json();
+  throw lastError ?? new AppError("The AI service is temporarily unavailable. Please try again in a moment.", 502, "upstream_error");
 }
 
 function extractResponseText(response: { output_text?: string; output?: Array<Record<string, unknown>> }): string {
@@ -306,7 +376,7 @@ export async function extractResumeText(client: ReturnType<typeof getOpenAIClien
         ],
       },
     ],
-  });
+  }, { timeoutMs: EXTRACTION_TIMEOUT_MS, action: "extract_resume_text" });
 
   const extractedText = normalizeWhitespace(extractResponseText(response)).slice(0, 24000);
   if (!extractedText) return null;
@@ -376,11 +446,24 @@ const jobExtractionJsonSchema = {
   },
 } as const;
 
+const categoryInputJsonSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["rawScore", "evidence", "notes"],
+  properties: {
+    rawScore: { type: "integer", minimum: 0, maximum: 10 },
+    evidence: { type: "array", items: { type: "string" } },
+    notes: { type: "string" },
+  },
+} as const;
+
+// The model provides per-category evidence and raw scores; fitScore is
+// calculated by the app in mergeWithMeta and is NOT part of this schema.
 const analysisResultJsonSchema = {
   type: "object",
   additionalProperties: false,
   required: [
-    "fitScore",
+    "categoryScores",
     "confidence",
     "verdict",
     "verdictExplanation",
@@ -396,7 +479,30 @@ const analysisResultJsonSchema = {
     "nextStep",
   ],
   properties: {
-    fitScore: { type: "integer", minimum: 0, maximum: 10 },
+    categoryScores: {
+      type: "object",
+      additionalProperties: false,
+      required: [
+        "required_qualifications",
+        "relevant_experience",
+        "relevant_skills",
+        "education_certifications",
+        "projects_portfolio",
+        "preferred_qualifications",
+        "seniority_alignment",
+        "location_logistics",
+      ],
+      properties: {
+        required_qualifications:  categoryInputJsonSchema,
+        relevant_experience:      categoryInputJsonSchema,
+        relevant_skills:          categoryInputJsonSchema,
+        education_certifications: categoryInputJsonSchema,
+        projects_portfolio:       categoryInputJsonSchema,
+        preferred_qualifications: categoryInputJsonSchema,
+        seniority_alignment:      categoryInputJsonSchema,
+        location_logistics:       categoryInputJsonSchema,
+      },
+    },
     confidence: { type: "string", enum: ["high", "medium", "low"] },
     verdict: {
       type: "string",
@@ -470,7 +576,30 @@ export async function analyzeJobAndResumes(
     extracted_text: resume.extracted_text.slice(0, 12000),
   }));
 
-  const response = await createOpenAIResponse(client, {
+  const systemInput = [
+    {
+      role: "developer",
+      content: [{ type: "input_text", text: buildAnalysisPrompt() }],
+    },
+    {
+      role: "user",
+      content: [
+        {
+          type: "input_text",
+          text: JSON.stringify(
+            {
+              job_source: jobSource,
+              resumes: resumePayload,
+            },
+            null,
+            2,
+          ),
+        },
+      ],
+    },
+  ];
+
+  const modelParams = {
     model: ANALYSIS_MODEL,
     reasoning: { effort: "medium" },
     text: {
@@ -481,38 +610,78 @@ export async function analyzeJobAndResumes(
         schema: analysisSchema,
       },
     },
-    input: [
+  };
+
+  const response = await createOpenAIResponse(
+    client,
+    { ...modelParams, input: systemInput },
+    { timeoutMs: ANALYSIS_TIMEOUT_MS, action: "analyze_job" },
+  );
+
+  const rawText = extractResponseText(response);
+
+  function mergeWithMeta(parsed: unknown) {
+    const p = parsed as Record<string, unknown>;
+    const modelAnalysis = (p.analysis ?? {}) as Record<string, unknown>;
+    // The model provides per-category raw inputs; the app calculates the score.
+    const categoryInputs = modelAnalysis.categoryScores as Record<ScoringCategory, CategoryInput>;
+    const scored = buildScoredRubric(categoryInputs);
+
+    return analysisResponseSchema.parse({
+      ...p,
+      analysis: {
+        ...modelAnalysis,
+        fitScore: scored.fitScore,
+        rubricVersion: scored.rubricVersion,
+        categoryScores: scored.categories,
+      },
+      importStatus: jobSource.importStatus,
+      source: jobSource.source,
+      fetchedUrl: jobSource.fetchedUrl,
+      promptVersion: CAREER_COACH_PROMPT_VERSION,
+    });
+  }
+
+  try {
+    return mergeWithMeta(JSON.parse(rawText));
+  } catch (firstError) {
+    // Log the validation failure without including résumé or job content.
+    const errorSummary =
+      firstError instanceof ZodError
+        ? firstError.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")
+        : "Invalid JSON or unexpected structure";
+    console.error("Analysis validation failed on first attempt:", errorSummary);
+
+    // Controlled repair: re-send the conversation with the bad output and a
+    // targeted correction instruction. The repair message never includes
+    // résumé text — only the model's own prior output and what was wrong.
+    const repairInput = [
+      ...systemInput,
       {
-        role: "developer",
-        content: [{ type: "input_text", text: buildAnalysisPrompt() }],
+        role: "assistant",
+        content: [{ type: "output_text", text: rawText }],
       },
       {
         role: "user",
         content: [
           {
             type: "input_text",
-            text: JSON.stringify(
-              {
-                job_source: jobSource,
-                resumes: resumePayload,
-              },
-              null,
-              2,
-            ),
+            text: `The previous response failed schema validation. Issues: ${errorSummary}. Return a corrected JSON object that fixes only the invalid fields while keeping all valid data unchanged.`,
           },
         ],
       },
-    ],
-  });
+    ];
 
-  const parsed = JSON.parse(extractResponseText(response));
-  return analysisResponseSchema.parse({
-    ...parsed,
-    importStatus: jobSource.importStatus,
-    source: jobSource.source,
-    fetchedUrl: jobSource.fetchedUrl,
-    promptVersion: CAREER_COACH_PROMPT_VERSION,
-  });
+    const repairResponse = await createOpenAIResponse(
+      client,
+      { ...modelParams, input: repairInput },
+      { timeoutMs: ANALYSIS_TIMEOUT_MS, action: "analyze_job_repair" },
+    );
+
+    // If repair also fails, the ZodError propagates — errorResponse handles it
+    // as a validation_error and never saves malformed output.
+    return mergeWithMeta(JSON.parse(extractResponseText(repairResponse)));
+  }
 }
 
 const coverLetterSchema = {
@@ -582,7 +751,7 @@ export async function generateCoverLetterText(
         ],
       },
     ],
-  });
+  }, { timeoutMs: COVER_LETTER_TIMEOUT_MS, action: "generate_cover_letter" });
 
   return coverLetterResponseSchema.parse(JSON.parse(extractResponseText(response)));
 }

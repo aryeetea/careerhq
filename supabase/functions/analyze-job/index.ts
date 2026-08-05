@@ -75,6 +75,7 @@ Deno.serve(async (request) => {
           ai_recommended_resume_id: recommendedResumeId,
           ai_last_analyzed_at: new Date().toISOString(),
           ai_prompt_version: analysis.promptVersion,
+          ai_rubric_version: analysis.analysis.rubricVersion,
           resume_id: nextResumeId,
         })
         .eq("id", savedJob.id)

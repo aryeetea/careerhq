@@ -91,7 +91,7 @@ export const jobFormSchema = jobBasicsSchema.extend({
     .optional(),
   // Registered with setValueAs (see AddJobDialog/JobDetailDialog) so an empty
   // input becomes null rather than coercing "" -> 0.
-  fitScore: z.number().int().min(0).max(10).nullable().optional(),
+  fitScore: z.number().min(0).max(10).nullable().optional(),
   resumeId: z.string().optional().or(z.literal("")),
   coverLetterUsed: z.string().trim().max(2000).optional().or(z.literal("")),
   priority: z.coerce.number().int().min(1).max(3).default(2),

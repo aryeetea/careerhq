@@ -59,8 +59,22 @@ export const aiJobExtractionSchema = z.object({
   rawJobText: z.string(),
 });
 
+export const categoryScoreSchema = z.object({
+  category: z.string(),
+  label: z.string(),
+  rawScore: z.number().int().min(0).max(10),
+  weight: z.number().min(0).max(1),
+  weightedContribution: z.number().min(0).max(10),
+  evidence: z.array(z.string()),
+  notes: z.string(),
+});
+export type CategoryScore = z.infer<typeof categoryScoreSchema>;
+
 export const analysisResultSchema = z.object({
-  fitScore: z.number().int().min(0).max(10),
+  // fitScore is app-calculated from categoryScores; rubricVersion is optional for old analyses.
+  fitScore: z.number().min(0).max(10),
+  rubricVersion: z.string().optional(),
+  categoryScores: z.array(categoryScoreSchema).optional(),
   confidence: confidenceLevelSchema,
   verdict: verdictSchema,
   verdictExplanation: z.string(),
@@ -101,6 +115,7 @@ export const jobAnalysisPayloadSchema = z.object({
   recommendedResumeId: z.string().uuid().nullable(),
   resumeSuggestions: z.array(resumeSuggestionSchema),
   promptVersion: z.string(),
+  rubricVersion: z.string().optional(),
 });
 export type JobAnalysisPayload = z.infer<typeof jobAnalysisPayloadSchema>;
 

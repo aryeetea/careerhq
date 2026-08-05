@@ -59,8 +59,21 @@ export const jobExtractionSchema = z.object({
   rawJobText: z.string(),
 });
 
+export const categoryScoreSchema = z.object({
+  category: z.string(),
+  label: z.string(),
+  rawScore: z.number().int().min(0).max(10),
+  weight: z.number().min(0).max(1),
+  weightedContribution: z.number().min(0).max(10),
+  evidence: z.array(z.string()),
+  notes: z.string(),
+});
+
 export const analysisResultSchema = z.object({
-  fitScore: z.number().int().min(0).max(10),
+  // fitScore and rubricVersion are computed by the app (rubric.ts), not by the model.
+  fitScore: z.number().min(0).max(10),
+  rubricVersion: z.string(),
+  categoryScores: z.array(categoryScoreSchema),
   confidence: z.enum(["high", "medium", "low"]),
   verdict: verdictEnum,
   verdictExplanation: z.string(),
