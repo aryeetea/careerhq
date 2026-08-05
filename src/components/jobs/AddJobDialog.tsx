@@ -20,7 +20,7 @@ import type { NewJob, Resume } from "@/types/database";
 import { useCreateJob } from "@/hooks/queries/useJobs";
 import { useAnalyzeJob } from "@/hooks/queries/useJobAi";
 import { useToast } from "@/components/shared/toast";
-import { JOB_STATUSES } from "@/lib/constants";
+import { JOB_STATUSES, VERDICT_OPTIONS } from "@/lib/constants";
 import { AnalysisSummary } from "@/components/jobs/AnalysisSummary";
 import { toDateInputValue } from "@/lib/utils";
 import type { JobAnalysisPayload } from "@/lib/ai";
@@ -247,9 +247,9 @@ export function AddJobDialog({ open, onOpenChange, resumes }: AddJobDialogProps)
                     <Select value={watch("verdict") || ""} onValueChange={(v) => setValue("verdict", v as JobFormValues["verdict"])}>
                       <SelectTrigger><SelectValue placeholder="Not evaluated" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="apply">🟢 Apply</SelectItem>
-                        <SelectItem value="maybe">🟡 Maybe</SelectItem>
-                        <SelectItem value="skip">🔴 Skip</SelectItem>
+                        {VERDICT_OPTIONS.map((v) => (
+                          <SelectItem key={v.value} value={v.value}>{v.emoji} {v.label}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>

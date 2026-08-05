@@ -1,7 +1,15 @@
 import { z } from "zod";
 
 const workArrangementSchema = z.union([z.enum(["remote", "hybrid", "onsite"]), z.null()]);
-const verdictSchema = z.enum(["apply", "maybe", "skip"]);
+const verdictSchema = z.enum([
+  "excellent_match",
+  "strong_match",
+  "worth_applying",
+  "stretch_opportunity",
+  "high_risk",
+  "not_recommended",
+]);
+const confidenceLevelSchema = z.enum(["low", "medium", "high"]);
 
 export const extractedJobSchema = z.object({
   company: z.string().nullable(),
@@ -37,15 +45,21 @@ export const jobAnalysisPayloadSchema = z.object({
   extracted_job: extractedJobSchema,
   fit_score: z.number().int().min(0).max(10),
   verdict: verdictSchema,
+  confidence_level: confidenceLevelSchema,
+  verdict_explanation: z.string(),
   priority: z.union([z.literal(1), z.literal(2), z.literal(3)]),
   deal_breakers: z.array(z.string()),
   matching_strengths: z.array(z.string()),
   missing_required_qualifications: z.array(z.string()),
   missing_preferred_qualifications: z.array(z.string()),
+  gaps_that_matter: z.array(z.string()),
+  gaps_that_dont_matter: z.array(z.string()),
+  highest_impact_next_step: z.string(),
   resume_rankings: z.array(resumeRecommendationSchema),
   recommended_resume_id: z.string().nullable(),
   recommended_resume_reason: z.string().nullable(),
   resume_improvement_suggestions: z.array(z.string()),
+  career_coach_advice: z.string(),
 });
 export type JobAnalysisPayload = z.infer<typeof jobAnalysisPayloadSchema>;
 

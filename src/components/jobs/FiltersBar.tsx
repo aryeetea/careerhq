@@ -4,7 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import type { Resume } from "@/types/database";
 import { DEFAULT_FILTERS, type JobFilters } from "@/types/filters";
-import { JOB_STATUSES } from "@/lib/constants";
+import { JOB_STATUSES, VERDICT_OPTIONS } from "@/lib/constants";
 
 export function FiltersBar({
   filters,
@@ -47,12 +47,12 @@ export function FiltersBar({
       </Select>
 
       <Select value={filters.verdict} onValueChange={(v) => onChange({ ...filters, verdict: v as JobFilters["verdict"] })}>
-        <SelectTrigger className="w-[130px]"><SelectValue placeholder="Verdict" /></SelectTrigger>
+        <SelectTrigger className="w-[170px]"><SelectValue placeholder="Verdict" /></SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All verdicts</SelectItem>
-          <SelectItem value="apply">🟢 Apply</SelectItem>
-          <SelectItem value="maybe">🟡 Maybe</SelectItem>
-          <SelectItem value="skip">🔴 Skip</SelectItem>
+          {VERDICT_OPTIONS.map((v) => (
+            <SelectItem key={v.value} value={v.value}>{v.emoji} {v.label}</SelectItem>
+          ))}
         </SelectContent>
       </Select>
 

@@ -76,7 +76,19 @@ export const jobFormSchema = jobBasicsSchema.extend({
     "closed",
     "archived",
   ]),
-  verdict: z.union([z.enum(["apply", "maybe", "skip"]), z.literal("")]).optional(),
+  verdict: z
+    .union([
+      z.enum([
+        "excellent_match",
+        "strong_match",
+        "worth_applying",
+        "stretch_opportunity",
+        "high_risk",
+        "not_recommended",
+      ]),
+      z.literal(""),
+    ])
+    .optional(),
   // Registered with setValueAs (see AddJobDialog/JobDetailDialog) so an empty
   // input becomes null rather than coercing "" -> 0.
   fitScore: z.number().int().min(0).max(10).nullable().optional(),

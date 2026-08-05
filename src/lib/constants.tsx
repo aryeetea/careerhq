@@ -56,10 +56,28 @@ export const JOB_STATUSES: { value: JobStatus; label: string }[] = ALL_BOARD_COL
   label: STATUS_META[s].label,
 }));
 
+// Six-tier verdict, from strongest to weakest fit. Deliberately reuses only
+// existing design tokens (success → sky → gold → peach → destructive) so no
+// new colors were introduced for this.
 export const VERDICT_META: Record<JobVerdict, { label: string; emoji: string; className: string }> = {
-  apply: { label: "Apply", emoji: "🟢", className: "bg-success/15 text-success" },
-  maybe: { label: "Maybe", emoji: "🟡", className: "bg-gold/15 text-gold" },
-  skip: { label: "Skip", emoji: "🔴", className: "bg-destructive/15 text-destructive" },
+  excellent_match: { label: "Excellent Match", emoji: "🌟", className: "bg-success/20 text-success font-semibold" },
+  strong_match: { label: "Strong Match", emoji: "🟢", className: "bg-success/15 text-success" },
+  worth_applying: { label: "Worth Applying", emoji: "🔵", className: "bg-sky/15 text-sky" },
+  stretch_opportunity: { label: "Stretch Opportunity", emoji: "🌱", className: "bg-gold/15 text-gold" },
+  high_risk: { label: "High Risk", emoji: "🟠", className: "bg-peach/20 text-peach-foreground" },
+  not_recommended: { label: "Not Recommended", emoji: "🔴", className: "bg-destructive/15 text-destructive" },
+};
+
+// Single source for every verdict <Select> in the app (JobDetailDialog,
+// AddJobDialog, FiltersBar) so the option list is never hand-duplicated.
+export const VERDICT_OPTIONS: { value: JobVerdict; label: string; emoji: string }[] = (
+  Object.keys(VERDICT_META) as JobVerdict[]
+).map((value) => ({ value, label: VERDICT_META[value].label, emoji: VERDICT_META[value].emoji }));
+
+export const CONFIDENCE_META: Record<"low" | "medium" | "high", { label: string; className: string }> = {
+  low: { label: "Low confidence", className: "text-muted-foreground" },
+  medium: { label: "Medium confidence", className: "text-foreground/80" },
+  high: { label: "High confidence", className: "text-foreground" },
 };
 
 export const WORK_ARRANGEMENT_META: Record<WorkArrangement, string> = {

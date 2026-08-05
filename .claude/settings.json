@@ -46,7 +46,9 @@
       "Read(//Applications/**)",
       "Bash(curl -sf http://localhost:4173/ -o /dev/null)",
       "Bash(python3 -c \"import json,sys,re; print\\(sys.stdin.read\\(\\)\\)\")",
-      "Bash(node debug_animations.mjs)"
+      "Bash(node debug_animations.mjs)",
+      "mcp__supabase__get_edge_function",
+      "mcp__supabase__deploy_edge_function"
     ]
   }
 }

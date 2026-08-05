@@ -25,7 +25,7 @@ import { useDeleteJob, useJobStatusHistory, useUpdateJob } from "@/hooks/queries
 import { useAnalyzeJob, useGenerateCoverLetter } from "@/hooks/queries/useJobAi";
 import { useToast } from "@/components/shared/toast";
 import { useCelebration } from "@/components/ambient/Celebration";
-import { JOB_STATUSES, STATUS_META } from "@/lib/constants";
+import { JOB_STATUSES, STATUS_META, VERDICT_OPTIONS } from "@/lib/constants";
 import { dateInputToISO, formatDate, formatDateTime, toDateInputValue } from "@/lib/utils";
 import type { JobAnalysisPayload } from "@/lib/ai";
 
@@ -328,9 +328,9 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
                   <Select value={watch("verdict") || ""} onValueChange={(v) => setValue("verdict", v as JobFormValues["verdict"], { shouldDirty: true })}>
                     <SelectTrigger><SelectValue placeholder="Not evaluated" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="apply">🟢 Apply</SelectItem>
-                      <SelectItem value="maybe">🟡 Maybe</SelectItem>
-                      <SelectItem value="skip">🔴 Skip</SelectItem>
+                      {VERDICT_OPTIONS.map((v) => (
+                        <SelectItem key={v.value} value={v.value}>{v.emoji} {v.label}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -476,7 +476,8 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
                   placeholder="Generate a draft after choosing the resume you want to use."
                 />
                 <p className="text-xs text-muted-foreground">
-                  Review this carefully before sending. It is constrained to the information in your selected resume and the saved job text.
+                  Review this carefully before sending. It draws only on your selected resume, the saved job text, and your career
+                  goal from your profile — nothing is invented.
                 </p>
               </div>
             </TabsContent>

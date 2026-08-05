@@ -20,7 +20,14 @@ export type JobStatus =
   | "closed"
   | "archived";
 
-export type JobVerdict = "apply" | "maybe" | "skip";
+export type JobVerdict =
+  | "excellent_match"
+  | "strong_match"
+  | "worth_applying"
+  | "stretch_opportunity"
+  | "high_risk"
+  | "not_recommended";
+export type ConfidenceLevel = "low" | "medium" | "high";
 export type CertificationStatus = "not_started" | "in_progress" | "completed" | "expired";
 export type VisibilityLevel = "private" | "friends_only" | "selected_friends" | "hidden";
 export type FriendRequestStatus = "pending" | "accepted" | "declined" | "cancelled";
@@ -62,6 +69,8 @@ export interface JobAiAnalysis {
   extracted_job: JobAiExtraction;
   fit_score: number;
   verdict: JobVerdict;
+  confidence_level: ConfidenceLevel;
+  verdict_explanation: string;
   priority: 1 | 2 | 3;
   recommended_resume_id: string | null;
   recommended_resume_reason: string | null;
@@ -69,8 +78,12 @@ export interface JobAiAnalysis {
   matching_strengths: string[];
   missing_required_qualifications: string[];
   missing_preferred_qualifications: string[];
+  gaps_that_matter: string[];
+  gaps_that_dont_matter: string[];
+  highest_impact_next_step: string;
   resume_rankings: ResumeRecommendation[];
   resume_improvement_suggestions: string[];
+  career_coach_advice: string;
 }
 
 export interface Profile {
