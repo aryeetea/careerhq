@@ -29,6 +29,25 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/shared/toast";
 import { formatDate, initials } from "@/lib/utils";
 import { getPersonProfilePath } from "@/lib/people";
+import type { PeopleProfileDenyReason } from "@/types/database";
+
+// Copy for each reason a profile can be unreachable. Kept intentionally
+// plain — a viewer should never learn *more* than this (a blocked viewer
+// and someone guessing a random id both just see "not available").
+const DENY_REASON_COPY: Record<PeopleProfileDenyReason, { title: string; description: string }> = {
+  not_found: {
+    title: "We couldn't find this profile",
+    description: "The link may be out of date, or this account no longer exists.",
+  },
+  blocked: {
+    title: "This profile isn't available",
+    description: "It isn't something you can view right now.",
+  },
+  no_access: {
+    title: "This profile isn't available to you",
+    description: "You may need to be friends, or they haven't turned on sharing.",
+  },
+};
 
 export default function PeopleProfile() {
   const { userId = "" } = useParams<{ userId: string }>();
@@ -45,9 +64,9 @@ export default function PeopleProfile() {
   if (isError) {
     return (
       <div className="flex flex-1 flex-col">
-        <TopBar title="Profile" subtitle="A calm, read-only view of what someone has chosen to share." />
+        <TopBar title="Profile" subtitle="Here's what they've chosen to share with you." />
         <div className="px-4 pb-10 sm:px-8">
-          <ErrorState description="This profile couldn't load right now. Try again." onRetry={() => refetch()} />
+          <ErrorState description="We couldn't load this profile right now. Try again in a moment." onRetry={() => refetch()} />
         </div>
       </div>
     );
@@ -56,7 +75,7 @@ export default function PeopleProfile() {
   if (isLoading) {
     return (
       <div className="flex flex-1 flex-col">
-        <TopBar title="Profile" subtitle="A calm, read-only view of what someone has chosen to share." />
+        <TopBar title="Profile" subtitle="Here's what they've chosen to share with you." />
         <div className="grid gap-4 px-4 pb-10 sm:px-8">
           <Skeleton className="h-56 rounded-[2rem]" />
           <Skeleton className="h-44 rounded-[2rem]" />
@@ -66,15 +85,17 @@ export default function PeopleProfile() {
     );
   }
 
-  if (!profile) {
+  const denyReason = profile?.deny_reason ?? (profile ? null : "not_found");
+  if (denyReason) {
+    const copy = DENY_REASON_COPY[denyReason];
     return (
       <div className="flex flex-1 flex-col">
-        <TopBar title="Profile" subtitle="A calm, read-only view of what someone has chosen to share." />
+        <TopBar title="Profile" subtitle="Here's what they've chosen to share with you." />
         <div className="flex-1 overflow-y-auto px-4 pb-10 sm:px-8">
           <EmptyState
             icon={<UserRound className="h-5 w-5" />}
-            title="This profile isn't available"
-            description="It may be private, unavailable to you, or no longer accessible."
+            title={copy.title}
+            description={copy.description}
             action={
               <Button asChild variant="outline">
                 <Link to="/app/friends">Back to Friends</Link>
@@ -123,6 +144,20 @@ function PeopleProfileContent({ userId, previewMode }: { userId: string; preview
     profile?.interviews_count ? `${profile.interviews_count} interviews` : null,
     profile?.offers_count ? `${profile.offers_count} offers` : null,
   ].filter((value): value is string => Boolean(value));
+
+  // Beyond the always-shown identity card and today's-thought card, is
+  // there anything else here? If not, say so plainly instead of leaving a
+  // long stretch of empty space.
+  const hasSharedMuch = Boolean(
+    profile?.bio ||
+      profile?.career_status ||
+      sharedProgressVisible ||
+      achievementChips.length > 0 ||
+      profile?.shared_goals.length ||
+      profile?.certification_name ||
+      profile?.mutual_groups.length ||
+      profile?.mutual_goals.length
+  );
 
   async function handleSendRequest() {
     await sendRequest.mutateAsync(userId);
@@ -199,7 +234,7 @@ function PeopleProfileContent({ userId, previewMode }: { userId: string; preview
         subtitle={
           previewMode
             ? "This is the read-only view someone else would get."
-            : "A warm, read-only view of what this person has chosen to share."
+            : "Here's what they've chosen to share with you."
         }
         action={
           <div className="flex items-center gap-2">
@@ -270,10 +305,16 @@ function PeopleProfileContent({ userId, previewMode }: { userId: string; preview
             </CardContent>
           </Card>
 
-          {profile?.status_message && (
+          {(isFriend || previewMode === "friend") && !hasSharedMuch && (
+            <p className="px-1 text-sm text-muted-foreground">They haven&apos;t shared much yet.</p>
+          )}
+
+          {(isFriend || previewMode === "friend") && (
             <SectionCard title="Today's Thought" icon={<MessageCircleHeart className="h-4 w-4 text-primary" />}>
               <ThoughtBubble className="max-w-2xl bg-card/80 px-4 py-3">
-                <p className="text-sm leading-7 text-foreground/82">{profile.status_message}</p>
+                <p className="text-sm leading-7 text-foreground/82">
+                  {profile?.status_message || <span className="text-muted-foreground">No thought shared today.</span>}
+                </p>
               </ThoughtBubble>
             </SectionCard>
           )}

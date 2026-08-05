@@ -308,6 +308,11 @@ export type PeopleProfileRelationship =
   | "outgoing_request"
   | "group_member";
 
+// Why get_people_profile declined to return a viewable profile. Deliberately
+// coarse — it should never tell a viewer more than they could already infer
+// (a blocked viewer just sees "not available", same as a made-up user id).
+export type PeopleProfileDenyReason = "not_found" | "blocked" | "no_access";
+
 export interface PeopleProfileGoalSummary {
   id: string;
   name: string;
@@ -343,6 +348,8 @@ export interface PeopleProfileView {
   shared_goals: PeopleProfileGoalSummary[];
   mutual_groups: PeopleProfileSimpleGroup[];
   mutual_goals: PeopleProfileSimpleGroup[];
+  /** Present, with everything else null, when the profile isn't viewable. */
+  deny_reason: PeopleProfileDenyReason | null;
 }
 
 export interface Goal {

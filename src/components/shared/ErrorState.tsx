@@ -9,8 +9,8 @@ import { cn } from "@/lib/utils";
  * from the query hook.
  */
 export function ErrorState({
-  title = "Something went wrong",
-  description = "That didn't load. Check your connection and try again — your data is safe.",
+  title = "This didn't load",
+  description = "Check your connection and try again — your data is safe.",
   onRetry,
   className,
   icon,

@@ -29,7 +29,7 @@ export default function Friends() {
     <div className="flex flex-1 flex-col">
       <TopBar
         title="Friends"
-        subtitle="Encouragement, not competition."
+        subtitle="Cheer each other on."
         action={
           <Button onClick={() => setAddOpen(true)} size="sm" className="gap-1.5">
             <UserPlus className="h-4 w-4" /> Add Friend
