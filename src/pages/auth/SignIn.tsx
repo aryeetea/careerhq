@@ -1,8 +1,8 @@
 import * as React from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, LoaderCircle, Mail } from "lucide-react";
+import { ArrowLeft, LoaderCircle } from "lucide-react";
 import { AuthLayout } from "@/pages/auth/AuthLayout";
 import { AuthNotice } from "@/components/auth/AuthNotice";
 import { Button } from "@/components/ui/button";
@@ -10,43 +10,34 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  otpRequestSchema,
   otpVerificationSchema,
-  signUpOtpRequestSchema,
-  signUpSchema,
+  signInSchema,
+  type OtpRequestValues,
   type OtpVerificationValues,
-  type SignUpOtpRequestValues,
-  type SignUpValues,
+  type SignInValues,
 } from "@/lib/validation";
-import { requestSignUpOtp, resendVerificationEmail, signUp, verifyEmailOtp } from "@/services/auth";
+import { requestSignInOtp, signIn, verifyEmailOtp } from "@/services/auth";
 import { useToast } from "@/components/shared/toast";
-
-interface PendingOtpSignup {
-  email: string;
-  displayName: string;
-}
 
 const OTP_RESEND_SECONDS = 45;
 
-export default function SignUp() {
+export default function SignIn() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { push } = useToast();
   const [authMethod, setAuthMethod] = React.useState<"password" | "otp">("password");
-  const [sent, setSent] = React.useState<string | null>(null);
-  const [passwordError, setPasswordError] = React.useState<string | null>(null);
-  const [resendVerificationState, setResendVerificationState] = React.useState<{
-    error: string | null;
-    loading: boolean;
-    success: string | null;
-  }>({ error: null, loading: false, success: null });
-  const [otpSignup, setOtpSignup] = React.useState<PendingOtpSignup | null>(null);
+  const [otpEmail, setOtpEmail] = React.useState<string | null>(null);
   const [resendAvailableAt, setResendAvailableAt] = React.useState<number | null>(null);
   const [secondsRemaining, setSecondsRemaining] = React.useState(0);
+  const [passwordError, setPasswordError] = React.useState<string | null>(null);
   const [requestError, setRequestError] = React.useState<string | null>(null);
   const [requestStatus, setRequestStatus] = React.useState<string | null>(null);
   const [verifyError, setVerifyError] = React.useState<string | null>(null);
   const [isResending, setIsResending] = React.useState(false);
-  const passwordForm = useForm<SignUpValues>({ resolver: zodResolver(signUpSchema) });
-  const otpRequestForm = useForm<SignUpOtpRequestValues>({ resolver: zodResolver(signUpOtpRequestSchema) });
+  const redirectTo = (location.state as { from?: string } | null)?.from ?? "/app";
+  const passwordForm = useForm<SignInValues>({ resolver: zodResolver(signInSchema) });
+  const otpRequestForm = useForm<OtpRequestValues>({ resolver: zodResolver(otpRequestSchema) });
   const otpVerifyForm = useForm<OtpVerificationValues>({ resolver: zodResolver(otpVerificationSchema) });
 
   React.useEffect(() => {
@@ -69,17 +60,17 @@ export default function SignUp() {
   }, [resendAvailableAt]);
 
   React.useEffect(() => {
-    if (!otpSignup) return;
+    if (!otpEmail) return;
     const focusTimer = window.setTimeout(() => otpVerifyForm.setFocus("token"), 20);
     return () => window.clearTimeout(focusTimer);
-  }, [otpSignup, otpVerifyForm]);
+  }, [otpEmail, otpVerifyForm]);
 
   function startResendCooldown() {
     setResendAvailableAt(Date.now() + OTP_RESEND_SECONDS * 1000);
   }
 
   function resetOtpFlow() {
-    setOtpSignup(null);
+    setOtpEmail(null);
     setResendAvailableAt(null);
     setSecondsRemaining(0);
     setRequestStatus(null);
@@ -90,50 +81,44 @@ export default function SignUp() {
     otpVerifyForm.reset();
   }
 
-  async function onPasswordSubmit(values: SignUpValues) {
+  async function onPasswordSubmit(values: SignInValues) {
     setPasswordError(null);
-    setResendVerificationState({ error: null, loading: false, success: null });
-
     try {
-      const result = await signUp(values.email, values.password, values.displayName);
-      if (result.session) {
-        navigate("/onboarding", { replace: true });
-        return;
-      }
-      setSent(values.email);
+      await signIn(values.email, values.password);
+      navigate(redirectTo, { replace: true });
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Couldn't create your account. Try again.";
+      const message = err instanceof Error ? err.message : "Couldn't sign in. Check your details and try again.";
       setPasswordError(message);
       push(message, "error");
     }
   }
 
-  async function sendCode(values: SignUpOtpRequestValues) {
+  async function sendCode(values: OtpRequestValues) {
     setRequestError(null);
     setVerifyError(null);
 
     try {
-      await requestSignUpOtp(values.email, values.displayName);
-      setOtpSignup(values);
-      setRequestStatus(`Your 6-digit sign-up code is on the way to ${values.email}.`);
+      await requestSignInOtp(values.email);
+      setOtpEmail(values.email);
+      setRequestStatus(`Your 6-digit sign-in code is on the way to ${values.email}.`);
       otpVerifyForm.reset();
       startResendCooldown();
-      push("Your 6-digit sign-up code is on the way.", "success");
+      push("Your 6-digit sign-in code is on the way.", "success");
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Couldn't send a sign-up code right now.";
+      const message = err instanceof Error ? err.message : "Couldn't send a sign-in code right now.";
       setRequestError(message);
       push(message, "error");
     }
   }
 
   async function verifyCode(values: OtpVerificationValues) {
-    if (!otpSignup) return;
+    if (!otpEmail) return;
 
     setVerifyError(null);
 
     try {
-      await verifyEmailOtp(otpSignup.email, values.token);
-      navigate("/onboarding", { replace: true });
+      await verifyEmailOtp(otpEmail, values.token);
+      navigate(redirectTo, { replace: true });
     } catch (err) {
       const message = err instanceof Error ? err.message : "That code didn't work. Request a fresh one and try again.";
       setVerifyError(message);
@@ -142,7 +127,7 @@ export default function SignUp() {
   }
 
   async function resendCode() {
-    if (!otpSignup || isResending) return;
+    if (!otpEmail || isResending) return;
     if (secondsRemaining > 0) {
       push(`Give it ${secondsRemaining}s before asking for another code.`, "info");
       return;
@@ -153,9 +138,9 @@ export default function SignUp() {
     setIsResending(true);
 
     try {
-      await requestSignUpOtp(otpSignup.email, otpSignup.displayName);
+      await requestSignInOtp(otpEmail);
       otpVerifyForm.reset();
-      setRequestStatus(`A fresh 6-digit sign-up code is on the way to ${otpSignup.email}.`);
+      setRequestStatus(`A fresh 6-digit sign-in code is on the way to ${otpEmail}.`);
       startResendCooldown();
       push("A fresh 6-digit code is on the way.", "success");
     } catch (err) {
@@ -167,75 +152,13 @@ export default function SignUp() {
     }
   }
 
-  async function onResendVerificationEmail() {
-    if (!sent || resendVerificationState.loading) return;
-
-    setResendVerificationState({ error: null, loading: true, success: null });
-
-    try {
-      await resendVerificationEmail(sent);
-      setResendVerificationState({
-        error: null,
-        loading: false,
-        success: `A fresh verification email is on the way to ${sent}.`,
-      });
-      push("Verification email resent.", "success");
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Couldn't resend the verification email right now.";
-      setResendVerificationState({ error: message, loading: false, success: null });
-      push(message, "error");
-    }
-  }
-
   const passwordBusy = passwordForm.formState.isSubmitting;
   const requestBusy = otpRequestForm.formState.isSubmitting;
   const verifyBusy = otpVerifyForm.formState.isSubmitting;
   const resendDisabled = secondsRemaining > 0 || isResending || verifyBusy;
 
-  if (sent) {
-    return (
-      <AuthLayout title="Check your inbox" subtitle="One more step before you're in.">
-        <div className="flex flex-col items-center gap-4 py-2 text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-secondary text-primary">
-            <Mail className="h-5 w-5" />
-          </div>
-          <AuthNotice variant="success" className="w-full text-left">
-            We sent a verification link to <span className="font-semibold text-foreground">{sent}</span>. Open it, then come back
-            here to sign in.
-          </AuthNotice>
-          <AuthNotice variant="info" className="w-full text-left">
-            If you do not see it, check spam or promotions first. Verification links can take a minute to arrive.
-          </AuthNotice>
-          {resendVerificationState.success && <AuthNotice variant="success" className="w-full text-left">{resendVerificationState.success}</AuthNotice>}
-          {resendVerificationState.error && <AuthNotice variant="error" className="w-full text-left">{resendVerificationState.error}</AuthNotice>}
-          <div className="flex w-full flex-col gap-2 sm:flex-row">
-            <Button
-              type="button"
-              variant="outline"
-              className="flex-1"
-              onClick={onResendVerificationEmail}
-              disabled={resendVerificationState.loading}
-            >
-              {resendVerificationState.loading ? (
-                <>
-                  <LoaderCircle className="animate-spin" />
-                  Resending…
-                </>
-              ) : (
-                "Resend verification email"
-              )}
-            </Button>
-            <Button asChild className="flex-1">
-              <Link to="/login">Back to sign in</Link>
-            </Button>
-          </div>
-        </div>
-      </AuthLayout>
-    );
-  }
-
   return (
-    <AuthLayout title="Start your search, gently" subtitle="A calm home base for everything job-search related.">
+    <AuthLayout title="Welcome back" subtitle="Take a breath. Let's see where things stand.">
       <Tabs
         value={authMethod}
         onValueChange={(value) => {
@@ -246,32 +169,16 @@ export default function SignUp() {
         }}
       >
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="password" aria-controls="signup-password-panel">
+          <TabsTrigger value="password" aria-controls="signin-password-panel">
             Password
           </TabsTrigger>
-          <TabsTrigger value="otp" aria-controls="signup-otp-panel">
+          <TabsTrigger value="otp" aria-controls="signin-otp-panel">
             Email code
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="password" id="signup-password-panel">
+        <TabsContent value="password" id="signin-password-panel">
           <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="grid gap-4" noValidate aria-busy={passwordBusy}>
-            <div className="grid gap-1.5">
-              <Label htmlFor="displayName">What should we call you?</Label>
-              <Input
-                id="displayName"
-                autoComplete="name"
-                placeholder="Aileen"
-                {...passwordForm.register("displayName")}
-                aria-invalid={!!passwordForm.formState.errors.displayName}
-                aria-describedby={passwordForm.formState.errors.displayName ? "signup-display-name-error" : undefined}
-              />
-              {passwordForm.formState.errors.displayName && (
-                <p id="signup-display-name-error" className="text-xs font-medium text-destructive">
-                  {passwordForm.formState.errors.displayName.message}
-                </p>
-              )}
-            </div>
             <div className="grid gap-1.5">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -281,43 +188,35 @@ export default function SignUp() {
                 placeholder="you@example.com"
                 {...passwordForm.register("email")}
                 aria-invalid={!!passwordForm.formState.errors.email}
-                aria-describedby={passwordForm.formState.errors.email ? "signup-email-error" : undefined}
+                aria-describedby={passwordForm.formState.errors.email ? "signin-email-error" : undefined}
               />
               {passwordForm.formState.errors.email && (
-                <p id="signup-email-error" className="text-xs font-medium text-destructive">
+                <p id="signin-email-error" className="text-xs font-medium text-destructive">
                   {passwordForm.formState.errors.email.message}
                 </p>
               )}
             </div>
             <div className="grid gap-1.5">
-              <Label htmlFor="password">Password</Label>
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="password">Password</Label>
+                <Link
+                  to="/forgot-password"
+                  className="rounded-full px-1.5 py-1 text-sm font-medium text-primary/90 transition-colors hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  Forgot password?
+                </Link>
+              </div>
               <Input
                 id="password"
                 type="password"
-                autoComplete="new-password"
+                autoComplete="current-password"
                 {...passwordForm.register("password")}
                 aria-invalid={!!passwordForm.formState.errors.password}
-                aria-describedby={passwordForm.formState.errors.password ? "signup-password-error" : undefined}
+                aria-describedby={passwordForm.formState.errors.password ? "signin-password-error" : undefined}
               />
               {passwordForm.formState.errors.password && (
-                <p id="signup-password-error" className="text-xs font-medium text-destructive">
+                <p id="signin-password-error" className="text-xs font-medium text-destructive">
                   {passwordForm.formState.errors.password.message}
-                </p>
-              )}
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="confirmPassword">Confirm password</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                autoComplete="new-password"
-                {...passwordForm.register("confirmPassword")}
-                aria-invalid={!!passwordForm.formState.errors.confirmPassword}
-                aria-describedby={passwordForm.formState.errors.confirmPassword ? "signup-confirm-password-error" : undefined}
-              />
-              {passwordForm.formState.errors.confirmPassword && (
-                <p id="signup-confirm-password-error" className="text-xs font-medium text-destructive">
-                  {passwordForm.formState.errors.confirmPassword.message}
                 </p>
               )}
             </div>
@@ -326,37 +225,37 @@ export default function SignUp() {
               {passwordBusy ? (
                 <>
                   <LoaderCircle className="animate-spin" />
-                  Creating your space…
+                  Signing in…
                 </>
               ) : (
-                "Create account"
+                "Sign in"
               )}
             </Button>
           </form>
         </TabsContent>
 
-        <TabsContent value="otp" id="signup-otp-panel">
-          {otpSignup ? (
+        <TabsContent value="otp" id="signin-otp-panel">
+          {otpEmail ? (
             <div className="grid gap-4">
               {requestStatus && (
                 <AuthNotice variant="success">
                   <span>
-                    {requestStatus} Once you confirm it, Bloom will finish creating your account and take you into onboarding.
+                    {requestStatus} Use the same email address on this screen so Bloom can finish signing you in safely.
                   </span>
                 </AuthNotice>
               )}
               <AuthNotice variant="info">
                 <span>
-                  We&apos;ll keep your spot. Check spam or promotions first if the email feels slow.
-                  {secondsRemaining > 0 ? ` You can resend in ${secondsRemaining}s.` : " You can resend below if needed."}
+                  Codes usually arrive within a minute. Check spam or promotions if it is missing.
+                  {secondsRemaining > 0 ? ` You can request another code in ${secondsRemaining}s.` : " You can resend if it still hasn't arrived."}
                 </span>
               </AuthNotice>
 
               <form onSubmit={otpVerifyForm.handleSubmit(verifyCode)} className="grid gap-4" noValidate aria-busy={verifyBusy}>
                 <div className="grid gap-1.5">
-                  <Label htmlFor="signup-otp">6-digit code</Label>
+                  <Label htmlFor="otp">6-digit code</Label>
                   <Input
-                    id="signup-otp"
+                    id="otp"
                     inputMode="numeric"
                     autoComplete="one-time-code"
                     placeholder="123456"
@@ -364,25 +263,25 @@ export default function SignUp() {
                     {...otpVerifyForm.register("token")}
                     aria-invalid={!!otpVerifyForm.formState.errors.token || !!verifyError}
                     aria-describedby={[
-                      "signup-otp-help",
-                      otpVerifyForm.formState.errors.token ? "signup-otp-error" : null,
-                      verifyError ? "signup-otp-request-error" : null,
+                      "signin-otp-help",
+                      otpVerifyForm.formState.errors.token ? "signin-otp-error" : null,
+                      verifyError ? "signin-otp-request-error" : null,
                     ]
                       .filter(Boolean)
                       .join(" ")}
                   />
-                  <p id="signup-otp-help" className="text-xs font-medium text-foreground/65">
-                    Use the latest 6-digit code from your email. Older codes can expire once you request a new one.
+                  <p id="signin-otp-help" className="text-xs font-medium text-foreground/65">
+                    Enter numbers only. If the code has expired, ask for a fresh one below.
                   </p>
                   {otpVerifyForm.formState.errors.token && (
-                    <p id="signup-otp-error" className="text-xs font-medium text-destructive">
+                    <p id="signin-otp-error" className="text-xs font-medium text-destructive">
                       {otpVerifyForm.formState.errors.token.message}
                     </p>
                   )}
                 </div>
                 {verifyError && (
                   <AuthNotice variant="error" className="animate-slide-up motion-reduce:animate-none">
-                    <span id="signup-otp-request-error">{verifyError}</span>
+                    <span id="signin-otp-request-error">{verifyError}</span>
                   </AuthNotice>
                 )}
                 <Button type="submit" size="lg" disabled={verifyBusy || isResending} className="mt-1" aria-busy={verifyBusy}>
@@ -392,7 +291,7 @@ export default function SignUp() {
                       Checking code…
                     </>
                   ) : (
-                    "Create account"
+                    "Continue"
                   )}
                 </Button>
               </form>
@@ -419,22 +318,6 @@ export default function SignUp() {
           ) : (
             <form onSubmit={otpRequestForm.handleSubmit(sendCode)} className="grid gap-4" noValidate aria-busy={requestBusy}>
               <div className="grid gap-1.5">
-                <Label htmlFor="otp-display-name">What should we call you?</Label>
-                <Input
-                  id="otp-display-name"
-                  autoComplete="name"
-                  placeholder="Aileen"
-                  {...otpRequestForm.register("displayName")}
-                  aria-invalid={!!otpRequestForm.formState.errors.displayName}
-                  aria-describedby={otpRequestForm.formState.errors.displayName ? "otp-display-name-error" : undefined}
-                />
-                {otpRequestForm.formState.errors.displayName && (
-                  <p id="otp-display-name-error" className="text-xs font-medium text-destructive">
-                    {otpRequestForm.formState.errors.displayName.message}
-                  </p>
-                )}
-              </div>
-              <div className="grid gap-1.5">
                 <Label htmlFor="otp-email">Email</Label>
                 <Input
                   id="otp-email"
@@ -444,28 +327,28 @@ export default function SignUp() {
                   {...otpRequestForm.register("email")}
                   aria-invalid={!!otpRequestForm.formState.errors.email || !!requestError}
                   aria-describedby={[
-                    "signup-otp-request-help",
-                    otpRequestForm.formState.errors.email ? "otp-email-error" : null,
-                    requestError ? "signup-otp-request-inline-error" : null,
+                    "signin-otp-request-help",
+                    otpRequestForm.formState.errors.email ? "signin-otp-email-error" : null,
+                    requestError ? "signin-otp-request-inline-error" : null,
                   ]
                     .filter(Boolean)
                     .join(" ")}
                 />
                 {otpRequestForm.formState.errors.email && (
-                  <p id="otp-email-error" className="text-xs font-medium text-destructive">
+                  <p id="signin-otp-email-error" className="text-xs font-medium text-destructive">
                     {otpRequestForm.formState.errors.email.message}
                   </p>
                 )}
               </div>
-              <p id="signup-otp-request-help" className="text-sm leading-6 text-foreground/72">
-                We&apos;ll send a 6-digit code so you can create your account without setting a password first.
+              <p id="signin-otp-request-help" className="text-sm leading-6 text-foreground/72">
+                We&apos;ll send a 6-digit sign-in code to your email. No password entry needed on the next step.
               </p>
               <AuthNotice variant="info">
-                For a smoother experience, Bloom paces repeated code requests so one impatient tap does not flood your inbox.
+                To protect your inbox, Bloom spaces out code emails for a moment if you tap repeatedly.
               </AuthNotice>
               {requestError && (
                 <AuthNotice variant="error">
-                  <span id="signup-otp-request-inline-error">{requestError}</span>
+                  <span id="signin-otp-request-inline-error">{requestError}</span>
                 </AuthNotice>
               )}
               <Button type="submit" size="lg" disabled={requestBusy} className="mt-1" aria-busy={requestBusy}>
@@ -484,12 +367,12 @@ export default function SignUp() {
       </Tabs>
 
       <p className="mt-5 text-center text-sm leading-6 text-foreground/68">
-        Already have an account?{" "}
+        New to Bloom?{" "}
         <Link
-          to="/login"
+          to="/signup"
           className="rounded-full px-1.5 py-1 font-semibold text-primary/90 transition-colors hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
-          Sign in
+          Create an account
         </Link>
       </p>
     </AuthLayout>
