@@ -47,10 +47,20 @@ export default function Dashboard() {
   const stats = React.useMemo(() => computeDashboardStats(jobs), [jobs]);
 
   const upcomingFollowUps: UpcomingRow[] = React.useMemo(() => {
-    const now = Date.now() - 86400000;
+    // Compares calendar-date strings directly rather than epoch
+    // timestamps — follow_up_date is a plain "YYYY-MM-DD" with no time
+    // component, and parsing it with `new Date(...)` reads it as UTC
+    // midnight. Subtracting a raw 24h from `Date.now()` to build a "still
+    // show yesterday's" grace window then compares that UTC-midnight
+    // timestamp against local now, which silently drops a follow-up dated
+    // "yesterday" hours before the local day is actually over. Date-only
+    // string comparison sidesteps timezone parsing entirely.
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 1);
+    const cutoffKey = `${cutoff.getFullYear()}-${String(cutoff.getMonth() + 1).padStart(2, "0")}-${String(cutoff.getDate()).padStart(2, "0")}`;
     return jobs
-      .filter((j) => j.follow_up_date && new Date(j.follow_up_date).getTime() >= now)
-      .sort((a, b) => new Date(a.follow_up_date!).getTime() - new Date(b.follow_up_date!).getTime())
+      .filter((j) => j.follow_up_date && j.follow_up_date.slice(0, 10) >= cutoffKey)
+      .sort((a, b) => a.follow_up_date!.localeCompare(b.follow_up_date!))
       .slice(0, 5)
       .map((j) => ({
         id: j.id,
