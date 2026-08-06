@@ -1,5 +1,5 @@
 -- =====================================================================
--- CareerHQ — Supabase Storage buckets + RLS policies.
+-- Bloom — Supabase Storage buckets + RLS policies.
 --
 -- Run AFTER 0001_core_schema.sql and 0002_social_schema.sql.
 --

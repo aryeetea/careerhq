@@ -1,5 +1,5 @@
 -- =====================================================================
--- CareerHQ — Social schema: friends, privacy, shared goals, groups,
+-- Bloom — Social schema: friends, privacy, shared goals, groups,
 -- encouragement reactions, activity/notifications feed, weekly progress.
 --
 -- Run AFTER 0001_core_schema.sql.

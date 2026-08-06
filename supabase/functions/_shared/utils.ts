@@ -271,7 +271,7 @@ export async function fetchJobSource(jobUrl: string | undefined, manualJobDescri
     try {
       const response = await fetch(jobUrl, {
         headers: {
-          "User-Agent": "BloomBot/1.0 (+https://bloom.app)",
+          "User-Agent": "BloomBot/1.0 (+https://bloomcircle.vercel.app)",
           "Accept-Language": "en-US,en;q=0.9",
         },
         redirect: "follow",
@@ -775,7 +775,7 @@ export async function generateCoverLetterText(
     text: {
       format: {
         type: "json_schema",
-        name: "careerhq_cover_letter",
+        name: "bloom_cover_letter",
         strict: true,
         schema: coverLetterSchema,
       },

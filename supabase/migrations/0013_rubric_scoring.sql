@@ -1,5 +1,5 @@
 -- =====================================================================
--- CareerHQ — Rubric-based scoring.
+-- Bloom — Rubric-based scoring.
 --
 -- 1. Change fit_score from smallint to numeric(4,1) so the application
 --    can store the weighted average calculated from per-category scores

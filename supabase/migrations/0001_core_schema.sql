@@ -1,5 +1,5 @@
 -- =====================================================================
--- CareerHQ — Core schema (profiles, jobs, resumes, certifications,
+-- Bloom — Core schema (profiles, jobs, resumes, certifications,
 -- settings, job status history) + Row Level Security.
 --
 -- Run this in the Supabase SQL editor (or via `supabase db push`)

@@ -1,5 +1,5 @@
 -- =====================================================================
--- CareerHQ — Tighten SECURITY DEFINER function grants.
+-- Bloom — Tighten SECURITY DEFINER function grants.
 --
 -- `create function` grants EXECUTE to PUBLIC by default, which the
 -- `anon` role inherits. That made every SECURITY DEFINER helper below

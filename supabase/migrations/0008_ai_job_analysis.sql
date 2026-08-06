@@ -1,5 +1,5 @@
 -- =====================================================================
--- CareerHQ — AI job analysis, resume text extraction, and rate limiting.
+-- Bloom — AI job analysis, resume text extraction, and rate limiting.
 --
 -- Adds cached extracted resume text plus persisted AI analysis fields on
 -- jobs so the frontend can stay thin and all OpenAI work can happen in

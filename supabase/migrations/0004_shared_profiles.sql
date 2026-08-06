@@ -1,5 +1,5 @@
 -- =====================================================================
--- CareerHQ — resolves minimal profile info (username/display_name/
+-- Bloom — resolves minimal profile info (username/display_name/
 -- avatar_url only — never career_goal, locations, or the weekly goal
 -- number) for people the caller shares a goal or group with, so the UI
 -- can show names on shared-goal and group member lists without opening

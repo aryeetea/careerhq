@@ -1,5 +1,5 @@
 -- =====================================================================
--- CareerHQ — Fix 0005: revoke EXECUTE from the actual granted roles.
+-- Bloom — Fix 0005: revoke EXECUTE from the actual granted roles.
 --
 -- 0005_tighten_function_grants.sql ran `revoke execute ... from public`,
 -- which assumes functions inherit EXECUTE through the PUBLIC pseudo-role.

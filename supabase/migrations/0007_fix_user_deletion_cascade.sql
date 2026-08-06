@@ -1,5 +1,5 @@
 -- =====================================================================
--- CareerHQ — Fix: deleting a user fails via the weekly_progress resync.
+-- Bloom — Fix: deleting a user fails via the weekly_progress resync.
 --
 -- Deleting a row from auth.users cascades into jobs (jobs.user_id
 -- references auth.users(id) on delete cascade). That cascade delete
