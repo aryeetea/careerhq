@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { queryKeys } from "@/lib/queryClient";
 import * as jobsService from "@/services/jobs";
 import { logActivity } from "@/services/activity";
-import type { Job, JobStatus, NewJob } from "@/types/database";
+import type { Job, JobStatus, JobStatusHistoryEntry, NewJob } from "@/types/database";
 
 // Logs a Recent Activity entry the first time a job crosses into one of
 // these milestone statuses. Shared by useCreateJob (manual entry can start
@@ -38,6 +38,20 @@ export function useJobStatusHistory(jobId: string | null) {
   });
 }
 
+// The Timeline view's data source — every status transition, across every
+// job, in one request. Loaded once alongside useJobs() and cached, so
+// switching between Board/List/Calendar/Timeline never re-fetches; only a
+// real change (see the invalidation calls below) refreshes it.
+export function useAllJobStatusHistory() {
+  const { user } = useAuth();
+  const userId = user?.id ?? "";
+  return useQuery({
+    queryKey: queryKeys.allJobStatusHistory(userId),
+    queryFn: () => jobsService.listAllJobStatusHistory(userId),
+    enabled: Boolean(userId),
+  });
+}
+
 export function useCreateJob() {
   const { user } = useAuth();
   const qc = useQueryClient();
@@ -48,6 +62,10 @@ export function useCreateJob() {
       void logActivity(user!.id, "job_saved", `Saved ${job.company}`, { jobId: job.id });
       // Manual entry can start a job past "saved" (e.g. logging one already applied to).
       logStatusTransition(user!.id, "saved", job);
+      // A new job always writes at least one job_status_history row (the
+      // trigger logs the initial save) — refresh Timeline's source so the
+      // new entry shows up without waiting for the next natural refetch.
+      qc.invalidateQueries({ queryKey: queryKeys.allJobStatusHistory(user!.id) });
     },
   });
 }
@@ -65,6 +83,9 @@ export function useUpdateJob() {
       if (updated.ai_last_analyzed_at && updated.ai_last_analyzed_at !== previous?.ai_last_analyzed_at) {
         void logActivity(user!.id, "ai_analysis_run", `Analyzed fit for ${updated.company}`, { jobId: updated.id });
       }
+      if (previous && previous.status !== updated.status) {
+        qc.invalidateQueries({ queryKey: queryKeys.allJobStatusHistory(user!.id) });
+      }
     },
   });
 }
@@ -76,6 +97,11 @@ export function useDeleteJob() {
     mutationFn: (id: string) => jobsService.deleteJob(id),
     onSuccess: (_void, id) => {
       qc.setQueryData<Job[]>(queryKeys.jobs(user!.id), (prev) => prev?.filter((j) => j.id !== id));
+      // Deleting a job cascades to its job_status_history rows too — drop
+      // them from Timeline's cache rather than leaving a ghost entry.
+      qc.setQueryData<JobStatusHistoryEntry[]>(queryKeys.allJobStatusHistory(user!.id), (prev) =>
+        prev?.filter((entry) => entry.job_id !== id)
+      );
     },
   });
 }
@@ -107,6 +133,11 @@ export function useMoveJob() {
       qc.setQueryData<Job[]>(key, (prev) => prev?.map((j) => (j.id === updated.id ? updated : j)));
       const previousStatus = context?.previous?.find((j) => j.id === updated.id)?.status;
       logStatusTransition(user!.id, previousStatus, updated);
+      // Board drag is the most common way a status changes — Timeline's
+      // history rows need refreshing the same as any other status change.
+      if (previousStatus && previousStatus !== updated.status) {
+        qc.invalidateQueries({ queryKey: queryKeys.allJobStatusHistory(user!.id) });
+      }
     },
   });
 }

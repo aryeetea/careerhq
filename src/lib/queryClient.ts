@@ -17,6 +17,7 @@ export const queryKeys = {
   jobs: (userId: string) => ["jobs", userId] as const,
   job: (id: string) => ["job", id] as const,
   jobStatusHistory: (jobId: string) => ["job-status-history", jobId] as const,
+  allJobStatusHistory: (userId: string) => ["all-job-status-history", userId] as const,
   resumes: (userId: string) => ["resumes", userId] as const,
   certifications: (userId: string) => ["certifications", userId] as const,
   profile: (userId: string) => ["profile", userId] as const,

@@ -63,3 +63,17 @@ export async function listJobStatusHistory(jobId: string): Promise<JobStatusHist
   if (error) throw error;
   return data as JobStatusHistoryEntry[];
 }
+
+// The Timeline view's source of truth: one row per status transition
+// (including the initial save, from_status null) across every job, in one
+// request — not one request per job. status_history_owner_select scopes
+// this to the caller's own rows.
+export async function listAllJobStatusHistory(userId: string): Promise<JobStatusHistoryEntry[]> {
+  const { data, error } = await supabase
+    .from("job_status_history")
+    .select("*")
+    .eq("user_id", userId)
+    .order("changed_at", { ascending: false });
+  if (error) throw error;
+  return data as JobStatusHistoryEntry[];
+}

@@ -1,6 +1,6 @@
 import * as React from "react";
 import { DndContext, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
-import { Plus, KanbanSquare, Calendar, GanttChartSquare } from "lucide-react";
+import { Plus, KanbanSquare } from "lucide-react";
 import { TopBar } from "@/components/layout/TopBar";
 import { Button } from "@/components/ui/button";
 import { FiltersBar } from "@/components/jobs/FiltersBar";
@@ -8,16 +8,19 @@ import { KanbanColumn } from "@/components/board/KanbanColumn";
 import { MobileJobList } from "@/components/board/MobileJobList";
 import { ColumnVisibilityMenu } from "@/components/board/ColumnVisibilityMenu";
 import { ViewSwitcher, type ApplicationsView } from "@/components/applications/ViewSwitcher";
+import { CalendarView } from "@/components/applications/CalendarView";
+import { TimelineView } from "@/components/applications/TimelineView";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ErrorState } from "@/components/shared/ErrorState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AddJobDialog } from "@/components/jobs/AddJobDialog";
 import { JobDetailDialog } from "@/components/jobs/JobDetailDialog";
-import { useJobs, useMoveJob } from "@/hooks/queries/useJobs";
+import { useJobs, useMoveJob, useAllJobStatusHistory } from "@/hooks/queries/useJobs";
 import { useResumes } from "@/hooks/queries/useResumes";
 import { useSettings, useUpdateSettings } from "@/hooks/queries/useProfile";
 import { ALL_BOARD_COLUMNS, ENCOURAGING_EMPTY_MESSAGES } from "@/lib/constants";
 import { DEFAULT_FILTERS, matchesFilters, type JobFilters } from "@/types/filters";
+import { deriveCalendarEvents, deriveTimelineEvents } from "@/lib/applications/events";
 import type { Job, JobStatus } from "@/types/database";
 import { useToast } from "@/components/shared/toast";
 import { useCelebration } from "@/components/ambient/Celebration";
@@ -36,6 +39,7 @@ export default function Applications() {
   const { data: jobs = [], isLoading, isError, refetch } = useJobs();
   const { data: resumes = [] } = useResumes();
   const { data: settings } = useSettings();
+  const { data: statusHistory = [] } = useAllJobStatusHistory();
   const updateSettings = useUpdateSettings();
   const moveJob = useMoveJob();
   const { push } = useToast();
@@ -51,6 +55,12 @@ export default function Applications() {
   const visibleSet = React.useMemo(() => new Set(visibleColumns), [visibleColumns]);
 
   const resumeById = React.useMemo(() => new Map(resumes.map((r) => [r.id, r])), [resumes]);
+  // Board, List, Calendar, and Timeline are four views of this one array —
+  // filtering happens exactly once, here, and every view downstream (byStatus
+  // for Board/List, the two derive*Events calls for Calendar/Timeline) reads
+  // from it. A job status history entry whose job got filtered out is
+  // automatically dropped too, since deriveTimelineEvents only keeps entries
+  // it can match back to a job in the array it's given.
   const filtered = React.useMemo(() => jobs.filter((j) => matchesFilters(j, filters)), [jobs, filters]);
   const byStatus = React.useMemo(() => {
     const map = new Map<JobStatus, Job[]>();
@@ -58,6 +68,8 @@ export default function Applications() {
     for (const job of filtered) map.get(job.status)?.push(job);
     return map;
   }, [filtered]);
+  const calendarEvents = React.useMemo(() => deriveCalendarEvents(filtered), [filtered]);
+  const timelineEvents = React.useMemo(() => deriveTimelineEvents(filtered, statusHistory), [filtered, statusHistory]);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
@@ -151,13 +163,12 @@ export default function Applications() {
         <div className="flex-1 overflow-y-auto">
           <MobileJobList columns={visibleColumns} byStatus={byStatus} resumeById={resumeById} onOpenJob={setSelectedJob} />
         </div>
+      ) : view === "calendar" ? (
+        <CalendarView events={calendarEvents} onOpenJob={setSelectedJob} />
       ) : (
-        <EmptyState
-          className="mx-4 sm:mx-8"
-          icon={view === "calendar" ? <Calendar className="h-5 w-5" /> : <GanttChartSquare className="h-5 w-5" />}
-          title={view === "calendar" ? "Calendar view is on the way" : "Timeline view is on the way"}
-          description="For now, Board and List will keep every deadline and stage easy to see."
-        />
+        <div className="flex-1 overflow-y-auto">
+          <TimelineView events={timelineEvents} onOpenJob={setSelectedJob} />
+        </div>
       )}
 
       <AddJobDialog open={addOpen} onOpenChange={setAddOpen} resumes={resumes} />
