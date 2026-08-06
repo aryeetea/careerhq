@@ -143,7 +143,14 @@ export type GoalFormValues = z.infer<typeof goalFormSchema>;
 export const groupFormSchema = z.object({
   name: z.string().trim().min(1, "Give this group a name").max(120),
   description: z.string().trim().max(500).optional().or(z.literal("")),
-  weeklyGoalTarget: z.coerce.number().int().min(0).max(500).optional().nullable(),
+  // An empty number input submits "" via react-hook-form, and plain
+  // z.coerce.number() turns that into 0 (Number("") === 0) rather than
+  // leaving the goal unset — preprocess blank/null/undefined to undefined
+  // first so leaving the field blank actually means "no goal," not "0."
+  weeklyGoalTarget: z.preprocess(
+    (val) => (val === "" || val === null || val === undefined ? undefined : val),
+    z.coerce.number().int().positive("Enter a positive number, or leave this blank").max(500).optional()
+  ),
 });
 export type GroupFormValues = z.infer<typeof groupFormSchema>;
 

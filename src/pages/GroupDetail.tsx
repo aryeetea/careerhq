@@ -25,11 +25,17 @@ function MemberRow({ userId, name, avatarPath, weeklyGoalTarget, groupId, isOwne
   userId: string; name: string; avatarPath: string | null; weeklyGoalTarget: number | null; groupId: string; isOwnerView: boolean; onRemove: () => void;
 }) {
   const { user } = useAuth();
+  const isSelf = userId === user?.id;
   const avatarUrl = useSignedAvatarUrl(avatarPath);
+  // get_friend_card() requires an actual friendship — it doesn't (and
+  // shouldn't) treat "is this me" as a special case, so it raises for your
+  // own row. Skip the call entirely for yourself rather than asking the
+  // RPC a question it isn't meant to answer.
   const { data: cardMap } = useQuery({
     queryKey: ["group-member-card", userId],
     queryFn: () => getFriendCards([userId]),
     select: (cards) => cards[0] ?? null,
+    enabled: !isSelf,
   });
 
   const weekly = cardMap?.applications_this_week ?? null;
@@ -54,9 +60,9 @@ function MemberRow({ userId, name, avatarPath, weeklyGoalTarget, groupId, isOwne
             </div>
             {weeklyGoalTarget ? <Progress value={Math.min(100, (weekly / weeklyGoalTarget) * 100)} className="mt-1 h-1.5" /> : null}
           </>
-        ) : (
+        ) : !isSelf ? (
           <p className="text-[11px] text-muted-foreground">Progress is private</p>
-        )}
+        ) : null}
       </div>
       {userId !== user?.id && <ReactionPicker recipientId={userId} contextType="group" contextId={groupId} />}
       {isOwnerView && userId !== user?.id && (

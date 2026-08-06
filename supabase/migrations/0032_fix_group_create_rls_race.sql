@@ -1,0 +1,24 @@
+-- Group creation was failing with "new row violates row-level security
+-- policy for table \"groups\"" on every attempt (groups had 0 rows in
+-- production — nobody had ever succeeded).
+--
+-- Root cause: createGroup() does `.insert({...}).select("*").single()`,
+-- i.e. INSERT ... RETURNING. Postgres enforces the table's SELECT policy
+-- against the RETURNING row for an INSERT, which for `groups` was
+-- `is_group_member(id, auth.uid())`. Membership is only created by
+-- trg_groups_add_owner, an AFTER INSERT trigger — and AFTER ROW triggers
+-- are queued and fired at the end of the statement, after the RETURNING
+-- row has already been checked against the SELECT policy. So at the
+-- instant Postgres evaluates whether the caller may see the row it just
+-- inserted, the owner's group_members row doesn't exist yet: a genuine
+-- chicken-and-egg race between RLS and the trigger, not a data or auth
+-- problem. Confirmed directly: a plain INSERT (no RETURNING) always
+-- succeeded and the trigger's membership row was correctly present
+-- immediately after; only INSERT ... RETURNING failed.
+--
+-- Fix: let the owner see their own group directly, without needing the
+-- trigger-created membership row to exist yet. This doesn't weaken
+-- anything — the owner is always entitled to see their own group — and
+-- it removes the dependency on trigger-vs-RLS ordering entirely.
+alter policy groups_select on groups
+  using (is_group_member(id, auth.uid()) or auth.uid() = owner_id);
