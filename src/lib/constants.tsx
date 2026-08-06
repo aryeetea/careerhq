@@ -2,6 +2,7 @@ import { Lock, Users2, UsersRound, Globe } from "lucide-react";
 import type {
   AiJobVerdict,
   ApplicationRecommendation,
+  EditableJobStatus,
   JobStatus,
   JobVerdict,
   OpportunityAssessment,
@@ -21,7 +22,7 @@ export const UNSET_SELECT_VALUE = "__unset__";
 // neither is selectable anywhere in the app anymore. New applications go
 // straight from Saved to Applied (date_applied is the meaningful signal,
 // not a separate in-progress status), and "ghosted" was a guess dressed
-// up as a fact; Dashboard now shows a factual "no response in 30+ days"
+// up as a fact; Dashboard now shows a factual "no response in 14 days"
 // count instead of asking anyone to label their own application dead.
 export const STATUS_META: Record<JobStatus, { label: string; dot: string; badge: string }> = {
   saved: { label: "Saved", dot: "bg-slate-400", badge: "bg-slate-400/15 text-slate-500" },
@@ -42,7 +43,7 @@ export const STATUS_META: Record<JobStatus, { label: string; dot: string; badge:
 // "archived" are real statuses (selectable everywhere else) but are
 // hidden from the board by default to avoid nine near-empty columns —
 // users can re-enable them from the column-visibility menu.
-export const DEFAULT_BOARD_COLUMNS: JobStatus[] = [
+export const DEFAULT_BOARD_COLUMNS: EditableJobStatus[] = [
   "saved",
   "applied",
   "interview",
@@ -53,7 +54,7 @@ export const DEFAULT_BOARD_COLUMNS: JobStatus[] = [
 // The selectable status set everywhere in the app (board columns, status
 // pickers, filters). Deliberately excludes "applying" and "ghosted" — see
 // the note on STATUS_META above.
-export const ALL_BOARD_COLUMNS: JobStatus[] = [
+export const ALL_BOARD_COLUMNS: EditableJobStatus[] = [
   "saved",
   "applied",
   "assessment",
@@ -66,10 +67,16 @@ export const ALL_BOARD_COLUMNS: JobStatus[] = [
   "archived",
 ];
 
-export const JOB_STATUSES: { value: JobStatus; label: string }[] = ALL_BOARD_COLUMNS.map((s) => ({
+export const JOB_STATUSES: { value: EditableJobStatus; label: string }[] = ALL_BOARD_COLUMNS.map((s) => ({
   value: s,
   label: STATUS_META[s].label,
 }));
+
+export function normalizeEditableJobStatus(status: JobStatus): EditableJobStatus {
+  if (status === "applying") return "saved";
+  if (status === "ghosted") return "closed";
+  return status;
+}
 
 // Six-tier verdict, from strongest to weakest fit. Deliberately reuses only
 // existing design tokens (success → sky → gold → peach → destructive) so no

@@ -99,7 +99,7 @@ export function ProfileForm() {
         weekly_application_goal: values.weeklyApplicationGoal,
         status_message: values.statusMessage?.trim() || null,
       });
-      push("Profile updated", "success");
+      push("Your profile has been saved.", "success");
       reset(values);
       setSaveState("saved");
     } catch (err) {
@@ -112,7 +112,7 @@ export function ProfileForm() {
     if (!file || !user) return;
     try {
       await updateAvatar.mutateAsync({ oldPath: profile?.avatar_url ?? null, file });
-      push("Photo updated", "success");
+      push("Your photo has been updated.", "success");
     } catch (err) {
       push(err instanceof Error ? err.message : "Couldn't update your photo.", "error");
     } finally {
@@ -124,7 +124,7 @@ export function ProfileForm() {
     if (!user || !profile?.avatar_url) return;
     const updated = await removeAvatarService(user.id, profile.avatar_url);
     qc.setQueryData(queryKeys.profile(user.id), updated);
-    push("Photo removed", "info");
+    push("Your photo has been removed.", "info");
   }
 
   async function handleSuggest(field: "bio" | "career_status") {

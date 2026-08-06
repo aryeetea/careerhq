@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Send, Bookmark, Users, Trophy, XCircle, Ghost, TrendingUp, CalendarDays, Plus, Sparkles, GraduationCap, CalendarClock } from "lucide-react";
+import { Send, Bookmark, Users, Trophy, XCircle, TrendingUp, CalendarCheck2, Plus, Sparkles, GraduationCap, CalendarClock } from "lucide-react";
 import { TopBar } from "@/components/layout/TopBar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -84,6 +84,11 @@ export default function Dashboard() {
 
   const recent = React.useMemo(() => jobs.slice(0, 6), [jobs]);
   const activeCert = React.useMemo(() => certifications.find((c) => c.status === "in_progress"), [certifications]);
+  const followUpsDue = React.useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    return jobs.filter((job) => job.follow_up_date && job.follow_up_date.slice(0, 10) <= today).length;
+  }, [jobs]);
+  const hasUsefulResponseRate = stats.applicationsSubmitted >= 3;
 
   const hasJobs = jobs.length > 0;
 
@@ -157,9 +162,14 @@ export default function Dashboard() {
               <StatCard icon={Users} label="Interviews" value={stats.interviews} accent="bg-lavender/20 text-lavender-foreground" />
               <StatCard icon={Trophy} label="Offers" value={stats.offers} accent="bg-success/15 text-success" />
               <StatCard icon={XCircle} label="Rejections" value={stats.rejections} accent="bg-destructive/15 text-destructive" />
-              <StatCard icon={Ghost} label="No response 30+ days" value={stats.noResponse} accent="bg-zinc-400/15 text-zinc-500" />
-              <StatCard icon={TrendingUp} label="Response rate" value={`${stats.responseRate}%`} accent="bg-gold/15 text-gold" />
-              <StatCard icon={CalendarDays} label="This month" value={stats.applicationsThisMonth} accent="bg-sky/15 text-sky" />
+              <StatCard icon={CalendarCheck2} label="Follow-ups due" value={followUpsDue} accent="bg-gold/15 text-gold" />
+              <StatCard
+                icon={TrendingUp}
+                label="Response rate"
+                value={hasUsefulResponseRate ? `${stats.responseRate}%` : "—"}
+                accent="bg-sky/15 text-sky"
+              />
+              <StatCard icon={CalendarClock} label="No response in 14 days" value={stats.noResponse} accent="bg-zinc-400/15 text-zinc-500" />
             </div>
 
             <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -193,7 +203,7 @@ export default function Dashboard() {
               />
             </div>
 
-            <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <div className={`mt-4 grid grid-cols-1 gap-4 ${activeCert ? "lg:grid-cols-2" : ""}`}>
               <Card className="glass-subtle border-border/60">
                 <CardContent className="p-4">
                   <h3 className="mb-1 text-sm font-semibold">Recently added</h3>
@@ -217,19 +227,12 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
 
-              <Card className="glass-subtle border-border/60">
-                <CardContent className="p-4">
-                  <h3 className="mb-1 flex items-center gap-1.5 text-sm font-semibold">
-                    <GraduationCap className="h-4 w-4 text-sage" /> Certification progress
-                  </h3>
-                  {!activeCert ? (
-                    <div className="py-6 text-center">
-                      <p className="text-sm text-muted-foreground">Nothing in progress right now.</p>
-                      <Button variant="link" size="sm" onClick={() => navigate("/app/certifications")}>
-                        Add one to track
-                      </Button>
-                    </div>
-                  ) : (
+              {activeCert && (
+                <Card className="glass-subtle border-border/60">
+                  <CardContent className="p-4">
+                    <h3 className="mb-1 flex items-center gap-1.5 text-sm font-semibold">
+                      <GraduationCap className="h-4 w-4 text-sage" /> Certification progress
+                    </h3>
                     <div className="py-2">
                       <div className="flex items-center justify-between">
                         <p className="text-sm font-medium">{activeCert.name}</p>
@@ -240,9 +243,9 @@ export default function Dashboard() {
                       {activeCert.provider && <p className="text-xs text-muted-foreground">{activeCert.provider}</p>}
                       <Progress value={activeCert.progress_percentage} className="mt-3" />
                     </div>
-                  )}
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </>
         )}

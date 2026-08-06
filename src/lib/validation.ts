@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { EDITABLE_JOB_STATUSES } from "@/types/database";
 
 export const emailSchema = z.string().trim().min(1, "Email is required").email("Enter a valid email address");
 export const passwordSchema = z.string().min(8, "Use at least 8 characters");
@@ -62,20 +63,7 @@ export const jobBasicsSchema = z.object({
 });
 
 export const jobFormSchema = jobBasicsSchema.extend({
-  status: z.enum([
-    "saved",
-    "applying",
-    "applied",
-    "assessment",
-    "recruiter_contacted",
-    "interview",
-    "final_interview",
-    "offer",
-    "rejected",
-    "ghosted",
-    "closed",
-    "archived",
-  ]),
+  status: z.enum(EDITABLE_JOB_STATUSES),
   verdict: z
     .union([
       z.enum([

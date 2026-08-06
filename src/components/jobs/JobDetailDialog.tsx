@@ -26,7 +26,7 @@ import { useDeleteJob, useJobStatusHistory, useSaveCoverLetter, useUpdateJob } f
 import { useAnalyzeJob, useGenerateCoverLetter } from "@/hooks/queries/useJobAi";
 import { useToast } from "@/components/shared/toast";
 import { useCelebration } from "@/components/ambient/Celebration";
-import { JOB_STATUSES, STATUS_META, UNSET_SELECT_VALUE, VERDICT_OPTIONS } from "@/lib/constants";
+import { JOB_STATUSES, STATUS_META, UNSET_SELECT_VALUE, VERDICT_OPTIONS, normalizeEditableJobStatus } from "@/lib/constants";
 import { dateInputToISO, formatDate, formatDateTime, toDateInputValue } from "@/lib/utils";
 import type { JobAnalysisPayload } from "@/lib/ai";
 
@@ -48,7 +48,7 @@ function jobToFormValues(job: Job): JobFormValues {
     source: job.source ?? "",
     jobUrl: job.job_url ?? "",
     jobDescription: job.job_description ?? "",
-    status: job.status,
+    status: normalizeEditableJobStatus(job.status),
     verdict: job.verdict ?? "",
     fitScore: job.fit_score,
     resumeId: job.resume_id ?? "",
@@ -155,7 +155,7 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
       if (values.status === "applied" && !job.date_applied && updated.follow_up_date) {
         push(`Application recorded. We'll remind you to follow up on ${formatDate(updated.follow_up_date)}.`, "success");
       } else {
-        push("Job updated", "success");
+        push("Your changes have been saved.", "success");
       }
       if (values.status === "offer" && !wasOffer) celebrate("An offer! Take a moment — this is worth celebrating. 🎉");
       onOpenChange(false);
@@ -167,7 +167,7 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
   async function handleDelete() {
     if (!job) return;
     await deleteJob.mutateAsync(job.id);
-    push("Job removed", "info");
+    push("This job has been removed.", "info");
     onOpenChange(false);
   }
 

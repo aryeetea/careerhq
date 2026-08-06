@@ -6,19 +6,24 @@
 export type WorkArrangement = "remote" | "hybrid" | "onsite";
 export type EmploymentType = "full_time" | "part_time" | "contract" | "internship" | "temporary";
 
-export type JobStatus =
-  | "saved"
-  | "applying"
-  | "applied"
-  | "assessment"
-  | "recruiter_contacted"
-  | "interview"
-  | "final_interview"
-  | "offer"
-  | "rejected"
-  | "ghosted"
-  | "closed"
-  | "archived";
+export const EDITABLE_JOB_STATUSES = [
+  "saved",
+  "applied",
+  "assessment",
+  "recruiter_contacted",
+  "interview",
+  "final_interview",
+  "offer",
+  "rejected",
+  "closed",
+  "archived",
+] as const;
+
+export type EditableJobStatus = (typeof EDITABLE_JOB_STATUSES)[number];
+
+export type LegacyJobStatus = "applying" | "ghosted";
+
+export type JobStatus = EditableJobStatus | LegacyJobStatus;
 
 export type JobVerdict =
   | "excellent_match"

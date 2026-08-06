@@ -5,11 +5,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { journalEntryFormSchema, type JournalEntryFormValues } from "@/lib/validation";
 import { useCreateJournalEntry, useUpdateJournalEntry } from "@/hooks/queries/useJournal";
 import { useGroups } from "@/hooks/queries/useGroups";
+import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/shared/toast";
 import { JOURNAL_MOOD_META, JOURNAL_VISIBILITY_META } from "@/lib/constants";
 import { cn, toDateInputValue } from "@/lib/utils";
@@ -31,11 +32,13 @@ export function JournalComposer({
   entry?: JournalEntry | null;
 }) {
   const isEditing = Boolean(entry);
+  const { user } = useAuth();
   const createEntry = useCreateJournalEntry();
   const updateEntry = useUpdateJournalEntry();
   const { data: groups = [] } = useGroups();
   const { push } = useToast();
   const submitGuardRef = React.useRef(false);
+  const draftKey = user ? `bloom:journal-draft:${user.id}:${entry?.id ?? "new"}` : null;
 
   const {
     register,
@@ -58,18 +61,61 @@ export function JournalComposer({
 
   React.useEffect(() => {
     if (!open) return;
-    reset({
+    const fallbackValues = {
       title: entry?.title ?? "",
       body: entry?.body ?? "",
       mood: entry?.mood ?? "",
       visibility: entry?.visibility ?? "private",
       groupId: entry?.group_id ?? "",
       entryDate: toDateInputValue(entry?.entry_date ?? new Date().toISOString()),
-    });
-  }, [open, entry, reset]);
+    };
+
+    if (!draftKey) {
+      reset(fallbackValues);
+      return;
+    }
+
+    try {
+      const savedDraft = window.localStorage.getItem(draftKey);
+      if (savedDraft) {
+        reset({ ...fallbackValues, ...JSON.parse(savedDraft) });
+        return;
+      }
+    } catch {
+      // Ignore malformed draft data and fall back to the saved entry/defaults.
+    }
+
+    reset(fallbackValues);
+  }, [open, entry, reset, draftKey]);
 
   const mood = watch("mood");
   const visibility = watch("visibility");
+  const watchedValues = watch();
+
+  React.useEffect(() => {
+    if (!open || !draftKey) return;
+
+    const hasMeaningfulContent =
+      (watchedValues.title ?? "").trim().length > 0 ||
+      watchedValues.body.trim().length > 0 ||
+      (watchedValues.mood ?? "").trim().length > 0 ||
+      watchedValues.visibility !== "private" ||
+      (watchedValues.groupId ?? "").trim().length > 0;
+
+    const timer = window.setTimeout(() => {
+      try {
+        if (!hasMeaningfulContent) {
+          window.localStorage.removeItem(draftKey);
+          return;
+        }
+        window.localStorage.setItem(draftKey, JSON.stringify(watchedValues));
+      } catch {
+        // Draft persistence is best-effort; editing should continue even if storage fails.
+      }
+    }, 250);
+
+    return () => window.clearTimeout(timer);
+  }, [open, draftKey, watchedValues]);
 
   async function onSubmit(values: JournalEntryFormValues) {
     if (submitGuardRef.current) return;
@@ -85,10 +131,17 @@ export function JournalComposer({
       };
       if (isEditing && entry) {
         await updateEntry.mutateAsync({ id: entry.id, patch: payload });
-        push("Entry updated.", "success");
+        push("Your entry has been updated.", "success");
       } else {
         await createEntry.mutateAsync(payload);
-        push("Entry saved.", "success");
+        push("Your entry has been saved.", "success");
+      }
+      if (draftKey) {
+        try {
+          window.localStorage.removeItem(draftKey);
+        } catch {
+          // Ignore draft cleanup failures.
+        }
       }
       onOpenChange(false);
     } catch (err) {
@@ -103,7 +156,7 @@ export function JournalComposer({
       <DialogContent size="lg">
         <DialogHeader>
           <DialogTitle>{isEditing ? "Edit entry" : "New journal entry"}</DialogTitle>
-          <DialogDescription>A few words about today are enough. Nothing here is shared unless you choose to.</DialogDescription>
+          <DialogDescription>A few honest lines are enough. Nothing here is shared unless you choose to share it.</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4" noValidate>
@@ -114,13 +167,15 @@ export function JournalComposer({
 
           <div className="grid gap-1.5">
             <Label htmlFor="j-body">What's on your mind?</Label>
-            <Textarea
+            <AutoResizeTextarea
               id="j-body"
-              rows={5}
-              placeholder="Today I…"
-              autoFocus
-              {...register("body")}
+              minRows={4}
+              maxHeight={280}
+              placeholder="What felt important today?"
+              value={watchedValues.body}
+              onChange={(event) => setValue("body", event.target.value, { shouldDirty: true, shouldValidate: true })}
               aria-invalid={!!errors.body}
+              error={!!errors.body}
             />
             {errors.body && <p className="text-xs text-destructive">{errors.body.message}</p>}
           </div>

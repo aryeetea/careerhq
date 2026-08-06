@@ -169,7 +169,7 @@ export function AddJobDialog({ open, onOpenChange, resumes }: AddJobDialogProps)
       if (created.status === "applied" && created.follow_up_date) {
         push(`Application recorded. We'll remind you to follow up on ${formatDate(created.follow_up_date)}.`, "success");
       } else {
-        push(`Saved ${values.title} at ${values.company}`, "success");
+        push(`Saved ${values.title} at ${values.company}.`, "success");
       }
       close(false);
     } catch (err) {

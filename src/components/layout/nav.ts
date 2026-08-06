@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { LayoutDashboard, KanbanSquare, FileText, GraduationCap, Handshake, Target, Settings, UserRound, NotebookPen } from "lucide-react";
+import { LayoutDashboard, KanbanSquare, FileText, Handshake, Target, Settings, UserRound, NotebookPen } from "lucide-react";
 
 export interface NavItem {
   to: string;
@@ -22,9 +22,8 @@ export const NAV_ITEMS: NavItem[] = [
   { to: "/app", label: "Dashboard", icon: LayoutDashboard, primary: true, tourId: "dashboard" },
   { to: "/app/applications", label: "Applications", icon: KanbanSquare, primary: true, tourId: "applications" },
   { to: "/app/resumes", label: "Resumes", icon: FileText, primary: true, tourId: "resumes" },
-  { to: "/app/certifications", label: "Certifications", icon: GraduationCap, tourId: "certifications" },
-  { to: "/app/goals", label: "Goals", icon: Target, tourId: "goals" },
   { to: "/app/journal", label: "Journal", icon: NotebookPen, tourId: "journal" },
+  { to: "/app/goals", label: "Goals", icon: Target, tourId: "goals" },
   { to: "/app/community", label: "Community", icon: Handshake, primary: true, tourId: "community" },
   { to: "/app/profile", label: "Profile", icon: UserRound, tourId: "profile" },
   { to: "/app/settings", label: "Settings", icon: Settings, tourId: "settings" },
