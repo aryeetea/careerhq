@@ -98,7 +98,7 @@ export default function PeopleProfile() {
             description={copy.description}
             action={
               <Button asChild variant="outline">
-                <Link to="/app/friends">Back to Friends</Link>
+                <Link to="/app/community/friends">Back to Friends</Link>
               </Button>
             }
           />

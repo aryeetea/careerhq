@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { LayoutDashboard, KanbanSquare, FileText, GraduationCap, Users2, Target, UsersRound, Settings, UserRound } from "lucide-react";
+import { LayoutDashboard, KanbanSquare, FileText, GraduationCap, Handshake, Target, Settings, UserRound } from "lucide-react";
 
 export interface NavItem {
   to: string;
@@ -12,14 +12,19 @@ export interface NavItem {
   tourId: string;
 }
 
+// Friends and Groups used to be two separate top-level destinations even
+// though people think of them as one thing — "who I'm connected to on
+// Bloom." They're now one Community item (see src/pages/community/), with
+// Friends / Groups / Invites as tabs inside it. Board is now Applications —
+// the feature, not one particular view of it (Board is still the default
+// view, alongside List, with Calendar and Timeline reserved for later).
 export const NAV_ITEMS: NavItem[] = [
   { to: "/app", label: "Dashboard", icon: LayoutDashboard, primary: true, tourId: "dashboard" },
-  { to: "/app/board", label: "Board", icon: KanbanSquare, primary: true, tourId: "board" },
-  { to: "/app/profile", label: "Profile", icon: UserRound, tourId: "profile" },
+  { to: "/app/applications", label: "Applications", icon: KanbanSquare, primary: true, tourId: "applications" },
   { to: "/app/resumes", label: "Resumes", icon: FileText, primary: true, tourId: "resumes" },
   { to: "/app/certifications", label: "Certifications", icon: GraduationCap, tourId: "certifications" },
   { to: "/app/goals", label: "Goals", icon: Target, tourId: "goals" },
-  { to: "/app/friends", label: "Friends", icon: Users2, primary: true, tourId: "friends" },
-  { to: "/app/groups", label: "Groups", icon: UsersRound, tourId: "groups" },
+  { to: "/app/community", label: "Community", icon: Handshake, primary: true, tourId: "community" },
+  { to: "/app/profile", label: "Profile", icon: UserRound, tourId: "profile" },
   { to: "/app/settings", label: "Settings", icon: Settings, tourId: "settings" },
 ];

@@ -1,12 +1,13 @@
 import * as React from "react";
 import { DndContext, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
-import { Plus, KanbanSquare } from "lucide-react";
+import { Plus, KanbanSquare, Calendar, GanttChartSquare } from "lucide-react";
 import { TopBar } from "@/components/layout/TopBar";
 import { Button } from "@/components/ui/button";
 import { FiltersBar } from "@/components/jobs/FiltersBar";
 import { KanbanColumn } from "@/components/board/KanbanColumn";
 import { MobileJobList } from "@/components/board/MobileJobList";
 import { ColumnVisibilityMenu } from "@/components/board/ColumnVisibilityMenu";
+import { ViewSwitcher, type ApplicationsView } from "@/components/applications/ViewSwitcher";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ErrorState } from "@/components/shared/ErrorState";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -22,7 +23,16 @@ import { useToast } from "@/components/shared/toast";
 import { useCelebration } from "@/components/ambient/Celebration";
 import { formatDate } from "@/lib/utils";
 
-export default function Board() {
+// The Kanban itself (drag, columns, status logic below) is unchanged from
+// the old Board page — only how you get to it changed. "Board" described
+// one particular view; "Applications" describes what's actually being
+// tracked, with Board, List, and eventually Calendar/Timeline as ways of
+// looking at the same roles.
+function defaultView(): ApplicationsView {
+  return window.matchMedia?.("(max-width: 1023px)").matches ? "list" : "board";
+}
+
+export default function Applications() {
   const { data: jobs = [], isLoading, isError, refetch } = useJobs();
   const { data: resumes = [] } = useResumes();
   const { data: settings } = useSettings();
@@ -31,6 +41,7 @@ export default function Board() {
   const { push } = useToast();
   const { celebrate } = useCelebration();
 
+  const [view, setView] = React.useState<ApplicationsView>(defaultView);
   const [filters, setFilters] = React.useState<JobFilters>(DEFAULT_FILTERS);
   const [addOpen, setAddOpen] = React.useState(false);
   const [selectedJob, setSelectedJob] = React.useState<Job | null>(null);
@@ -83,7 +94,7 @@ export default function Board() {
   return (
     <div className="flex flex-1 flex-col">
       <TopBar
-        title="Board"
+        title="Applications"
         subtitle="Every role you're tracking, organized by stage"
         action={
           <>
@@ -97,10 +108,17 @@ export default function Board() {
         }
       />
 
-      {hasAnyJobs && <FiltersBar filters={filters} onChange={setFilters} resumes={resumes} />}
+      {hasAnyJobs && (
+        <>
+          <div className="px-4 pt-4 sm:px-8">
+            <ViewSwitcher value={view} onChange={setView} />
+          </div>
+          <FiltersBar filters={filters} onChange={setFilters} resumes={resumes} />
+        </>
+      )}
 
       {isError ? (
-        <ErrorState className="mx-4 sm:mx-8" description="Your board couldn't load. Your data is safe — try again." onRetry={() => refetch()} />
+        <ErrorState className="mx-4 sm:mx-8" description="Your applications couldn't load. Your data is safe — try again." onRetry={() => refetch()} />
       ) : isLoading ? (
         <div className="flex gap-4 px-4 sm:px-8">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -111,7 +129,7 @@ export default function Board() {
         <EmptyState
           className="mx-4 sm:mx-8"
           icon={<KanbanSquare className="h-5 w-5" />}
-          title="Your board is a blank page today"
+          title="Nothing tracked yet"
           description={ENCOURAGING_EMPTY_MESSAGES.noJobsBoard}
           action={
             <Button onClick={() => setAddOpen(true)}>
@@ -119,22 +137,27 @@ export default function Board() {
             </Button>
           }
         />
+      ) : view === "board" ? (
+        <div className="flex-1 overflow-x-auto px-4 pb-6 pt-4 sm:px-8">
+          <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+            <div className="flex h-full gap-3" style={{ minWidth: visibleColumns.length * 296 }}>
+              {visibleColumns.map((status) => (
+                <KanbanColumn key={status} status={status} jobs={byStatus.get(status) ?? []} resumeById={resumeById} onOpenJob={setSelectedJob} />
+              ))}
+            </div>
+          </DndContext>
+        </div>
+      ) : view === "list" ? (
+        <div className="flex-1 overflow-y-auto">
+          <MobileJobList columns={visibleColumns} byStatus={byStatus} resumeById={resumeById} onOpenJob={setSelectedJob} />
+        </div>
       ) : (
-        <>
-          <div className="hidden flex-1 overflow-x-auto px-4 pb-6 sm:px-8 lg:block">
-            <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-              <div className="flex h-full gap-3" style={{ minWidth: visibleColumns.length * 296 }}>
-                {visibleColumns.map((status) => (
-                  <KanbanColumn key={status} status={status} jobs={byStatus.get(status) ?? []} resumeById={resumeById} onOpenJob={setSelectedJob} />
-                ))}
-              </div>
-            </DndContext>
-          </div>
-
-          <div className="flex-1 overflow-y-auto lg:hidden">
-            <MobileJobList columns={visibleColumns} byStatus={byStatus} resumeById={resumeById} onOpenJob={setSelectedJob} />
-          </div>
-        </>
+        <EmptyState
+          className="mx-4 sm:mx-8"
+          icon={view === "calendar" ? <Calendar className="h-5 w-5" /> : <GanttChartSquare className="h-5 w-5" />}
+          title={view === "calendar" ? "Calendar view is on the way" : "Timeline view is on the way"}
+          description="For now, Board and List will keep every deadline and stage easy to see."
+        />
       )}
 
       <AddJobDialog open={addOpen} onOpenChange={setAddOpen} resumes={resumes} />

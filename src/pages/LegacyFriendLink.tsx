@@ -7,8 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { useAuth } from "@/hooks/useAuth";
 
 // Bloom's friend invites moved from shareable links to friend codes
-// (entered on the Friends page, inside the authenticated app — never a
-// standalone route). Anyone who still has an old /join/friend/:token link
+// (entered from Community → Friends, inside the authenticated app — never
+// a standalone route). Anyone who still has an old /join/friend/:token link
 // lands here instead of a broken page, no data fetching, no context
 // dependency beyond what's available at this route level.
 export default function LegacyFriendLink() {
@@ -29,14 +29,14 @@ export default function LegacyFriendLink() {
             </div>
             <CardTitle className="font-display text-2xl">This invite link is no longer used</CardTitle>
             <CardDescription className="text-sm leading-6 text-muted-foreground">
-              Ask your friend for their Bloom friend code instead — you can enter it from the Friends page once you&apos;re
-              signed in.
+              Ask your friend for their Bloom friend code instead — you can enter it from Community once you&apos;re signed
+              in.
             </CardDescription>
           </CardHeader>
           <CardContent>
             {!loading && (
               <Button asChild size="lg" className="w-full">
-                <Link to={user ? "/app/friends" : "/login"}>{user ? "Go to Friends" : "Sign in"}</Link>
+                <Link to={user ? "/app/community/friends" : "/login"}>{user ? "Go to Community" : "Sign in"}</Link>
               </Button>
             )}
           </CardContent>

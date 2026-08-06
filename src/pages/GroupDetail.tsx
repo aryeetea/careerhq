@@ -127,7 +127,7 @@ export default function GroupDetail() {
         subtitle={activeGroup.description ?? undefined}
         action={
           <>
-            <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => navigate("/app/groups")}>
+            <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => navigate("/app/community/groups")}>
               <ArrowLeft className="h-4 w-4" /> <span className="hidden sm:inline">All groups</span>
             </Button>
             <Button size="sm" className="gap-1.5" onClick={() => setInviteOpen(true)}>
@@ -187,7 +187,7 @@ export default function GroupDetail() {
         onConfirm={async () => {
           await leaveGroup.mutateAsync(activeGroup.id);
           push("You left the group", "info");
-          navigate("/app/groups");
+          navigate("/app/community/groups");
         }}
       />
       <ConfirmDialog
@@ -200,7 +200,7 @@ export default function GroupDetail() {
           if (!groupId) return;
           await deleteGroupMutation.mutateAsync(groupId);
           push("Group deleted", "info");
-          navigate("/app/groups");
+          navigate("/app/community/groups");
         }}
       />
       <ConfirmDialog

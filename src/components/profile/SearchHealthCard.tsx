@@ -39,8 +39,8 @@ export function SearchHealthCard({
 }) {
   const checks: HealthCheck[] = [
     { label: "Resume uploaded", met: resumes.length > 0, actionLabel: "Upload a resume", actionTo: "/app/resumes" },
-    { label: "AI analyzed", met: jobs.some((j) => j.ai_last_analyzed_at), actionLabel: "Analyze a job", actionTo: "/app/board" },
-    { label: "Applications tracked", met: jobs.length > 0, actionLabel: "Add a job", actionTo: "/app/board" },
+    { label: "AI analyzed", met: jobs.some((j) => j.ai_last_analyzed_at), actionLabel: "Analyze a job", actionTo: "/app/applications" },
+    { label: "Applications tracked", met: jobs.length > 0, actionLabel: "Add a job", actionTo: "/app/applications" },
     { label: "Goals active", met: getMyActiveGoals(goals, profile.id).length > 0, actionLabel: "Set a goal", actionTo: "/app/goals" },
     { label: "Profile complete", met: profileComplete(profile), actionLabel: "Finish your profile", actionTo: "/app/settings" },
   ];

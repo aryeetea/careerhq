@@ -21,6 +21,16 @@ export function useGroup(id: string | undefined) {
   });
 }
 
+export function useGroupPreviews(groupIds: string[]) {
+  const sorted = [...groupIds].sort();
+  return useQuery({
+    queryKey: ["group-previews", sorted],
+    queryFn: () => groupsService.getGroupPreviews(sorted),
+    enabled: sorted.length > 0,
+    select: (rows) => new Map(rows.map((r) => [r.id, r])),
+  });
+}
+
 export function useGroupJoinLinkPreview(token: string | undefined) {
   return useQuery({
     queryKey: ["group-join-preview", token ?? ""],
@@ -40,12 +50,23 @@ export function useGroupInvites() {
   });
 }
 
+export function useSentGroupInvites() {
+  const { user } = useAuth();
+  const userId = user?.id ?? "";
+  return useQuery({
+    queryKey: queryKeys.sentGroupInvites(userId),
+    queryFn: () => groupsService.listSentGroupInvites(userId),
+    enabled: Boolean(userId),
+  });
+}
+
 function useInvalidateGroups() {
   const { user } = useAuth();
   const qc = useQueryClient();
   return (groupId?: string) => {
     qc.invalidateQueries({ queryKey: queryKeys.groups(user?.id ?? "") });
     qc.invalidateQueries({ queryKey: queryKeys.groupInvites(user?.id ?? "") });
+    qc.invalidateQueries({ queryKey: queryKeys.sentGroupInvites(user?.id ?? "") });
     if (groupId) qc.invalidateQueries({ queryKey: queryKeys.group(groupId) });
   };
 }
@@ -89,6 +110,14 @@ export function useDeclineGroupInvite() {
   const invalidate = useInvalidateGroups();
   return useMutation({
     mutationFn: (inviteId: string) => groupsService.declineGroupInvite(inviteId),
+    onSuccess: () => invalidate(),
+  });
+}
+
+export function useCancelGroupInvite() {
+  const invalidate = useInvalidateGroups();
+  return useMutation({
+    mutationFn: (inviteId: string) => groupsService.cancelGroupInvite(inviteId),
     onSuccess: () => invalidate(),
   });
 }

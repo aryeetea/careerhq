@@ -1,4 +1,4 @@
-import { Flower2, LayoutDashboard, Plus, KanbanSquare, FileText, UserRound, Users2 } from "lucide-react";
+import { Flower2, LayoutDashboard, Plus, KanbanSquare, FileText, UserRound, Handshake } from "lucide-react";
 import type { Tour } from "@/lib/tour/types";
 
 // The six teaching steps stay on the dashboard route the whole time and
@@ -35,11 +35,11 @@ export const onboardingTour: Tour = {
       placement: "bottom",
     },
     {
-      id: "board",
-      target: '[data-tour="nav-board"]',
+      id: "applications",
+      target: '[data-tour="nav-applications"]',
       icon: KanbanSquare,
-      title: "The Bloom Board",
-      body: "We'll keep track of your applications for you. Drag a role forward as things move.",
+      title: "Applications",
+      body: "We'll keep track of every role for you. Drag one forward as things move, or switch to a list.",
       placement: "right",
     },
     {
@@ -59,11 +59,11 @@ export const onboardingTour: Tour = {
       placement: "right",
     },
     {
-      id: "friends",
-      target: '[data-tour="nav-friends"]',
-      icon: Users2,
-      title: "Friends & Groups",
-      body: "Invite people who'll cheer you on. Nothing private is ever shared automatically.",
+      id: "community",
+      target: '[data-tour="nav-community"]',
+      icon: Handshake,
+      title: "Community",
+      body: "Friends, groups, and every invite waiting on you live here together. Nothing private is ever shared automatically.",
       placement: "right",
     },
     {

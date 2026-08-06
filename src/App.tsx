@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { AuthProvider } from "@/hooks/useAuth";
@@ -26,13 +26,15 @@ import LegacyFriendLink from "@/pages/LegacyFriendLink";
 // lazy-loaded so first paint only ships what a signed-out visitor needs.
 const Onboarding = lazy(() => import("@/pages/Onboarding"));
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
-const Board = lazy(() => import("@/pages/Board"));
+const Applications = lazy(() => import("@/pages/Applications"));
 const ProfilePage = lazy(() => import("@/pages/Profile"));
 const PeopleProfile = lazy(() => import("@/pages/PeopleProfile"));
 const Resumes = lazy(() => import("@/pages/Resumes"));
 const Certifications = lazy(() => import("@/pages/Certifications"));
-const Friends = lazy(() => import("@/pages/Friends"));
-const Groups = lazy(() => import("@/pages/Groups"));
+const CommunityLayout = lazy(() => import("@/pages/community/CommunityLayout"));
+const CommunityFriends = lazy(() => import("@/pages/community/CommunityFriends"));
+const CommunityGroups = lazy(() => import("@/pages/community/CommunityGroups"));
+const CommunityInvites = lazy(() => import("@/pages/community/CommunityInvites"));
 const GroupDetail = lazy(() => import("@/pages/GroupDetail"));
 const Goals = lazy(() => import("@/pages/Goals"));
 const SettingsPage = lazy(() => import("@/pages/Settings"));
@@ -70,16 +72,30 @@ export default function App() {
                       <Route element={<RequireOnboarding />}>
                         <Route path="/app" element={<AppShell />}>
                           <Route index element={<Dashboard />} />
-                          <Route path="board" element={<Board />} />
+                          <Route path="applications" element={<Applications />} />
                           <Route path="profile" element={<ProfilePage />} />
                           <Route path="people/:userId" element={<PeopleProfile />} />
                           <Route path="resumes" element={<Resumes />} />
                           <Route path="certifications" element={<Certifications />} />
                           <Route path="goals" element={<Goals />} />
-                          <Route path="friends" element={<Friends />} />
-                          <Route path="groups" element={<Groups />} />
+
+                          {/* Friends, Groups, and Invites used to be separate pages —
+                              they're tabs under one Community layout now, so switching
+                              between them never triggers a full page reload. */}
+                          <Route path="community" element={<CommunityLayout />}>
+                            <Route index element={<Navigate to="friends" replace />} />
+                            <Route path="friends" element={<CommunityFriends />} />
+                            <Route path="groups" element={<CommunityGroups />} />
+                            <Route path="invites" element={<CommunityInvites />} />
+                          </Route>
                           <Route path="groups/:groupId" element={<GroupDetail />} />
+
                           <Route path="settings" element={<SettingsPage />} />
+
+                          {/* Legacy links (old bookmarks, old copy) still resolve. */}
+                          <Route path="board" element={<Navigate to="/app/applications" replace />} />
+                          <Route path="friends" element={<Navigate to="/app/community/friends" replace />} />
+                          <Route path="groups" element={<Navigate to="/app/community/groups" replace />} />
                         </Route>
                       </Route>
                     </Route>

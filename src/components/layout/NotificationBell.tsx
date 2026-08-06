@@ -20,8 +20,10 @@ function getNotificationTarget(event: ActivityEvent): string {
   }
 
   switch (event.type) {
+    // Group invitations are acted on from the Invites tab, not Groups —
+    // send people straight to where they can actually accept or decline.
     case "group_invite_received":
-      return "/app/groups";
+      return "/app/community/invites";
     default:
       return "/app";
   }

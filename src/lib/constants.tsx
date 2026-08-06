@@ -190,4 +190,5 @@ export const ENCOURAGING_EMPTY_MESSAGES = {
   noGoals: "Set a small, doable goal for this week. Progress over perfection.",
   noGroups: "Start or join a group with people who get what this season feels like.",
   noNotifications: "You're all caught up.",
+  noPendingInvites: "Nothing waiting on anyone right now. When a request comes in, you'll see it here first.",
 };

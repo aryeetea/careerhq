@@ -373,7 +373,7 @@ function displayCode(code: string): string {
 }
 
 function codeMessage(inviterName: string, code: string): string {
-  return `${inviterName} invited you to Bloom 🌸\n\nCreate an account, open Friends, and enter this code:\n${displayCode(code)}\n\nBloom helps us organize our job searches and encourage each other without sharing private application details.`;
+  return `${inviterName} invited you to Bloom 🌸\n\nCreate an account, open Community, and enter this code:\n${displayCode(code)}\n\nBloom helps us organize our job searches and encourage each other without sharing private application details.`;
 }
 
 function InviteSomeoneView() {
