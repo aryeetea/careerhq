@@ -1,41 +1,40 @@
-import { Card, CardContent } from "@/components/ui/card";
 import { computeGardenStages } from "@/lib/garden";
 import { cn, formatDate } from "@/lib/utils";
 import type { Job, Resume } from "@/types/database";
 
+// Content only, no outer card — the visual centerpiece of the merged
+// Progress section (see ProgressSection.tsx).
 export function BloomGarden({ jobs, resumes, accountCreatedAt }: { jobs: Job[]; resumes: Resume[]; accountCreatedAt: string }) {
   const stages = computeGardenStages(jobs, resumes, accountCreatedAt);
   const blossomedCount = stages.filter((stage) => stage.unlocked).length;
   const nextStage = stages.find((stage) => stage.isNext) ?? null;
 
   return (
-    <Card className="glass-subtle overflow-hidden border-border/60">
-      <CardContent className="p-5 sm:p-6">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h3 className="font-display text-xl font-semibold tracking-tight">Bloom Garden</h3>
-            <p className="mt-1 text-sm text-foreground/76">
-              {blossomedCount <= 1 ? "Your garden is growing." : `${blossomedCount} milestones have blossomed.`}
-            </p>
-          </div>
-          <p className="text-sm font-medium text-primary/90">
-            {nextStage ? `Next bloom: ${nextStage.milestoneLabel}` : "Your garden is in full bloom"}
+    <div>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-sm font-semibold">Bloom Garden</p>
+          <p className="mt-1 text-sm text-foreground/76">
+            {blossomedCount <= 1 ? "Your garden is growing." : `${blossomedCount} milestones have blossomed.`}
           </p>
         </div>
+        <p className="text-sm font-medium text-primary/90">
+          {nextStage ? `Next bloom: ${nextStage.milestoneLabel}` : "Your garden is in full bloom"}
+        </p>
+      </div>
 
-        <div className="mt-6 hidden grid-cols-7 gap-3 lg:grid">
-          {stages.map((stage, index) => (
-            <GardenStageCard key={stage.key} stage={stage} index={index} orientation="horizontal" />
-          ))}
-        </div>
+      <div className="mt-6 hidden grid-cols-7 gap-3 lg:grid">
+        {stages.map((stage, index) => (
+          <GardenStageCard key={stage.key} stage={stage} index={index} orientation="horizontal" />
+        ))}
+      </div>
 
-        <div className="mt-6 grid gap-3 lg:hidden">
-          {stages.map((stage, index) => (
-            <GardenStageCard key={stage.key} stage={stage} index={index} orientation="vertical" />
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+      <div className="mt-6 grid gap-3 lg:hidden">
+        {stages.map((stage, index) => (
+          <GardenStageCard key={stage.key} stage={stage} index={index} orientation="vertical" />
+        ))}
+      </div>
+    </div>
   );
 }
 

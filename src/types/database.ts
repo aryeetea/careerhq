@@ -511,3 +511,22 @@ export interface ProfileActivity {
   metadata: Record<string, unknown>;
   created_at: string;
 }
+
+export type JournalMood = "excited" | "hopeful" | "calm" | "proud" | "grateful" | "tired" | "anxious" | "discouraged";
+
+// Who besides the author can read an entry. "group" always carries a
+// group_id (enforced in the DB, not just the app); the other three don't.
+export type JournalVisibility = "private" | "friends" | "group" | "public";
+
+export interface JournalEntry {
+  id: string;
+  user_id: string;
+  title: string | null;
+  body: string;
+  mood: JournalMood | null;
+  visibility: JournalVisibility;
+  group_id: string | null;
+  entry_date: string;
+  created_at: string;
+  updated_at: string;
+}

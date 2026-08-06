@@ -1,6 +1,5 @@
 import { Link } from "react-router-dom";
 import { Check, HeartPulse } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { getMyActiveGoals } from "@/lib/goals";
 import type { GoalWithMembers } from "@/services/goals";
@@ -48,39 +47,37 @@ export function SearchHealthCard({
   const score = Math.round((checks.filter((c) => c.met).length / checks.length) * 100);
 
   return (
-    <Card className="glass-subtle border-border/60">
-      <CardContent className="p-5">
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <HeartPulse className="h-4 w-4 text-rose" />
-            <h3 className="font-semibold">Search health</h3>
-          </div>
-          <span className="text-sm font-semibold text-primary">{score}%</span>
+    <div>
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <HeartPulse className="h-4 w-4 text-rose" />
+          <p className="text-sm font-semibold">Search health</p>
         </div>
+        <span className="text-sm font-semibold text-primary">{score}%</span>
+      </div>
 
-        <ul className="grid gap-2">
-          {checks.map((check) => (
-            <li key={check.label} className="flex items-center justify-between gap-3 rounded-xl bg-card/60 px-3 py-2 text-sm">
-              <span className="flex items-center gap-2">
-                <span
-                  className={cn(
-                    "flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full border",
-                    check.met ? "border-success/40 bg-success/15 text-success" : "border-border/70 text-transparent"
-                  )}
-                >
-                  <Check className="h-3 w-3" />
-                </span>
-                <span className={check.met ? "text-foreground" : "text-muted-foreground"}>{check.label}</span>
+      <ul className="grid gap-1.5">
+        {checks.map((check) => (
+          <li key={check.label} className="flex items-center justify-between gap-3 rounded-xl bg-card/60 px-3 py-2 text-sm">
+            <span className="flex items-center gap-2">
+              <span
+                className={cn(
+                  "flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full border",
+                  check.met ? "border-success/40 bg-success/15 text-success" : "border-border/70 text-transparent"
+                )}
+              >
+                <Check className="h-3 w-3" />
               </span>
-              {!check.met && (
-                <Link to={check.actionTo} className="shrink-0 text-xs font-medium text-primary hover:underline">
-                  {check.actionLabel}
-                </Link>
-              )}
-            </li>
-          ))}
-        </ul>
-      </CardContent>
-    </Card>
+              <span className={check.met ? "text-foreground" : "text-muted-foreground"}>{check.label}</span>
+            </span>
+            {!check.met && (
+              <Link to={check.actionTo} className="shrink-0 text-xs font-medium text-primary hover:underline">
+                {check.actionLabel}
+              </Link>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

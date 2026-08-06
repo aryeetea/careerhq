@@ -1,3 +1,4 @@
+import { Lock, Users2, UsersRound, Globe } from "lucide-react";
 import type {
   AiJobVerdict,
   ApplicationRecommendation,
@@ -9,6 +10,8 @@ import type {
   ReactionType,
   VisibilityLevel,
   CertificationStatus,
+  JournalMood,
+  JournalVisibility,
 } from "@/types/database";
 
 export const UNSET_SELECT_VALUE = "__unset__";
@@ -191,4 +194,22 @@ export const ENCOURAGING_EMPTY_MESSAGES = {
   noGroups: "Start or join a group with people who get what this season feels like.",
   noNotifications: "You're all caught up.",
   noPendingInvites: "Nothing waiting on anyone right now. When a request comes in, you'll see it here first.",
+};
+
+export const JOURNAL_MOOD_META: Record<JournalMood, { label: string; emoji: string }> = {
+  excited: { label: "Excited", emoji: "✨" },
+  hopeful: { label: "Hopeful", emoji: "🌱" },
+  calm: { label: "Calm", emoji: "🌿" },
+  proud: { label: "Proud", emoji: "🌷" },
+  grateful: { label: "Grateful", emoji: "🌸" },
+  tired: { label: "Tired", emoji: "🌙" },
+  anxious: { label: "Anxious", emoji: "🍂" },
+  discouraged: { label: "Discouraged", emoji: "🌧️" },
+};
+
+export const JOURNAL_VISIBILITY_META: Record<JournalVisibility, { label: string; description: string; icon: typeof Lock }> = {
+  private: { label: "Private", description: "Only you can see this entry", icon: Lock },
+  friends: { label: "Friends", description: "Any accepted friend can see this", icon: Users2 },
+  group: { label: "One group", description: "Visible to members of a group you choose", icon: UsersRound },
+  public: { label: "Public", description: "Any signed-in Bloom user can see this", icon: Globe },
 };

@@ -238,3 +238,13 @@ export const backupSchema = z.discriminatedUnion("version", [
   }),
 ]);
 export type BackupData = z.infer<typeof backupSchema>;
+
+export const journalEntryFormSchema = z.object({
+  title: z.string().trim().max(120).optional().or(z.literal("")),
+  body: z.string().trim().min(1, "Write at least a little something").max(4000),
+  mood: z.string().optional().or(z.literal("")),
+  visibility: z.enum(["private", "friends", "group", "public"]).default("private"),
+  groupId: z.string().optional().or(z.literal("")),
+  entryDate: z.string().min(1, "Pick a date"),
+});
+export type JournalEntryFormValues = z.infer<typeof journalEntryFormSchema>;

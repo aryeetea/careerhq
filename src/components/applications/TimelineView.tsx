@@ -1,36 +1,14 @@
-import * as React from "react";
-import { isToday, isYesterday, isThisWeek, isWithinInterval, startOfWeek, endOfWeek, subWeeks } from "date-fns";
 import { Sparkles } from "lucide-react";
 import { TimelineCard } from "@/components/applications/TimelineCard";
+import { groupByRecency, DATE_GROUP_ORDER } from "@/lib/dateGroups";
 import type { TimelineEvent } from "@/lib/applications/events";
 import type { Job } from "@/types/database";
-
-type GroupKey = "Today" | "Yesterday" | "This Week" | "Last Week" | "Earlier";
-const GROUP_ORDER: GroupKey[] = ["Today", "Yesterday", "This Week", "Last Week", "Earlier"];
-
-function groupKeyFor(date: Date, now: Date): GroupKey {
-  if (isToday(date)) return "Today";
-  if (isYesterday(date)) return "Yesterday";
-  if (isThisWeek(date, { weekStartsOn: 0 })) return "This Week";
-  const lastWeekStart = startOfWeek(subWeeks(now, 1));
-  const lastWeekEnd = endOfWeek(subWeeks(now, 1));
-  if (isWithinInterval(date, { start: lastWeekStart, end: lastWeekEnd })) return "Last Week";
-  return "Earlier";
-}
 
 /** "How has my search progressed?" — a reflective, reverse-chronological
  * read of the same events the Board and Calendar show, grouped the way a
  * journal would be rather than dumped as a flat log. */
 export function TimelineView({ events, onOpenJob }: { events: TimelineEvent[]; onOpenJob: (job: Job) => void }) {
-  const now = React.useMemo(() => new Date(), []);
-  const groups = React.useMemo(() => {
-    const map = new Map<GroupKey, TimelineEvent[]>();
-    for (const key of GROUP_ORDER) map.set(key, []);
-    for (const event of events) {
-      map.get(groupKeyFor(event.date, now))!.push(event);
-    }
-    return map;
-  }, [events, now]);
+  const groups = groupByRecency(events, (event) => event.date);
 
   if (events.length === 0) {
     return (
@@ -46,7 +24,7 @@ export function TimelineView({ events, onOpenJob }: { events: TimelineEvent[]; o
 
   return (
     <div className="mx-auto grid w-full max-w-2xl gap-6 px-4 pb-10 pt-2 sm:px-8 animate-fade-in">
-      {GROUP_ORDER.filter((key) => (groups.get(key)?.length ?? 0) > 0).map((key) => {
+      {DATE_GROUP_ORDER.filter((key) => (groups.get(key)?.length ?? 0) > 0).map((key) => {
         const groupEvents = groups.get(key)!;
         return (
           <section key={key}>

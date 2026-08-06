@@ -37,6 +37,7 @@ const CommunityGroups = lazy(() => import("@/pages/community/CommunityGroups"));
 const CommunityInvites = lazy(() => import("@/pages/community/CommunityInvites"));
 const GroupDetail = lazy(() => import("@/pages/GroupDetail"));
 const Goals = lazy(() => import("@/pages/Goals"));
+const Journal = lazy(() => import("@/pages/Journal"));
 const SettingsPage = lazy(() => import("@/pages/Settings"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
@@ -78,6 +79,7 @@ export default function App() {
                           <Route path="resumes" element={<Resumes />} />
                           <Route path="certifications" element={<Certifications />} />
                           <Route path="goals" element={<Goals />} />
+                          <Route path="journal" element={<Journal />} />
 
                           {/* Friends, Groups, and Invites used to be separate pages —
                               they're tabs under one Community layout now, so switching
