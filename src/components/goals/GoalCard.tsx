@@ -1,5 +1,4 @@
 import * as React from "react";
-import { Link } from "react-router-dom";
 import { Plus, Trash2, Users } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,7 +13,7 @@ import { useSharedContextProfiles } from "@/hooks/queries/useProfile";
 import { useAuth } from "@/hooks/useAuth";
 import { useDeleteGoal, useJoinGoal, useLeaveGoal, useUpdateGoalProgress } from "@/hooks/queries/useGoals";
 import { useToast } from "@/components/shared/toast";
-import { formatDate, initials } from "@/lib/utils";
+import { cn, formatDate, initials } from "@/lib/utils";
 import type { GoalWithMembers } from "@/services/goals";
 
 function MemberRow({ userId, displayName, avatarPath, progress, target, unit, isSelf, goalId, ownerId }: {
@@ -52,7 +51,7 @@ function MemberRow({ userId, displayName, avatarPath, progress, target, unit, is
   );
 }
 
-export function GoalCard({ goal }: { goal: GoalWithMembers }) {
+export function GoalCard({ goal, highlighted = false }: { goal: GoalWithMembers; highlighted?: boolean }) {
   const { user } = useAuth();
   const joinGoal = useJoinGoal();
   const leaveGoal = useLeaveGoal();
@@ -66,7 +65,7 @@ export function GoalCard({ goal }: { goal: GoalWithMembers }) {
   const isOwner = goal.owner_id === user?.id;
 
   return (
-    <Card className="hover-lift">
+    <Card className={cn("hover-lift transition-shadow duration-700", highlighted && "ring-2 ring-primary shadow-lift")}>
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
@@ -119,7 +118,7 @@ export function GoalCard({ goal }: { goal: GoalWithMembers }) {
             className="mt-3 w-full"
             onClick={async () => {
               await joinGoal.mutateAsync(goal.id);
-              push("Joined goal", "success");
+              push("Joined goal.", "success");
             }}
           >
             Join this goal
@@ -132,15 +131,10 @@ export function GoalCard({ goal }: { goal: GoalWithMembers }) {
             className="mt-3 w-full"
             onClick={async () => {
               await leaveGoal.mutateAsync(goal.id);
-              push("Left goal", "info");
+              push("Left goal.", "info");
             }}
           >
             Leave goal
-          </Button>
-        )}
-        {goal.is_shared && (
-          <Button asChild size="sm" variant="ghost" className="mt-2 w-full">
-            <Link to="/app/goals">View shared goal details</Link>
           </Button>
         )}
       </CardContent>
@@ -153,7 +147,7 @@ export function GoalCard({ goal }: { goal: GoalWithMembers }) {
         confirmLabel="Delete goal"
         onConfirm={async () => {
           await deleteGoal.mutateAsync(goal.id);
-          push("Goal deleted", "info");
+          push("Goal deleted.", "info");
         }}
       />
     </Card>

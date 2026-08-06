@@ -10,9 +10,19 @@ import { CreateGoalDialog } from "@/components/goals/CreateGoalDialog";
 import { useGoals } from "@/hooks/queries/useGoals";
 import { ENCOURAGING_EMPTY_MESSAGES } from "@/lib/constants";
 
+// How long a freshly-created goal's card stays highlighted before settling
+// in with the rest of the list.
+const HIGHLIGHT_MS = 2500;
+
 export default function Goals() {
   const { data: goals = [], isLoading, isError, refetch } = useGoals();
   const [createOpen, setCreateOpen] = React.useState(false);
+  const [justCreatedId, setJustCreatedId] = React.useState<string | null>(null);
+
+  function handleCreated(goal: { id: string }) {
+    setJustCreatedId(goal.id);
+    window.setTimeout(() => setJustCreatedId((current) => (current === goal.id ? null : current)), HIGHLIGHT_MS);
+  }
 
   return (
     <div className="flex flex-1 flex-col">
@@ -41,11 +51,11 @@ export default function Goals() {
           />
         ) : (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {goals.map((g) => <GoalCard key={g.id} goal={g} />)}
+            {goals.map((g) => <GoalCard key={g.id} goal={g} highlighted={g.id === justCreatedId} />)}
           </div>
         )}
       </div>
-      <CreateGoalDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <CreateGoalDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={handleCreated} />
     </div>
   );
 }
