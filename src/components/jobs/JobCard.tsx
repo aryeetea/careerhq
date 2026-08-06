@@ -1,5 +1,5 @@
 import * as React from "react";
-import { MapPin, FileText, GripVertical, CalendarClock } from "lucide-react";
+import { MapPin, FileText, GripVertical, CalendarClock, CheckCircle2 } from "lucide-react";
 import type { DraggableAttributes, DraggableSyntheticListeners } from "@dnd-kit/core";
 import type { Job, Resume } from "@/types/database";
 import { VerdictBadge } from "@/components/jobs/StatusBadge";
@@ -84,9 +84,18 @@ export const JobCard = React.forwardRef<HTMLDivElement, JobCardProps>(
           </div>
         )}
 
-        {job.follow_up_date && (
-          <div className="mt-2.5 flex items-center gap-1 text-[11px] text-gold">
-            <CalendarClock className="h-3 w-3" /> Follow up {formatDate(job.follow_up_date)}
+        {(job.follow_up_date || job.ai_cover_letter) && (
+          <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+            {job.follow_up_date && (
+              <span className="flex items-center gap-1 text-gold">
+                <CalendarClock className="h-3 w-3" /> Follow up {formatDate(job.follow_up_date)}
+              </span>
+            )}
+            {job.ai_cover_letter && (
+              <span className="flex items-center gap-1 text-success">
+                <CheckCircle2 className="h-3 w-3" /> Cover letter ready
+              </span>
+            )}
           </div>
         )}
 

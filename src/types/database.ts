@@ -196,6 +196,8 @@ export interface Job {
   cover_letter_used: string | null;
   priority: number;
   follow_up_date: string | null;
+  followed_up_at: string | null;
+  follow_up_round: number;
   interview_date: string | null;
   offer_date: string | null;
   rejection_date: string | null;
@@ -209,6 +211,7 @@ export interface Job {
   ai_analysis: JobAiAnalysis | null;
   ai_recommended_resume_id: string | null;
   ai_cover_letter: string | null;
+  ai_cover_letter_updated_at: string | null;
   ai_last_analyzed_at: string | null;
   ai_prompt_version: string | null;
   ai_rubric_version: string | null;

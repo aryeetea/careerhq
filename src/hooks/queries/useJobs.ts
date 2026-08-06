@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { queryKeys } from "@/lib/queryClient";
+import { useRealtimeTable } from "@/hooks/useRealtimeTable";
 import * as jobsService from "@/services/jobs";
 import { logActivity } from "@/services/activity";
 import type { Job, JobStatus, JobStatusHistoryEntry, NewJob } from "@/types/database";
@@ -27,6 +28,39 @@ export function useJobs() {
     queryKey: queryKeys.jobs(userId),
     queryFn: () => jobsService.listJobs(userId),
     enabled: Boolean(userId),
+  });
+}
+
+// Mounted once (see RealtimeSync) so a job changed on another tab or
+// device — or, later, by any server-side automation — reaches this
+// session's Board/List/Calendar/Timeline/Dashboard/Garden without a
+// refresh. Patches the same cache entry every mutation in this file
+// already writes to, so there's exactly one source of truth for "jobs"
+// regardless of which client changed them.
+export function useJobsRealtime() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  const userId = user?.id ?? "";
+
+  useRealtimeTable<Job>({
+    channel: `jobs:${userId}`,
+    table: "jobs",
+    filter: userId ? `user_id=eq.${userId}` : undefined,
+    enabled: Boolean(userId),
+    onChange: (payload) => {
+      const key = queryKeys.jobs(userId);
+      if (payload.eventType === "INSERT") {
+        const job = payload.new as Job;
+        qc.setQueryData<Job[]>(key, (prev) => (prev?.some((j) => j.id === job.id) ? prev : [job, ...(prev ?? [])]));
+      } else if (payload.eventType === "UPDATE") {
+        const job = payload.new as Job;
+        qc.setQueryData<Job[]>(key, (prev) => prev?.map((j) => (j.id === job.id ? job : j)));
+      } else if (payload.eventType === "DELETE") {
+        const oldId = (payload.old as { id?: string }).id;
+        if (oldId) qc.setQueryData<Job[]>(key, (prev) => prev?.filter((j) => j.id !== oldId));
+      }
+      qc.invalidateQueries({ queryKey: queryKeys.allJobStatusHistory(userId) });
+    },
   });
 }
 
@@ -138,6 +172,65 @@ export function useMoveJob() {
       if (previousStatus && previousStatus !== updated.status) {
         qc.invalidateQueries({ queryKey: queryKeys.allJobStatusHistory(user!.id) });
       }
+    },
+  });
+}
+
+/** Persists a generated cover letter immediately — release-blocking: a
+ * letter must never live only in component state, or it's lost the moment
+ * the dialog closes without a full form save. */
+export function useSaveCoverLetter() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  const key = queryKeys.jobs(user?.id ?? "");
+
+  return useMutation({
+    mutationFn: ({ id, coverLetter, resumeId }: { id: string; coverLetter: string; resumeId: string | null }) =>
+      jobsService.saveCoverLetter(id, coverLetter, resumeId),
+    onSuccess: (updated) => {
+      qc.setQueryData<Job[]>(key, (prev) => prev?.map((j) => (j.id === updated.id ? updated : j)));
+    },
+  });
+}
+
+/** The follow-up checkmark. Optimistic (clears the reminder immediately
+ * everywhere that reads job.follow_up_date), rolls back visually if the
+ * server rejects it. */
+export function useCompleteFollowUp() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  const key = queryKeys.jobs(user?.id ?? "");
+
+  return useMutation({
+    mutationFn: ({ id, nextRound }: { id: string; nextRound: number }) => jobsService.completeFollowUp(id, nextRound),
+    onMutate: async ({ id, nextRound }) => {
+      await qc.cancelQueries({ queryKey: key });
+      const previous = qc.getQueryData<Job[]>(key);
+      qc.setQueryData<Job[]>(key, (prev) =>
+        prev?.map((j) => (j.id === id ? { ...j, follow_up_date: null, followed_up_at: new Date().toISOString(), follow_up_round: nextRound } : j))
+      );
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) qc.setQueryData(key, context.previous);
+    },
+    onSuccess: (updated) => {
+      qc.setQueryData<Job[]>(key, (prev) => prev?.map((j) => (j.id === updated.id ? updated : j)));
+    },
+  });
+}
+
+/** The optional "schedule one final follow-up" offer after the first
+ * completes — never invoked automatically past round 2. */
+export function useScheduleAnotherFollowUp() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  const key = queryKeys.jobs(user?.id ?? "");
+
+  return useMutation({
+    mutationFn: ({ id, followUpDate }: { id: string; followUpDate: string }) => jobsService.scheduleAnotherFollowUp(id, followUpDate),
+    onSuccess: (updated) => {
+      qc.setQueryData<Job[]>(key, (prev) => prev?.map((j) => (j.id === updated.id ? updated : j)));
     },
   });
 }

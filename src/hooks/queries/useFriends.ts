@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { queryKeys } from "@/lib/queryClient";
+import { useRealtimeTable } from "@/hooks/useRealtimeTable";
 import * as friendsService from "@/services/friends";
 
 export function useUserSearch(query: string) {
@@ -73,6 +74,32 @@ function useInvalidateFriendData() {
     qc.invalidateQueries({ queryKey: queryKeys.outgoingRequests(userId) });
     qc.invalidateQueries({ queryKey: queryKeys.blockedUsers(userId) });
   };
+}
+
+// Mounted once (see RealtimeSync). A request arriving, being accepted, or a
+// friend being removed all need to reach both people involved without a
+// refresh — unfiltered because "who requested/befriended me" is inherently
+// about someone else's row; RLS (friend_requests_select / friendships_select)
+// already limits delivery to rows this user is a party to, the same way it
+// limits a normal SELECT.
+export function useFriendRealtime() {
+  const { user } = useAuth();
+  const invalidate = useInvalidateFriendData();
+  const userId = user?.id ?? "";
+
+  useRealtimeTable({
+    channel: `friend-requests:${userId}`,
+    table: "friend_requests",
+    enabled: Boolean(userId),
+    onChange: invalidate,
+  });
+
+  useRealtimeTable({
+    channel: `friendships:${userId}`,
+    table: "friendships",
+    enabled: Boolean(userId),
+    onChange: invalidate,
+  });
 }
 
 export function useSendFriendRequest() {

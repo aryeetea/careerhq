@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ExternalLink, Sparkles, Trash2 } from "lucide-react";
+import { Check, Copy, Download, ExternalLink, FileText, Sparkles, Trash2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -19,9 +19,10 @@ import { Separator } from "@/components/ui/separator";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { AnalysisSummary } from "@/components/jobs/AnalysisSummary";
 import { StatusBadge } from "@/components/jobs/StatusBadge";
+import { FollowUpCheckmark } from "@/components/jobs/FollowUpCheckmark";
 import type { Job, Resume } from "@/types/database";
 import { jobFormSchema, type JobFormValues } from "@/lib/validation";
-import { useDeleteJob, useJobStatusHistory, useUpdateJob } from "@/hooks/queries/useJobs";
+import { useDeleteJob, useJobStatusHistory, useSaveCoverLetter, useUpdateJob } from "@/hooks/queries/useJobs";
 import { useAnalyzeJob, useGenerateCoverLetter } from "@/hooks/queries/useJobAi";
 import { useToast } from "@/components/shared/toast";
 import { useCelebration } from "@/components/ambient/Celebration";
@@ -72,6 +73,7 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
   const deleteJob = useDeleteJob();
   const analyzeJob = useAnalyzeJob();
   const generateCoverLetter = useGenerateCoverLetter();
+  const saveCoverLetter = useSaveCoverLetter();
   const { data: history = [] } = useJobStatusHistory(job?.id ?? null);
   const { push } = useToast();
   const { celebrate } = useCelebration();
@@ -79,6 +81,7 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
   const [analysisState, setAnalysisState] = React.useState<JobAnalysisPayload | null>(job?.ai_analysis ?? null);
   const [coverLetter, setCoverLetter] = React.useState(job?.ai_cover_letter ?? "");
   const [activeTab, setActiveTab] = React.useState("overview");
+  const coverLetterDirty = coverLetter !== (job?.ai_cover_letter ?? "");
 
   const {
     register,
@@ -89,15 +92,23 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
     formState: { errors, isSubmitting, isDirty },
   } = useForm<JobFormValues>({ resolver: zodResolver(jobFormSchema) });
 
+  // Keyed on job id, not the job object itself — the job prop now updates
+  // reactively as the cache changes (a follow-up completed, a cover letter
+  // generated, a realtime update from another tab) so this must only reset
+  // the form when the dialog switches to a genuinely different job, never
+  // wiping in-progress edits out from under someone because an unrelated
+  // field changed underneath them.
   React.useEffect(() => {
     if (job) reset(jobToFormValues(job));
-  }, [job, reset]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [job?.id]);
 
   React.useEffect(() => {
     setAnalysisState(job?.ai_analysis ?? null);
     setCoverLetter(job?.ai_cover_letter ?? "");
     setActiveTab("overview");
-  }, [job]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [job?.id]);
 
   if (!job) return null;
 
@@ -139,7 +150,6 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
           strengths: values.strengths?.trim() || null,
           missing_qualifications: values.missingQualifications?.trim() || null,
           notes: values.notes?.trim() || null,
-          ai_cover_letter: coverLetter.trim() || null,
         },
       });
       if (values.status === "applied" && !job.date_applied && updated.follow_up_date) {
@@ -200,14 +210,50 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
         jobId: job.id,
         selectedResumeId: watch("resumeId") || null,
       });
+      // Persist the moment it's ready — not just in local state, and not
+      // gated on the user separately clicking the form's "Save changes".
+      await saveCoverLetter.mutateAsync({ id: job.id, coverLetter: response.cover_letter, resumeId: response.resume_id });
       setCoverLetter(response.cover_letter);
       if (response.resume_id) {
-        setValue("resumeId", response.resume_id, { shouldDirty: true });
+        setValue("resumeId", response.resume_id, { shouldDirty: false });
       }
-      push("Cover letter draft generated.", "success");
+      setActiveTab("cover-letter");
+      push("Your cover letter is ready.", "success");
     } catch (err) {
+      // Deliberately does not touch `coverLetter` — a failed regeneration
+      // never clears or overwrites an existing saved draft.
       push(err instanceof Error ? err.message : "Couldn't generate a cover letter yet.", "error");
     }
+  }
+
+  async function handleSaveCoverLetterEdit() {
+    if (!job) return;
+    try {
+      await saveCoverLetter.mutateAsync({ id: job.id, coverLetter, resumeId: null });
+      push("Cover letter saved.", "success");
+    } catch (err) {
+      push(err instanceof Error ? err.message : "Couldn't save your edits.", "error");
+    }
+  }
+
+  async function handleCopyCoverLetter() {
+    try {
+      await navigator.clipboard.writeText(coverLetter);
+      push("Copied to your clipboard.", "success");
+    } catch {
+      push("Couldn't copy — try selecting the text instead.", "error");
+    }
+  }
+
+  function handleDownloadCoverLetter() {
+    if (!job) return;
+    const blob = new Blob([coverLetter], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${job.company} - ${job.title} - cover letter.txt`.replace(/[/\\?%*:|"<>]/g, "-");
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   return (
@@ -243,7 +289,11 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
               <TabsTrigger value="evaluation">Evaluation</TabsTrigger>
               <TabsTrigger value="tracking">Tracking</TabsTrigger>
               <TabsTrigger value="recruiter">Recruiter</TabsTrigger>
-              <TabsTrigger value="ai">AI</TabsTrigger>
+              <TabsTrigger value="ai">AI Coach</TabsTrigger>
+              <TabsTrigger value="cover-letter" className="gap-1.5">
+                Cover Letter
+                {job.ai_cover_letter && <Check className="h-3 w-3 text-success" aria-hidden="true" />}
+              </TabsTrigger>
               <TabsTrigger value="history">History</TabsTrigger>
             </TabsList>
 
@@ -404,9 +454,14 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
                 </div>
                 <div className="grid gap-1.5">
                   <Label htmlFor="d-followUpDate">Follow-up date</Label>
-                  <Input id="d-followUpDate" type="date" {...register("followUpDate")} />
+                  <div className="flex items-center gap-2">
+                    <Input id="d-followUpDate" type="date" {...register("followUpDate")} className="flex-1" />
+                    {job.follow_up_date && <FollowUpCheckmark job={job} />}
+                  </div>
                   <p className="text-xs text-muted-foreground">
-                    Bloom schedules this automatically when you first apply. Change it here only if you want a different follow-up.
+                    {job.followed_up_at
+                      ? `Marked complete ${formatDate(job.followed_up_at)}.`
+                      : "Bloom schedules this automatically when you first apply. Change it here only if you want a different follow-up."}
                   </p>
                 </div>
               </div>
@@ -455,20 +510,15 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
                 <div>
                   <p className="flex items-center gap-1.5 text-sm font-medium">
                     <Sparkles className="h-4 w-4 text-primary" />
-                    AI tools
+                    AI Coach
                   </p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Re-import and analyze this job from the saved URL or description, then generate a cover letter from the selected resume.
+                    Re-import and analyze this job from the saved URL or description to see how it fits your resume.
                   </p>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button type="button" variant="outline" size="sm" onClick={handleAnalyze} disabled={analyzeJob.isPending}>
-                    {analyzeJob.isPending ? "Analyzing…" : "Run analysis"}
-                  </Button>
-                  <Button type="button" size="sm" onClick={handleGenerateCoverLetter} disabled={generateCoverLetter.isPending}>
-                    {generateCoverLetter.isPending ? "Generating…" : "Generate cover letter"}
-                  </Button>
-                </div>
+                <Button type="button" variant="outline" size="sm" onClick={handleAnalyze} disabled={analyzeJob.isPending}>
+                  {analyzeJob.isPending ? "Analyzing…" : "Run analysis"}
+                </Button>
               </div>
 
               {analysisState ? (
@@ -480,24 +530,72 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
                 />
               ) : (
                 <div className="rounded-xl border border-dashed border-border/70 px-4 py-8 text-center text-sm text-muted-foreground">
-                  No AI analysis has been saved for this job yet.
+                  Fit not assessed yet — run analysis once you've saved a job link or description.
                 </div>
               )}
+            </TabsContent>
 
-              <div className="grid gap-1.5">
-                <Label htmlFor="d-aiCoverLetter">Cover letter draft</Label>
-                <Textarea
-                  id="d-aiCoverLetter"
-                  value={coverLetter}
-                  onChange={(e) => setCoverLetter(e.target.value)}
-                  rows={12}
-                  placeholder="Generate a draft after choosing the resume you want to use."
-                />
-                <p className="text-xs text-muted-foreground">
-                  Review this carefully before sending. It draws only on your selected resume, the saved job text, and your career
-                  goal from your profile — nothing is invented.
-                </p>
+            <TabsContent value="cover-letter" className="grid gap-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border/60 bg-card/50 p-3">
+                <div>
+                  <p className="flex items-center gap-1.5 text-sm font-medium">
+                    <FileText className="h-4 w-4 text-primary" />
+                    Cover letter
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Draws only on your selected resume, this job's saved text, and your career goal — nothing is invented.
+                  </p>
+                </div>
+                <Button type="button" size="sm" onClick={handleGenerateCoverLetter} disabled={generateCoverLetter.isPending}>
+                  {generateCoverLetter.isPending ? "Generating…" : job.ai_cover_letter ? "Regenerate" : "Generate cover letter"}
+                </Button>
               </div>
+
+              {!job.ai_cover_letter && !coverLetter ? (
+                <div className="rounded-xl border border-dashed border-border/70 px-4 py-10 text-center">
+                  <p className="text-sm font-medium">No cover letter yet</p>
+                  <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
+                    Choose the resume you want to use on the Evaluation tab, then generate one — it takes a few seconds.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                    <span>
+                      {watch("resumeId") && resumes.find((r) => r.id === watch("resumeId"))
+                        ? `Using ${resumes.find((r) => r.id === watch("resumeId"))?.name}`
+                        : "Resume not set"}
+                      {job.ai_cover_letter_updated_at && ` · Last updated ${formatDateTime(job.ai_cover_letter_updated_at)}`}
+                    </span>
+                    <div className="flex gap-1.5">
+                      <Button type="button" variant="ghost" size="sm" onClick={handleCopyCoverLetter} className="h-7 gap-1 px-2 text-xs">
+                        <Copy className="h-3 w-3" /> Copy
+                      </Button>
+                      <Button type="button" variant="ghost" size="sm" onClick={handleDownloadCoverLetter} className="h-7 gap-1 px-2 text-xs">
+                        <Download className="h-3 w-3" /> Download
+                      </Button>
+                    </div>
+                  </div>
+                  <Textarea
+                    id="d-aiCoverLetter"
+                    value={coverLetter}
+                    onChange={(e) => setCoverLetter(e.target.value)}
+                    rows={14}
+                  />
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs text-muted-foreground">Review this carefully before sending.</p>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={handleSaveCoverLetterEdit}
+                      disabled={!coverLetterDirty || saveCoverLetter.isPending}
+                    >
+                      {saveCoverLetter.isPending ? "Saving…" : coverLetterDirty ? "Save edits" : "Saved"}
+                    </Button>
+                  </div>
+                </>
+              )}
             </TabsContent>
 
             <TabsContent value="history">

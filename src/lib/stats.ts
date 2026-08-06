@@ -10,7 +10,11 @@ export interface DashboardStats {
   interviews: number;
   offers: number;
   rejections: number;
-  ghosted: number;
+  /** Applications still sitting at "Applied" 30+ days after date_applied,
+   * with no interview/offer/rejection recorded. A factual, computed signal
+   * rather than a judgmental "Ghosted" label — nothing is ever auto-marked
+   * ghosted. */
+  noResponse: number;
   applicationsThisWeek: number;
   applicationsThisMonth: number;
   responseRate: number;
@@ -31,7 +35,9 @@ export function computeDashboardStats(jobs: Job[]): DashboardStats {
   const interviews = jobs.filter((j) => j.status === "interview" || j.status === "final_interview").length;
   const offers = jobs.filter((j) => j.status === "offer").length;
   const rejections = jobs.filter((j) => j.status === "rejected").length;
-  const ghosted = jobs.filter((j) => j.status === "ghosted").length;
+  const noResponse = jobs.filter(
+    (j) => j.status === "applied" && j.date_applied && now.getTime() - new Date(j.date_applied).getTime() >= 30 * 86400000
+  ).length;
 
   const applicationsThisWeek = applied.filter((j) => new Date(j.date_applied!) >= weekAgo).length;
   const applicationsThisMonth = applied.filter((j) => new Date(j.date_applied!) >= monthAgo).length;
@@ -62,7 +68,7 @@ export function computeDashboardStats(jobs: Job[]): DashboardStats {
     interviews,
     offers,
     rejections,
-    ghosted,
+    noResponse,
     applicationsThisWeek,
     applicationsThisMonth,
     responseRate,

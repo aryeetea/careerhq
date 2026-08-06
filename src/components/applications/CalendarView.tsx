@@ -15,6 +15,7 @@ import { ChevronLeft, ChevronRight, CalendarClock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import { CalendarEventChip } from "@/components/applications/CalendarEventChip";
+import { FollowUpCheckmark } from "@/components/jobs/FollowUpCheckmark";
 import { CALENDAR_EVENT_META, type CalendarEvent } from "@/lib/applications/events";
 import type { Job } from "@/types/database";
 import { cn } from "@/lib/utils";
@@ -150,20 +151,22 @@ function DayAgenda({ day, dayEvents, onOpenJob }: { day: Date; dayEvents: Calend
         dayEvents.map((event) => {
           const meta = CALENDAR_EVENT_META[event.type];
           return (
-            <button
-              key={event.id}
-              type="button"
-              onClick={() => onOpenJob(event.job)}
-              className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition-colors hover:bg-secondary/60"
-            >
-              <span className={cn("h-2 w-2 shrink-0 rounded-full", meta.dot)} />
-              <span className="min-w-0 flex-1">
-                <span className="block truncate font-medium">{event.job.company}</span>
-                <span className="block truncate text-xs text-muted-foreground">
-                  {meta.label} · {event.job.title}
+            <div key={event.id} className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => onOpenJob(event.job)}
+                className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition-colors hover:bg-secondary/60"
+              >
+                <span className={cn("h-2 w-2 shrink-0 rounded-full", meta.dot)} />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-medium">{event.job.company}</span>
+                  <span className="block truncate text-xs text-muted-foreground">
+                    {meta.label} · {event.job.title}
+                  </span>
                 </span>
-              </span>
-            </button>
+              </button>
+              {event.type === "follow_up" && event.job.follow_up_date && <FollowUpCheckmark job={event.job} className="mr-1" />}
+            </div>
           );
         })
       )}

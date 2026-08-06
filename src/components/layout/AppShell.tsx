@@ -1,6 +1,7 @@
 import { Outlet, useLocation } from "react-router-dom";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { MobileNav } from "@/components/layout/MobileNav";
+import { RealtimeSync } from "@/components/layout/RealtimeSync";
 import { AmbientBackground } from "@/components/ambient/AmbientBackground";
 import { CelebrationProvider } from "@/components/ambient/Celebration";
 import { TourProvider } from "@/components/tour/TourProvider";
@@ -14,6 +15,7 @@ export function AppShell() {
           soft-petals celebration used for offers and weekly goals, rather
           than a second bespoke confetti effect. */}
       <TourProvider>
+        <RealtimeSync />
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[200] focus:rounded-lg focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-primary-foreground focus:shadow-lift"

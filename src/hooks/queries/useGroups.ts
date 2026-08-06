@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { queryKeys } from "@/lib/queryClient";
+import { useRealtimeTable } from "@/hooks/useRealtimeTable";
 import * as groupsService from "@/services/groups";
 
 export function useGroups() {
@@ -69,6 +70,30 @@ function useInvalidateGroups() {
     qc.invalidateQueries({ queryKey: queryKeys.sentGroupInvites(user?.id ?? "") });
     if (groupId) qc.invalidateQueries({ queryKey: queryKeys.group(groupId) });
   };
+}
+
+// Mounted once (see RealtimeSync) — an invite arriving, a member joining or
+// leaving, or being removed from a group all land without a refresh.
+// Unfiltered: group_invites/group_members RLS already scopes delivery to
+// rows this user is a party to or a member of.
+export function useGroupsRealtime() {
+  const { user } = useAuth();
+  const invalidate = useInvalidateGroups();
+  const userId = user?.id ?? "";
+
+  useRealtimeTable({
+    channel: `group-invites:${userId}`,
+    table: "group_invites",
+    enabled: Boolean(userId),
+    onChange: () => invalidate(),
+  });
+
+  useRealtimeTable({
+    channel: `group-members:${userId}`,
+    table: "group_members",
+    enabled: Boolean(userId),
+    onChange: () => invalidate(),
+  });
 }
 
 export function useCreateGroup() {

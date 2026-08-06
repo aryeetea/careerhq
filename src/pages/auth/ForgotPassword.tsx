@@ -25,7 +25,7 @@ export default function ForgotPassword() {
       await requestPasswordReset(values.email);
       setSent(values.email);
     } catch (err) {
-      push(err instanceof Error ? err.message : "Something went wrong. Try again.", "error");
+      push(err instanceof Error ? err.message : "Couldn't send that reset link. Try again in a moment.", "error");
     }
   }
 

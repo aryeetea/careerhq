@@ -16,6 +16,13 @@ import type {
 
 export const UNSET_SELECT_VALUE = "__unset__";
 
+// "applying" and "ghosted" stay in this map (and in the JobStatus type)
+// purely so any legacy row still renders a label instead of crashing —
+// neither is selectable anywhere in the app anymore. New applications go
+// straight from Saved to Applied (date_applied is the meaningful signal,
+// not a separate in-progress status), and "ghosted" was a guess dressed
+// up as a fact; Dashboard now shows a factual "no response in 30+ days"
+// count instead of asking anyone to label their own application dead.
 export const STATUS_META: Record<JobStatus, { label: string; dot: string; badge: string }> = {
   saved: { label: "Saved", dot: "bg-slate-400", badge: "bg-slate-400/15 text-slate-500" },
   applying: { label: "Applying", dot: "bg-sky", badge: "bg-sky/15 text-sky" },
@@ -37,16 +44,17 @@ export const STATUS_META: Record<JobStatus, { label: string; dot: string; badge:
 // users can re-enable them from the column-visibility menu.
 export const DEFAULT_BOARD_COLUMNS: JobStatus[] = [
   "saved",
-  "applying",
   "applied",
   "interview",
   "offer",
   "rejected",
 ];
 
+// The selectable status set everywhere in the app (board columns, status
+// pickers, filters). Deliberately excludes "applying" and "ghosted" — see
+// the note on STATUS_META above.
 export const ALL_BOARD_COLUMNS: JobStatus[] = [
   "saved",
-  "applying",
   "applied",
   "assessment",
   "recruiter_contacted",
@@ -54,7 +62,6 @@ export const ALL_BOARD_COLUMNS: JobStatus[] = [
   "final_interview",
   "offer",
   "rejected",
-  "ghosted",
   "closed",
   "archived",
 ];

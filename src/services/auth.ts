@@ -46,7 +46,7 @@ function normalizeAuthError(error: unknown) {
     return new Error(message);
   }
 
-  return error instanceof Error ? error : new Error("Something went wrong with authentication.");
+  return error instanceof Error ? error : new Error("Couldn't sign you in. Try again in a moment.");
 }
 
 async function ensureActiveSession() {

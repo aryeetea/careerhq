@@ -15,6 +15,7 @@ import { UpcomingList, type UpcomingRow } from "@/components/dashboard/UpcomingL
 import { AddJobDialog } from "@/components/jobs/AddJobDialog";
 import { JobDetailDialog } from "@/components/jobs/JobDetailDialog";
 import { StatusBadge } from "@/components/jobs/StatusBadge";
+import { FollowUpCheckmark } from "@/components/jobs/FollowUpCheckmark";
 import { useJobs } from "@/hooks/queries/useJobs";
 import { useResumes } from "@/hooks/queries/useResumes";
 import { useCertifications } from "@/hooks/queries/useCertifications";
@@ -33,6 +34,16 @@ export default function Dashboard() {
   const [addOpen, setAddOpen] = React.useState(false);
   const [selectedJob, setSelectedJob] = React.useState<Job | null>(null);
 
+  // Keeps the open Job Detail dialog in sync with the live jobs cache — a
+  // cover letter generated, a follow-up completed, or a realtime update from
+  // another tab all need to show up in the dialog that's already open, not
+  // just the next time it's reopened.
+  React.useEffect(() => {
+    if (!selectedJob) return;
+    const fresh = jobs.find((j) => j.id === selectedJob.id);
+    if (fresh && fresh !== selectedJob) setSelectedJob(fresh);
+  }, [jobs, selectedJob]);
+
   const stats = React.useMemo(() => computeDashboardStats(jobs), [jobs]);
 
   const upcomingFollowUps: UpcomingRow[] = React.useMemo(() => {
@@ -41,7 +52,14 @@ export default function Dashboard() {
       .filter((j) => j.follow_up_date && new Date(j.follow_up_date).getTime() >= now)
       .sort((a, b) => new Date(a.follow_up_date!).getTime() - new Date(b.follow_up_date!).getTime())
       .slice(0, 5)
-      .map((j) => ({ id: j.id, title: j.title, subtitle: j.company, date: j.follow_up_date!, onClick: () => setSelectedJob(j) }));
+      .map((j) => ({
+        id: j.id,
+        title: j.title,
+        subtitle: j.company,
+        date: j.follow_up_date!,
+        onClick: () => setSelectedJob(j),
+        action: <FollowUpCheckmark job={j} />,
+      }));
   }, [jobs]);
 
   const upcomingInterviews: UpcomingRow[] = React.useMemo(() => {
@@ -129,7 +147,7 @@ export default function Dashboard() {
               <StatCard icon={Users} label="Interviews" value={stats.interviews} accent="bg-lavender/20 text-lavender-foreground" />
               <StatCard icon={Trophy} label="Offers" value={stats.offers} accent="bg-success/15 text-success" />
               <StatCard icon={XCircle} label="Rejections" value={stats.rejections} accent="bg-destructive/15 text-destructive" />
-              <StatCard icon={Ghost} label="Ghosted" value={stats.ghosted} accent="bg-zinc-400/15 text-zinc-500" />
+              <StatCard icon={Ghost} label="No response 30+ days" value={stats.noResponse} accent="bg-zinc-400/15 text-zinc-500" />
               <StatCard icon={TrendingUp} label="Response rate" value={`${stats.responseRate}%`} accent="bg-gold/15 text-gold" />
               <StatCard icon={CalendarDays} label="This month" value={stats.applicationsThisMonth} accent="bg-sky/15 text-sky" />
             </div>

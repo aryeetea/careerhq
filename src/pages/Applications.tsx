@@ -50,6 +50,16 @@ export default function Applications() {
   const [addOpen, setAddOpen] = React.useState(false);
   const [selectedJob, setSelectedJob] = React.useState<Job | null>(null);
 
+  // Keeps the open Job Detail dialog in sync with the live jobs cache — a
+  // cover letter generated, a follow-up completed, a board move, or a
+  // realtime update from another tab all need to show up immediately in the
+  // dialog that's already open, not just the next time it's reopened.
+  React.useEffect(() => {
+    if (!selectedJob) return;
+    const fresh = jobs.find((j) => j.id === selectedJob.id);
+    if (fresh && fresh !== selectedJob) setSelectedJob(fresh);
+  }, [jobs, selectedJob]);
+
   const hidden = React.useMemo(() => new Set(settings?.hidden_statuses ?? []), [settings]);
   const visibleColumns = React.useMemo(() => ALL_BOARD_COLUMNS.filter((s) => !hidden.has(s)), [hidden]);
   const visibleSet = React.useMemo(() => new Set(visibleColumns), [visibleColumns]);

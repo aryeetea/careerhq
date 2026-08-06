@@ -54,6 +54,47 @@ export async function deleteJob(id: string): Promise<void> {
   if (error) throw error;
 }
 
+// Marks the currently-open follow-up done: stamps followed_up_at, clears
+// follow_up_date (so it drops out of overdue/upcoming lists immediately),
+// and advances follow_up_round. nextRound is computed by the caller from
+// the job it already has in hand rather than a round-trip read-then-write.
+export async function completeFollowUp(id: string, nextRound: number): Promise<Job> {
+  const { data, error } = await supabase
+    .from("jobs")
+    .update({ followed_up_at: new Date().toISOString(), follow_up_date: null, follow_up_round: nextRound })
+    .eq("id", id)
+    .select("*")
+    .single();
+  if (error) throw error;
+  return data as Job;
+}
+
+// Persists a generated cover letter the moment it's ready — a dedicated,
+// narrow write, deliberately separate from the job's full-form "Save
+// changes" so the letter survives even if the dialog is closed without
+// touching anything else. Never called with an empty string on a failed
+// generation; the caller only invokes this after a successful response.
+export async function saveCoverLetter(id: string, coverLetter: string, resumeId: string | null): Promise<Job> {
+  const patch: Partial<Job> = { ai_cover_letter: coverLetter, ai_cover_letter_updated_at: new Date().toISOString() };
+  if (resumeId) patch.resume_id = resumeId;
+  const { data, error } = await supabase.from("jobs").update(patch).eq("id", id).select("*").single();
+  if (error) throw error;
+  return data as Job;
+}
+
+// The optional second follow-up a user can accept after the first is
+// done — never offered automatically past round 2 (see follow_up_round).
+export async function scheduleAnotherFollowUp(id: string, followUpDate: string): Promise<Job> {
+  const { data, error } = await supabase
+    .from("jobs")
+    .update({ follow_up_date: followUpDate, followed_up_at: null })
+    .eq("id", id)
+    .select("*")
+    .single();
+  if (error) throw error;
+  return data as Job;
+}
+
 export async function listJobStatusHistory(jobId: string): Promise<JobStatusHistoryEntry[]> {
   const { data, error } = await supabase
     .from("job_status_history")

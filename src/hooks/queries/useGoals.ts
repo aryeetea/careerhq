@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { queryKeys } from "@/lib/queryClient";
+import { useRealtimeTable } from "@/hooks/useRealtimeTable";
 import * as goalsService from "@/services/goals";
 import { logActivity } from "@/services/activity";
 
@@ -18,6 +19,30 @@ function useInvalidateGoals() {
   const { user } = useAuth();
   const qc = useQueryClient();
   return () => qc.invalidateQueries({ queryKey: queryKeys.goals(user?.id ?? "") });
+}
+
+// Mounted once (see RealtimeSync) — a shared goal's progress moving, or
+// someone joining/leaving one, reaches every participant's Dashboard and
+// Goals page immediately. Unfiltered: goals_select/goal_members_select RLS
+// already scopes delivery to goals this user owns or belongs to.
+export function useGoalsRealtime() {
+  const { user } = useAuth();
+  const invalidate = useInvalidateGoals();
+  const userId = user?.id ?? "";
+
+  useRealtimeTable({
+    channel: `goals:${userId}`,
+    table: "goals",
+    enabled: Boolean(userId),
+    onChange: invalidate,
+  });
+
+  useRealtimeTable({
+    channel: `goal-members:${userId}`,
+    table: "goal_members",
+    enabled: Boolean(userId),
+    onChange: invalidate,
+  });
 }
 
 export function useCreateGoal() {
