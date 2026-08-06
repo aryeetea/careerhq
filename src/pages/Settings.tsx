@@ -8,6 +8,7 @@ import { JobSearchPreferencesForm } from "@/components/settings/JobSearchPrefere
 import { ThemePicker } from "@/components/settings/ThemePicker";
 import { DataPortability } from "@/components/settings/DataPortability";
 import { AccountSection } from "@/components/settings/AccountSection";
+import { HelpSection } from "@/components/settings/HelpSection";
 
 export default function SettingsPage() {
   return (
@@ -25,6 +26,7 @@ export default function SettingsPage() {
                 <TabsTrigger value="appearance">Appearance</TabsTrigger>
                 <TabsTrigger value="data">Data</TabsTrigger>
                 <TabsTrigger value="account">Account</TabsTrigger>
+                <TabsTrigger value="help">Help</TabsTrigger>
               </TabsList>
               <TabsContent value="profile"><ProfileForm /></TabsContent>
               <TabsContent value="privacy"><PrivacyForm /></TabsContent>
@@ -33,6 +35,7 @@ export default function SettingsPage() {
               <TabsContent value="appearance"><ThemePicker /></TabsContent>
               <TabsContent value="data"><DataPortability /></TabsContent>
               <TabsContent value="account"><AccountSection /></TabsContent>
+              <TabsContent value="help"><HelpSection /></TabsContent>
             </Tabs>
           </CardContent>
         </Card>

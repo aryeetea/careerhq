@@ -40,6 +40,14 @@ export async function completeOnboarding(userId: string, patch: Partial<Profile>
   return data as Profile;
 }
 
+// Marks the guided product tour as seen — set the first time it finishes
+// OR is skipped, so it never auto-shows again on any device. Replaying it
+// from Settings → Help never calls this, so replaying never disturbs the
+// "first time" record.
+export async function completeTour(userId: string): Promise<Profile> {
+  return updateProfile(userId, { tour_completed_at: new Date().toISOString() });
+}
+
 export async function isUsernameAvailable(username: string, excludeUserId?: string): Promise<boolean> {
   const query = supabase.from("profiles").select("id").eq("username", username).limit(1);
   const { data, error } = await query;

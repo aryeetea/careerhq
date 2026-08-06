@@ -19,14 +19,11 @@ import { useJobs } from "@/hooks/queries/useJobs";
 import { useResumes } from "@/hooks/queries/useResumes";
 import { useCertifications } from "@/hooks/queries/useCertifications";
 import { useProfile } from "@/hooks/queries/useProfile";
-import { useAuth } from "@/hooks/useAuth";
 import { computeDashboardStats, getUpcomingInterviews } from "@/lib/stats";
 import { CERTIFICATION_STATUS_META } from "@/lib/constants";
 import type { Job } from "@/types/database";
-import { WelcomeTutorialDialog } from "@/components/shared/WelcomeTutorialDialog";
 
 export default function Dashboard() {
-  const { user } = useAuth();
   const { data: jobs = [], isLoading, isError, refetch } = useJobs();
   const { data: resumes = [] } = useResumes();
   const { data: certifications = [] } = useCertifications();
@@ -35,13 +32,6 @@ export default function Dashboard() {
 
   const [addOpen, setAddOpen] = React.useState(false);
   const [selectedJob, setSelectedJob] = React.useState<Job | null>(null);
-  const [tutorialOpen, setTutorialOpen] = React.useState(false);
-
-  React.useEffect(() => {
-    if (!user?.id || !profile?.onboarded_at) return;
-    const seen = localStorage.getItem(`bloom-welcome-tour:v1:${user.id}`);
-    if (!seen) setTutorialOpen(true);
-  }, [profile?.onboarded_at, user?.id]);
 
   const stats = React.useMemo(() => computeDashboardStats(jobs), [jobs]);
 
@@ -75,7 +65,7 @@ export default function Dashboard() {
         title="Dashboard"
         subtitle="Your growth, at a glance"
         action={
-          <Button onClick={() => setAddOpen(true)} size="sm" className="gap-1.5">
+          <Button data-tour="add-job-button" onClick={() => setAddOpen(true)} size="sm" className="gap-1.5">
             <Plus className="h-4 w-4" /> <span className="hidden sm:inline">Add job</span>
           </Button>
         }
@@ -91,7 +81,7 @@ export default function Dashboard() {
             ))}
           </div>
         ) : !hasJobs ? (
-          <div className="grid gap-4 xl:grid-cols-[1.1fr,0.9fr]">
+          <div data-tour="dashboard-overview" className="grid gap-4 xl:grid-cols-[1.1fr,0.9fr]">
             <EmptyState
               className="glass-subtle border border-border/60"
               icon={<Sparkles className="h-5 w-5" />}
@@ -133,7 +123,7 @@ export default function Dashboard() {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div data-tour="dashboard-overview" className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <StatCard icon={Bookmark} label="Jobs saved" value={stats.jobsSaved} accent="bg-slate-400/15 text-slate-500" />
               <StatCard icon={Send} label="Applications sent" value={stats.applicationsSubmitted} accent="bg-primary/15 text-primary" />
               <StatCard icon={Users} label="Interviews" value={stats.interviews} accent="bg-lavender/20 text-lavender-foreground" />
@@ -232,7 +222,6 @@ export default function Dashboard() {
 
       <AddJobDialog open={addOpen} onOpenChange={setAddOpen} resumes={resumes} />
       <JobDetailDialog job={selectedJob} resumes={resumes} open={Boolean(selectedJob)} onOpenChange={(open) => !open && setSelectedJob(null)} />
-      {user?.id && <WelcomeTutorialDialog userId={user.id} open={tutorialOpen} onOpenChange={setTutorialOpen} />}
     </div>
   );
 }

@@ -16,6 +16,7 @@ export function MobileNav() {
           key={item.to}
           to={item.to}
           end={item.to === "/app"}
+          data-tour={`nav-${item.tourId}`}
           className={({ isActive }) =>
             cn(
               "flex flex-col items-center gap-0.5 rounded-full px-3 py-1.5 text-[10px] font-medium transition-colors",
@@ -34,7 +35,7 @@ export function MobileNav() {
         </DropdownMenuTrigger>
         <DropdownMenuContent side="top" align="end" className="mb-2">
           {rest.map((item) => (
-            <DropdownMenuItem key={item.to} onSelect={() => navigate(item.to)}>
+            <DropdownMenuItem key={item.to} data-tour={`nav-${item.tourId}`} onSelect={() => navigate(item.to)}>
               <item.icon className="mr-2 h-4 w-4" />
               {item.label}
             </DropdownMenuItem>

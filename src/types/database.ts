@@ -140,6 +140,7 @@ export interface Profile {
   sharing_enabled: boolean;
   status_message: string | null;
   onboarded_at: string | null;
+  tour_completed_at: string | null;
   created_at: string;
   updated_at: string;
 }

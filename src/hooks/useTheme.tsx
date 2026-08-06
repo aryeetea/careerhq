@@ -61,6 +61,22 @@ export function usePrefersReducedMotion(): boolean {
   return reduced;
 }
 
+/** True on narrow (phone-width) viewports — used by the product tour to swap
+ * its floating card + connector line for a simpler anchored bottom sheet,
+ * where a long diagonal connector would have nowhere good to go. */
+export function useIsCompact(): boolean {
+  const [compact, setCompact] = React.useState(
+    () => window.matchMedia?.("(max-width: 640px)").matches ?? false
+  );
+  React.useEffect(() => {
+    const mq = window.matchMedia("(max-width: 640px)");
+    const handler = () => setCompact(mq.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  return compact;
+}
+
 /** True while the browser tab is visible — used to pause ambient animation off-screen. */
 export function usePageVisible(): boolean {
   const [visible, setVisible] = React.useState(document.visibilityState === "visible");

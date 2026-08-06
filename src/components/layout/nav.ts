@@ -7,16 +7,19 @@ export interface NavItem {
   icon: LucideIcon;
   /** Shown in the compact bottom bar on mobile. */
   primary?: boolean;
+  /** Stable id for `data-tour="nav-<id>"` — independent of `to` so a route
+   * rename never silently breaks a tour step's target selector. */
+  tourId: string;
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  { to: "/app", label: "Dashboard", icon: LayoutDashboard, primary: true },
-  { to: "/app/board", label: "Board", icon: KanbanSquare, primary: true },
-  { to: "/app/profile", label: "Profile", icon: UserRound },
-  { to: "/app/resumes", label: "Resumes", icon: FileText, primary: true },
-  { to: "/app/certifications", label: "Certifications", icon: GraduationCap },
-  { to: "/app/goals", label: "Goals", icon: Target },
-  { to: "/app/friends", label: "Friends", icon: Users2, primary: true },
-  { to: "/app/groups", label: "Groups", icon: UsersRound },
-  { to: "/app/settings", label: "Settings", icon: Settings },
+  { to: "/app", label: "Dashboard", icon: LayoutDashboard, primary: true, tourId: "dashboard" },
+  { to: "/app/board", label: "Board", icon: KanbanSquare, primary: true, tourId: "board" },
+  { to: "/app/profile", label: "Profile", icon: UserRound, tourId: "profile" },
+  { to: "/app/resumes", label: "Resumes", icon: FileText, primary: true, tourId: "resumes" },
+  { to: "/app/certifications", label: "Certifications", icon: GraduationCap, tourId: "certifications" },
+  { to: "/app/goals", label: "Goals", icon: Target, tourId: "goals" },
+  { to: "/app/friends", label: "Friends", icon: Users2, primary: true, tourId: "friends" },
+  { to: "/app/groups", label: "Groups", icon: UsersRound, tourId: "groups" },
+  { to: "/app/settings", label: "Settings", icon: Settings, tourId: "settings" },
 ];

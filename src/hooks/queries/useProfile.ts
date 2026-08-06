@@ -36,6 +36,15 @@ export function useCompleteOnboarding() {
   });
 }
 
+export function useCompleteTour() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => profilesService.completeTour(user!.id),
+    onSuccess: (updated) => qc.setQueryData<Profile>(queryKeys.profile(user!.id), updated),
+  });
+}
+
 export function useUpdateAvatar() {
   const { user } = useAuth();
   const qc = useQueryClient();
