@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, LogOut, Trash2, UserPlus, UserMinus } from "lucide-react";
 import { TopBar } from "@/components/layout/TopBar";
+import { PageContent, PageContainer } from "@/components/layout/PageContent";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -101,9 +102,9 @@ export default function GroupDetail() {
     return (
       <div className="flex flex-1 flex-col">
         <TopBar title="Group" />
-        <div className="px-4 pb-10 sm:px-8">
+        <PageContent>
           <ErrorState description="This group couldn't load. Try again." onRetry={() => refetch()} />
-        </div>
+        </PageContent>
       </div>
     );
   }
@@ -112,7 +113,9 @@ export default function GroupDetail() {
     return (
       <div className="flex flex-1 flex-col">
         <TopBar title="Group" />
-        <div className="px-4 pb-10 sm:px-8"><Skeleton className="h-64 rounded-2xl" /></div>
+        <PageContent>
+          <Skeleton className="h-64 rounded-2xl" />
+        </PageContent>
       </div>
     );
   }
@@ -136,45 +139,47 @@ export default function GroupDetail() {
           </>
         }
       />
-      <div className="flex-1 overflow-y-auto px-4 pb-10 sm:px-8">
-        <Card className="glass-subtle mb-4 border-border/60">
-          <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
-            <div className="text-sm text-muted-foreground">
-              {activeGroup.group_members.length} member{activeGroup.group_members.length === 1 ? "" : "s"}
-              {activeGroup.weekly_goal_target ? ` · shared goal: ${activeGroup.weekly_goal_target} applications/week` : ""}
-            </div>
-            <div className="flex gap-2">
-              {isOwner ? (
-                <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => setConfirmDelete(true)}>
-                  <Trash2 className="h-3.5 w-3.5" /> Delete group
-                </Button>
-              ) : (
-                <Button variant="ghost" size="sm" onClick={() => setConfirmLeave(true)}>
-                  <LogOut className="h-3.5 w-3.5" /> Leave group
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+      <PageContent>
+        <PageContainer>
+          <Card className="glass-subtle mb-4 border-border/60">
+            <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
+              <div className="text-sm text-muted-foreground">
+                {activeGroup.group_members.length} member{activeGroup.group_members.length === 1 ? "" : "s"}
+                {activeGroup.weekly_goal_target ? ` · shared goal: ${activeGroup.weekly_goal_target} applications/week` : ""}
+              </div>
+              <div className="flex gap-2">
+                {isOwner ? (
+                  <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => setConfirmDelete(true)}>
+                    <Trash2 className="h-3.5 w-3.5" /> Delete group
+                  </Button>
+                ) : (
+                  <Button variant="ghost" size="sm" onClick={() => setConfirmLeave(true)}>
+                    <LogOut className="h-3.5 w-3.5" /> Leave group
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
 
-        <div className="grid gap-2.5">
-          {activeGroup.group_members.map((m) => {
-            const profile = profileMap?.get(m.user_id);
-            return (
-              <MemberRow
-                key={m.id}
-                userId={m.user_id}
-                name={m.user_id === user?.id ? "You" : profile?.display_name || "Member"}
-                avatarPath={profile?.avatar_url ?? null}
-                weeklyGoalTarget={activeGroup.weekly_goal_target}
-                groupId={activeGroup.id}
-                isOwnerView={isOwner}
-                onRemove={() => setRemoveTarget(m.user_id)}
-              />
-            );
-          })}
-        </div>
-      </div>
+          <div className="grid gap-2.5">
+            {activeGroup.group_members.map((m) => {
+              const profile = profileMap?.get(m.user_id);
+              return (
+                <MemberRow
+                  key={m.id}
+                  userId={m.user_id}
+                  name={m.user_id === user?.id ? "You" : profile?.display_name || "Member"}
+                  avatarPath={profile?.avatar_url ?? null}
+                  weeklyGoalTarget={activeGroup.weekly_goal_target}
+                  groupId={activeGroup.id}
+                  isOwnerView={isOwner}
+                  onRemove={() => setRemoveTarget(m.user_id)}
+                />
+              );
+            })}
+          </div>
+        </PageContainer>
+      </PageContent>
 
       <InviteToGroupDialog open={inviteOpen} onOpenChange={setInviteOpen} groupId={activeGroup.id} existingMemberIds={memberIds} />
 

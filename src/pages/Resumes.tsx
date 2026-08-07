@@ -1,6 +1,7 @@
 import * as React from "react";
 import { FileText, Plus } from "lucide-react";
 import { TopBar } from "@/components/layout/TopBar";
+import { PageContent, PageContainer } from "@/components/layout/PageContent";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ErrorState } from "@/components/shared/ErrorState";
@@ -55,7 +56,8 @@ export default function Resumes() {
         }
       />
 
-      <div className="flex-1 overflow-y-auto px-4 pb-10 sm:px-8">
+      <PageContent>
+        <PageContainer>
         {isError ? (
           <ErrorState description="Your resumes couldn't load. Your files are safe — try again." onRetry={() => refetch()} />
         ) : isLoading ? (
@@ -87,7 +89,8 @@ export default function Resumes() {
             ))}
           </div>
         )}
-      </div>
+        </PageContainer>
+      </PageContent>
 
       <ResumeFormDialog open={formOpen} onOpenChange={setFormOpen} resume={editing} />
     </div>

@@ -2,6 +2,7 @@ import * as React from "react";
 import { DndContext, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { Plus, KanbanSquare } from "lucide-react";
 import { TopBar } from "@/components/layout/TopBar";
+import { PageContainer, PageContent } from "@/components/layout/PageContent";
 import { Button } from "@/components/ui/button";
 import { FiltersBar } from "@/components/jobs/FiltersBar";
 import { KanbanColumn } from "@/components/board/KanbanColumn";
@@ -132,35 +133,46 @@ export default function Applications() {
 
       {hasAnyJobs && (
         <>
-          <div className="px-4 pt-4 sm:px-8">
-            <ViewSwitcher value={view} onChange={setView} />
+          <div className="px-4 pt-7 sm:px-8 sm:pt-8 lg:px-10 lg:pt-9">
+            <PageContainer>
+              <ViewSwitcher value={view} onChange={setView} />
+            </PageContainer>
           </div>
           <FiltersBar filters={filters} onChange={setFilters} resumes={resumes} />
         </>
       )}
 
       {isError ? (
-        <ErrorState className="mx-4 sm:mx-8" description="Your applications couldn't load. Your data is safe — try again." onRetry={() => refetch()} />
+        <div className="px-4 pt-7 sm:px-8 sm:pt-8 lg:px-10 lg:pt-9">
+          <PageContainer>
+            <ErrorState description="Your applications couldn't load. Your data is safe — try again." onRetry={() => refetch()} />
+          </PageContainer>
+        </div>
       ) : isLoading ? (
-        <div className="flex gap-4 px-4 sm:px-8">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-96 w-72 rounded-2xl" />
-          ))}
+        <div className="px-4 pt-7 sm:px-8 sm:pt-8 lg:px-10 lg:pt-9">
+          <PageContainer className="flex gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-96 w-72 rounded-2xl" />
+            ))}
+          </PageContainer>
         </div>
       ) : !hasAnyJobs ? (
-        <EmptyState
-          className="mx-4 sm:mx-8"
-          icon={<KanbanSquare className="h-5 w-5" />}
-          title="Nothing tracked yet"
-          description={ENCOURAGING_EMPTY_MESSAGES.noJobsBoard}
-          action={
-            <Button onClick={() => setAddOpen(true)}>
-              <Plus className="h-4 w-4" /> Add your first job
-            </Button>
-          }
-        />
+        <PageContent>
+          <PageContainer>
+            <EmptyState
+              icon={<KanbanSquare className="h-5 w-5" />}
+              title="Nothing tracked yet"
+              description={ENCOURAGING_EMPTY_MESSAGES.noJobsBoard}
+              action={
+                <Button onClick={() => setAddOpen(true)}>
+                  <Plus className="h-4 w-4" /> Add your first job
+                </Button>
+              }
+            />
+          </PageContainer>
+        </PageContent>
       ) : view === "board" ? (
-        <div className="flex-1 overflow-x-auto px-4 pb-6 pt-4 sm:px-8">
+        <div className="flex-1 overflow-x-auto px-4 pb-8 pt-6 sm:px-8 lg:px-10">
           <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
             <div className="flex h-full gap-3" style={{ minWidth: visibleColumns.length * 296 }}>
               {visibleColumns.map((status) => (
@@ -170,13 +182,13 @@ export default function Applications() {
           </DndContext>
         </div>
       ) : view === "list" ? (
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto pt-6">
           <MobileJobList columns={visibleColumns} byStatus={byStatus} resumeById={resumeById} onOpenJob={setSelectedJob} />
         </div>
       ) : view === "calendar" ? (
         <CalendarView events={calendarEvents} onOpenJob={setSelectedJob} />
       ) : (
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto pt-6">
           <TimelineView events={timelineEvents} onOpenJob={setSelectedJob} />
         </div>
       )}

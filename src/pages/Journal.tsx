@@ -2,6 +2,7 @@ import * as React from "react";
 import { parseISO } from "date-fns";
 import { NotebookPen, Plus } from "lucide-react";
 import { TopBar } from "@/components/layout/TopBar";
+import { PageContent, PageContainer } from "@/components/layout/PageContent";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ErrorState } from "@/components/shared/ErrorState";
@@ -43,8 +44,8 @@ export default function Journal() {
         }
       />
 
-      <div className="flex-1 overflow-y-auto px-4 pb-16 sm:px-8">
-        <div className="mx-auto max-w-2xl pt-2">
+      <PageContent className="pb-16">
+        <PageContainer className="max-w-2xl">
           {isError ? (
             <ErrorState description="Your journal couldn't load. Your entries are safe — try again." onRetry={() => refetch()} />
           ) : isLoading ? (
@@ -72,8 +73,8 @@ export default function Journal() {
               ))}
             </div>
           )}
-        </div>
-      </div>
+        </PageContainer>
+      </PageContent>
 
       <JournalComposer open={composerOpen} onOpenChange={setComposerOpen} entry={editingEntry} />
     </div>

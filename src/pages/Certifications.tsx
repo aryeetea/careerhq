@@ -1,6 +1,7 @@
 import * as React from "react";
 import { GraduationCap, Plus } from "lucide-react";
 import { TopBar } from "@/components/layout/TopBar";
+import { PageContent, PageContainer } from "@/components/layout/PageContent";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ErrorState } from "@/components/shared/ErrorState";
@@ -38,7 +39,8 @@ export default function Certifications() {
           )
         }
       />
-      <div className="flex-1 overflow-y-auto px-4 pb-10 sm:px-8">
+      <PageContent>
+        <PageContainer>
         {isError ? (
           <ErrorState description="Your certifications couldn't load. Your data is safe — try again." onRetry={() => refetch()} />
         ) : isLoading ? (
@@ -59,7 +61,8 @@ export default function Certifications() {
             ))}
           </div>
         )}
-      </div>
+        </PageContainer>
+      </PageContent>
       <CertificationFormDialog open={formOpen} onOpenChange={setFormOpen} certification={editing} />
     </div>
   );

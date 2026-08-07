@@ -1,6 +1,7 @@
 import { Outlet, useLocation } from "react-router-dom";
 import { Users2, UsersRound, Inbox } from "lucide-react";
 import { TopBar } from "@/components/layout/TopBar";
+import { PageContent } from "@/components/layout/PageContent";
 import { CommunityTabs } from "@/components/community/CommunityTabs";
 import { useIncomingRequests } from "@/hooks/queries/useFriends";
 import { useGroupInvites } from "@/hooks/queries/useGroups";
@@ -20,8 +21,8 @@ export default function CommunityLayout() {
   return (
     <div className="flex flex-1 flex-col">
       <TopBar title="Community" subtitle="Your people, your groups, and what's waiting on you" />
-      <div className="flex-1 overflow-y-auto px-4 pb-10 sm:px-8">
-        <div className="sticky top-0 z-20 -mx-4 bg-background/80 px-4 pb-3 pt-4 backdrop-blur sm:-mx-8 sm:px-8">
+      <PageContent className="pt-0">
+        <div className="sticky top-0 z-20 -mx-4 bg-background/80 px-4 pb-4 pt-8 backdrop-blur sm:-mx-8 sm:px-8 lg:-mx-10 lg:px-10 lg:pt-9">
           <CommunityTabs
             items={[
               { to: "/app/community/friends", label: "Friends", icon: Users2 },
@@ -30,10 +31,10 @@ export default function CommunityLayout() {
             ]}
           />
         </div>
-        <div key={location.pathname} className="animate-fade-in">
+        <div key={location.pathname} className="animate-fade-in pt-6 lg:pt-7">
           <Outlet />
         </div>
-      </div>
+      </PageContent>
     </div>
   );
 }

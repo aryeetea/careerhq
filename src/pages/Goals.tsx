@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Plus, Target } from "lucide-react";
 import { TopBar } from "@/components/layout/TopBar";
+import { PageContent, PageContainer } from "@/components/layout/PageContent";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ErrorState } from "@/components/shared/ErrorState";
@@ -35,7 +36,8 @@ export default function Goals() {
           </Button>
         }
       />
-      <div className="flex-1 overflow-y-auto px-4 pb-10 sm:px-8">
+      <PageContent>
+        <PageContainer>
         {isError ? (
           <ErrorState description="Your goals couldn't load. Your data is safe — try again." onRetry={() => refetch()} />
         ) : isLoading ? (
@@ -54,7 +56,8 @@ export default function Goals() {
             {goals.map((g) => <GoalCard key={g.id} goal={g} highlighted={g.id === justCreatedId} />)}
           </div>
         )}
-      </div>
+        </PageContainer>
+      </PageContent>
       <CreateGoalDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={handleCreated} />
     </div>
   );

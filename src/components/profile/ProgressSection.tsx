@@ -30,21 +30,21 @@ export function ProgressSection({
   activity: ProfileActivity[];
 }) {
   return (
-    <section className="rounded-[2rem] border border-border/50 bg-card/40 p-5 sm:p-7">
+    <section className="rounded-[2rem] border border-border/50 bg-card/40 px-5 py-6 sm:px-7 sm:py-8 lg:px-8 lg:py-10">
       <h2 className="font-display text-xl font-semibold tracking-tight">Progress</h2>
       <p className="mt-1 text-sm text-foreground/70">How your search is growing, all in one place.</p>
 
-      <div className="mt-6 grid gap-8 lg:grid-cols-2">
+      <div className="mt-7 grid gap-8 lg:grid-cols-2">
         <WeeklyProgressCard stats={stats} weeklyGoal={weeklyGoal} />
         <SearchHealthCard profile={profile} resumes={resumes} jobs={jobs} goals={goals} />
       </div>
 
-      <div className="mt-8 border-t border-border/50 pt-6">
+      <div className="mt-10 border-t border-border/50 pt-8 lg:mt-12 lg:pt-10">
         <BloomGarden jobs={jobs} resumes={resumes} accountCreatedAt={profile.created_at} />
       </div>
 
       {activity.length > 0 && (
-        <div className="mt-8 border-t border-border/50 pt-6">
+        <div className="mt-10 border-t border-border/50 pt-8">
           <RecentActivityFeed activity={activity} limit={4} />
         </div>
       )}

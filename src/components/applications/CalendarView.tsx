@@ -70,7 +70,7 @@ export function CalendarView({ events, onOpenJob }: { events: CalendarEvent[]; o
   const monthHasEvents = monthDays.some((d) => isSameMonth(d, cursor) && eventsOn(d).length > 0);
 
   return (
-    <div className="flex flex-1 flex-col px-4 pb-6 pt-4 sm:px-8">
+    <div className="flex flex-1 flex-col px-4 pb-8 sm:px-8 lg:px-10">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
           <Button type="button" variant="outline" size="sm" onClick={goPrev} aria-label="Previous">

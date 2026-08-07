@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 export function Sidebar() {
   return (
-    <aside className="glass-subtle sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r-0 px-3 pb-4 pt-6 lg:flex">
+    <aside className="glass-subtle sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r-0 px-3 pb-4 pt-8 lg:flex">
       <div className="mb-6 flex items-center gap-2 px-2">
         <BrandMark size="md" />
         <span className="font-display text-[15px] font-semibold tracking-tight">Bloom</span>

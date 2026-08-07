@@ -2,6 +2,7 @@ import * as React from "react";
 import { Link, Navigate, useParams, useSearchParams } from "react-router-dom";
 import { Ban, Check, Heart, MessageCircleHeart, Sparkles, Target, UserPlus, UserRound, UserRoundMinus, X } from "lucide-react";
 import { TopBar } from "@/components/layout/TopBar";
+import { PageContent, PageContainer } from "@/components/layout/PageContent";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -65,9 +66,9 @@ export default function PeopleProfile() {
     return (
       <div className="flex flex-1 flex-col">
         <TopBar title="Profile" subtitle="Here's what they've chosen to share with you." />
-        <div className="px-4 pb-10 sm:px-8">
+        <PageContent>
           <ErrorState description="We couldn't load this profile right now. Try again in a moment." onRetry={() => refetch()} />
-        </div>
+        </PageContent>
       </div>
     );
   }
@@ -76,11 +77,13 @@ export default function PeopleProfile() {
     return (
       <div className="flex flex-1 flex-col">
         <TopBar title="Profile" subtitle="Here's what they've chosen to share with you." />
-        <div className="grid gap-4 px-4 pb-10 sm:px-8">
-          <Skeleton className="h-56 rounded-[2rem]" />
-          <Skeleton className="h-44 rounded-[2rem]" />
-          <Skeleton className="h-44 rounded-[2rem]" />
-        </div>
+        <PageContent>
+          <div className="grid gap-4 lg:gap-5">
+            <Skeleton className="h-56 rounded-[2rem]" />
+            <Skeleton className="h-44 rounded-[2rem]" />
+            <Skeleton className="h-44 rounded-[2rem]" />
+          </div>
+        </PageContent>
       </div>
     );
   }
@@ -91,7 +94,7 @@ export default function PeopleProfile() {
     return (
       <div className="flex flex-1 flex-col">
         <TopBar title="Profile" subtitle="Here's what they've chosen to share with you." />
-        <div className="flex-1 overflow-y-auto px-4 pb-10 sm:px-8">
+        <PageContent>
           <EmptyState
             icon={<UserRound className="h-5 w-5" />}
             title={copy.title}
@@ -102,7 +105,7 @@ export default function PeopleProfile() {
               </Button>
             }
           />
-        </div>
+        </PageContent>
       </div>
     );
   }
@@ -260,56 +263,57 @@ function PeopleProfileContent({ userId, previewMode }: { userId: string; preview
         }
       />
 
-      <div className="flex-1 overflow-y-auto px-4 pb-10 sm:px-8">
-        <div className="grid gap-4">
-          <Card className="glass-subtle overflow-hidden border-border/60">
-            <CardContent className="p-5 sm:p-6">
-              <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
-                <Avatar className="h-24 w-24 border border-border/80 shadow-soft">
-                  {avatarUrl && <AvatarImage src={avatarUrl} alt="" />}
-                  <AvatarFallback className="text-xl">{initials(profile?.display_name || profile?.username || "B")}</AvatarFallback>
-                </Avatar>
+      <PageContent>
+        <PageContainer>
+          <div className="grid gap-5 lg:gap-6">
+            <Card className="glass-subtle overflow-hidden border-border/60">
+              <CardContent className="p-5 sm:p-6">
+                <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
+                  <Avatar className="h-24 w-24 border border-border/80 shadow-soft">
+                    {avatarUrl && <AvatarImage src={avatarUrl} alt="" />}
+                    <AvatarFallback className="text-xl">{initials(profile?.display_name || profile?.username || "B")}</AvatarFallback>
+                  </Avatar>
 
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="min-w-0">
-                      <h2 className="truncate font-display text-3xl font-semibold">{profile?.display_name}</h2>
-                      <p className="truncate text-sm text-foreground/68">@{profile?.username}</p>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0">
+                        <h2 className="truncate font-display text-3xl font-semibold">{profile?.display_name}</h2>
+                        <p className="truncate text-sm text-foreground/68">@{profile?.username}</p>
+                      </div>
+                      <Chip variant={previewMode ? "warning" : isFriend ? "primary" : "muted"}>
+                        {previewMode
+                          ? previewMode === "friend"
+                            ? "Friend preview"
+                            : "Non-friend preview"
+                          : relationshipLabel(relationship)}
+                      </Chip>
                     </div>
-                    <Chip variant={previewMode ? "warning" : isFriend ? "primary" : "muted"}>
-                      {previewMode
-                        ? previewMode === "friend"
-                          ? "Friend preview"
-                          : "Non-friend preview"
-                        : relationshipLabel(relationship)}
-                    </Chip>
-                  </div>
 
-                  {profile?.bio && (
-                    <p className="mt-3 max-w-2xl text-sm leading-7 text-foreground/82">{profile.bio}</p>
-                  )}
+                    {profile?.bio && (
+                      <p className="mt-3 max-w-2xl text-sm leading-7 text-foreground/82">{profile.bio}</p>
+                    )}
 
-                  {profile?.career_goal && (
-                    <p className="mt-2 max-w-2xl text-sm leading-7 text-foreground/78">
-                      <span className="font-medium text-foreground/85">Working toward:</span> {profile.career_goal}
-                    </p>
-                  )}
+                    {profile?.career_goal && (
+                      <p className="mt-2 max-w-2xl text-sm leading-7 text-foreground/78">
+                        <span className="font-medium text-foreground/85">Working toward:</span> {profile.career_goal}
+                      </p>
+                    )}
 
-                  {profile?.career_status && (
-                    <p className="mt-3 flex items-center gap-1.5 text-sm font-medium text-primary">
-                      <Target className="h-4 w-4 shrink-0" /> {profile.career_status}
-                    </p>
-                  )}
+                    {profile?.career_status && (
+                      <p className="mt-3 flex items-center gap-1.5 text-sm font-medium text-primary">
+                        <Target className="h-4 w-4 shrink-0" /> {profile.career_status}
+                      </p>
+                    )}
 
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {profile?.mutual_groups.length ? <Chip variant="interactive">{profile.mutual_groups.length} mutual group{profile.mutual_groups.length === 1 ? "" : "s"}</Chip> : null}
-                    {profile?.mutual_goals.length ? <Chip variant="interactive">{profile.mutual_goals.length} mutual goal{profile.mutual_goals.length === 1 ? "" : "s"}</Chip> : null}
-                    {sharedProgressVisible ? <Chip variant="success">Shared progress enabled</Chip> : null}
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {profile?.mutual_groups.length ? <Chip variant="interactive">{profile.mutual_groups.length} mutual group{profile.mutual_groups.length === 1 ? "" : "s"}</Chip> : null}
+                      {profile?.mutual_goals.length ? <Chip variant="interactive">{profile.mutual_goals.length} mutual goal{profile.mutual_goals.length === 1 ? "" : "s"}</Chip> : null}
+                      {sharedProgressVisible ? <Chip variant="success">Shared progress enabled</Chip> : null}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
           {(isFriend || previewMode === "friend") && !hasSharedMuch && (
             <p className="px-1 text-sm text-muted-foreground">They haven&apos;t shared much yet.</p>
@@ -422,8 +426,9 @@ function PeopleProfileContent({ userId, previewMode }: { userId: string; preview
               </div>
             </SectionCard>
           )}
-        </div>
-      </div>
+          </div>
+        </PageContainer>
+      </PageContent>
     </div>
   );
 }

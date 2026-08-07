@@ -23,7 +23,7 @@ export function TimelineView({ events, onOpenJob }: { events: TimelineEvent[]; o
   }
 
   return (
-    <div className="mx-auto grid w-full max-w-2xl gap-6 px-4 pb-10 pt-2 sm:px-8 animate-fade-in">
+    <div className="mx-auto grid w-full max-w-2xl gap-6 px-4 pb-10 sm:px-8 lg:px-0 animate-fade-in">
       {DATE_GROUP_ORDER.filter((key) => (groups.get(key)?.length ?? 0) > 0).map((key) => {
         const groupEvents = groups.get(key)!;
         return (

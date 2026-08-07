@@ -2,6 +2,7 @@ import * as React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Send, Bookmark, Users, Trophy, XCircle, TrendingUp, CalendarCheck2, Plus, Sparkles, GraduationCap, CalendarClock } from "lucide-react";
 import { TopBar } from "@/components/layout/TopBar";
+import { PageContent, PageContainer } from "@/components/layout/PageContent";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -104,7 +105,8 @@ export default function Dashboard() {
         }
       />
 
-      <div className="flex-1 overflow-y-auto px-4 pb-10 sm:px-8">
+      <PageContent>
+        <PageContainer>
         {isError ? (
           <ErrorState description="Your dashboard couldn't load. Your data is safe — try again." onRetry={() => refetch()} />
         ) : isLoading ? (
@@ -249,7 +251,8 @@ export default function Dashboard() {
             </div>
           </>
         )}
-      </div>
+        </PageContainer>
+      </PageContent>
 
       <AddJobDialog open={addOpen} onOpenChange={setAddOpen} resumes={resumes} />
       <JobDetailDialog job={selectedJob} resumes={resumes} open={Boolean(selectedJob)} onOpenChange={(open) => !open && setSelectedJob(null)} />
