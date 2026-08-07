@@ -25,14 +25,24 @@ export type LegacyJobStatus = "applying" | "ghosted";
 
 export type JobStatus = EditableJobStatus | LegacyJobStatus;
 
+// excellent_match/stretch_opportunity/high_risk are legacy tiers: still
+// valid on old rows and still manually selectable, but the AI itself only
+// returns strong_match/worth_applying/consider/not_recommended going
+// forward — see careerCoach.ts VERDICT RULES and migration 0040.
 export type JobVerdict =
   | "excellent_match"
   | "strong_match"
   | "worth_applying"
+  | "consider"
   | "stretch_opportunity"
   | "high_risk"
   | "not_recommended";
 export type AiJobVerdict = JobVerdict | "not_yet_assessed";
+// Who authored the job's current verdict/fit_score pair. null means never
+// set. 'user' means a re-analysis must not silently overwrite them — see
+// analyze-job/index.ts and JobDetailDialog/AddJobDialog's verdict-source
+// derivation.
+export type VerdictSource = "ai" | "user";
 export type ConfidenceLevel = "low" | "medium" | "high";
 export type OpportunityAssessment = "promising" | "neutral" | "risky" | "ineligible";
 export type ApplicationRecommendation = "apply_now" | "tailor_first" | "consider" | "skip" | "upload_resume_first";
@@ -66,6 +76,17 @@ export interface JobAiDealBreaker {
   status: "confirmed" | "possible" | "insufficient_information";
 }
 
+// Logistics/lifestyle factors (relocation, travel, work arrangement,
+// schedule, …) — kept separate from JobAiDealBreaker, which is scoped to
+// genuine hard-eligibility issues only. preferenceMatch reflects the
+// candidate's saved settings preferences (see Settings below); "unspecified"
+// is the default and is never treated as a rejection.
+export interface JobAiLogisticsConsideration {
+  label: string;
+  detail: string;
+  preferenceMatch: "aligned" | "conflict" | "unspecified";
+}
+
 export interface JobAiJobExtraction {
   company: string | null;
   jobTitle: string | null;
@@ -82,6 +103,11 @@ export interface JobAiJobExtraction {
   experienceRequirements: string[];
   certifications: string[];
   dealBreakers: JobAiDealBreaker[];
+  // Every fresh analysis includes this, but analyses saved before this
+  // field existed won't have it in their stored JSONB — this interface is
+  // a TS-only cast over that data, so always read with `?? []` rather than
+  // trusting the type at runtime for old rows.
+  logisticsConsiderations: JobAiLogisticsConsideration[];
   applicationDeadline: string | null;
   rawJobText: string;
 }
@@ -158,6 +184,13 @@ export interface Settings {
   default_application_follow_up_days: 3 | 5 | 7 | 10 | 14 | null;
   show_ai_fit_score: boolean;
   muted_notification_types: string[];
+  // Logistics preferences the AI evaluator uses to judge whether a job's
+  // relocation/travel/work-arrangement requirements are worth flagging as
+  // a conflict — null means not specified, which is always treated as a
+  // consideration, never an automatic rejection. See migration 0040.
+  relocation_preference: "open" | "not_open" | null;
+  travel_preference: "comfortable" | "limited" | "not_comfortable" | null;
+  work_arrangement_preference: "remote_only" | "hybrid_ok" | "onsite_ok" | "flexible" | null;
   created_at: string;
   updated_at: string;
 }
@@ -196,6 +229,9 @@ export interface Job {
   deadline: string | null;
   status: JobStatus;
   verdict: JobVerdict | null;
+  // Whether `verdict`/`fit_score` came from the AI or a manual edit — see
+  // VerdictSource above and analyze-job/index.ts's verdictLocked check.
+  verdict_source: VerdictSource | null;
   fit_score: number | null;
   resume_id: string | null;
   cover_letter_used: string | null;

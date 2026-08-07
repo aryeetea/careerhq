@@ -1,10 +1,14 @@
 import { z } from "zod";
 
 const workArrangementSchema = z.union([z.enum(["remote", "hybrid", "onsite"]), z.null()]);
+// excellent_match/stretch_opportunity/high_risk are legacy-only — the AI no
+// longer returns them (see careerCoach.ts VERDICT RULES), but they're kept
+// here so old saved analyses and manually-set verdicts still validate.
 const verdictSchema = z.enum([
   "excellent_match",
   "strong_match",
   "worth_applying",
+  "consider",
   "stretch_opportunity",
   "high_risk",
   "not_recommended",
@@ -41,6 +45,15 @@ export const dealBreakerSchema = z.object({
   status: dealBreakerStatusSchema,
 });
 
+// Logistics/lifestyle factors (relocation, travel, work arrangement,
+// schedule, …) — separate from dealBreakers, which is scoped to genuine
+// hard-eligibility issues only. See AnalysisSummary's "Things to consider".
+export const logisticsConsiderationSchema = z.object({
+  label: z.string(),
+  detail: z.string(),
+  preferenceMatch: z.enum(["aligned", "conflict", "unspecified"]),
+});
+
 export const aiJobExtractionSchema = z.object({
   company: z.string().nullable(),
   jobTitle: z.string().nullable(),
@@ -57,6 +70,7 @@ export const aiJobExtractionSchema = z.object({
   experienceRequirements: z.array(z.string()),
   certifications: z.array(z.string()),
   dealBreakers: z.array(dealBreakerSchema),
+  logisticsConsiderations: z.array(logisticsConsiderationSchema),
   applicationDeadline: z.string().nullable(),
   rawJobText: z.string(),
 });

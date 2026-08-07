@@ -16,6 +16,14 @@ const MAX_RETRIES = 2;
 const RETRY_DELAY_MS = [1_000, 2_000];
 const POSITIVE_VERDICTS = new Set(["excellent_match", "strong_match", "worth_applying"]);
 const HIGH_MATCH_VERDICTS = new Set(["excellent_match", "strong_match"]);
+// Confirmed dealBreakers (hard-requirement issues only, post redesign) block
+// a positive verdict. Logistics/lifestyle labels — relocation, travel,
+// on-site/hybrid, geography, schedule — must never land in dealBreakers;
+// this is the code-level backstop for that, on top of the prompt telling
+// the model to put them in logisticsConsiderations instead. This is what
+// used to make relocation/travel alone force a "Not Recommended" verdict.
+const LOGISTICS_KEYWORD_PATTERN =
+  /\b(relocat|travel|on-?site|onsite|hybrid|remote|commut|time ?zone|geographic|shift|schedule)\b/i;
 
 export interface ResumeRow {
   id: string;
@@ -43,6 +51,11 @@ export interface JobRow {
   deadline: string | null;
   resume_id: string | null;
   ai_extracted_data: Record<string, unknown> | null;
+  verdict: string | null;
+  fit_score: number | null;
+  // 'user' means the verdict/fit_score were set (or kept) by hand — see
+  // migration 0040. analyze-job must never overwrite them in that case.
+  verdict_source: "ai" | "user" | null;
 }
 
 export type AppErrorCode =
@@ -137,6 +150,14 @@ export interface CandidateEvidenceContext {
   hasProfileEvidence: boolean;
 }
 
+// Mirrors settings.relocation_preference / travel_preference /
+// work_arrangement_preference (see migration 0040). Null = not specified.
+export interface CandidatePreferences {
+  relocationPreference: "open" | "not_open" | null;
+  travelPreference: "comfortable" | "limited" | "not_comfortable" | null;
+  workArrangementPreference: "remote_only" | "hybrid_ok" | "onsite_ok" | "flexible" | null;
+}
+
 function withMissingEvidenceUnknowns(existing: string[], context: CandidateEvidenceContext): string[] {
   const unknowns = [...existing];
   if (!context.hasResumeEvidence) unknowns.push("No resume evidence was available to assess your fit.");
@@ -151,6 +172,19 @@ export function normalizeAndValidateAnalysis(response: AnalysisResponse, context
   const confirmedDealBreakers = response.jobExtraction.dealBreakers.filter((item) => item.status === "confirmed");
   const criticalGapCount = normalized.analysis.candidateFit.criticalGaps.length;
   const issues: string[] = [];
+
+  // Code-level backstop for the Epic Entry-Level PM bug: relocation/travel/
+  // on-site-type labels must be reported as logisticsConsiderations, never
+  // as dealBreakers — dealBreakers alone gate a positive verdict below, and
+  // logistics should never be able to force "Not Recommended" on their own.
+  const misclassifiedLogistics = normalized.jobExtraction.dealBreakers.filter(
+    (item) => LOGISTICS_KEYWORD_PATTERN.test(item.label)
+  );
+  if (misclassifiedLogistics.length > 0) {
+    issues.push(
+      `logistics/lifestyle items belong in logisticsConsiderations, not dealBreakers: ${misclassifiedLogistics.map((item) => item.label).join(", ")}`,
+    );
+  }
 
   if (!hasCandidateEvidence) {
     normalized.analysis.candidateFit.fitScore = null;
@@ -336,10 +370,29 @@ export async function getProfileCareerGoal(adminClient: any, userId: string): Pr
   return (data.career_goal as string | null) ?? null;
 }
 
+// Best-effort, same as getProfileCareerGoal — a missing settings row (or a
+// user who hasn't set these yet) must never block analysis. Unset fields
+// come back null, which the prompt is instructed to treat as "not
+// specified," never as an automatic rejection.
+export async function getCandidatePreferences(adminClient: any, userId: string): Promise<CandidatePreferences> {
+  const { data } = await adminClient
+    .from("settings")
+    .select("relocation_preference,travel_preference,work_arrangement_preference")
+    .eq("user_id", userId)
+    .maybeSingle();
+  return {
+    relocationPreference: data?.relocation_preference ?? null,
+    travelPreference: data?.travel_preference ?? null,
+    workArrangementPreference: data?.work_arrangement_preference ?? null,
+  };
+}
+
 export async function getJobForUser(adminClient: any, userId: string, jobId: string): Promise<JobRow> {
   const { data, error } = await adminClient
     .from("jobs")
-    .select("id,user_id,company,title,location,salary,work_arrangement,job_url,job_description,deadline,resume_id,ai_extracted_data")
+    .select(
+      "id,user_id,company,title,location,salary,work_arrangement,job_url,job_description,deadline,resume_id,ai_extracted_data,verdict,fit_score,verdict_source",
+    )
     .eq("id", jobId)
     .eq("user_id", userId)
     .single();
@@ -501,6 +554,17 @@ const dealBreakerJsonSchema = {
   },
 } as const;
 
+const logisticsConsiderationJsonSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["label", "detail", "preferenceMatch"],
+  properties: {
+    label: { type: "string" },
+    detail: { type: "string" },
+    preferenceMatch: { type: "string", enum: ["aligned", "conflict", "unspecified"] },
+  },
+} as const;
+
 const jobExtractionJsonSchema = {
   type: "object",
   additionalProperties: false,
@@ -520,6 +584,7 @@ const jobExtractionJsonSchema = {
     "experienceRequirements",
     "certifications",
     "dealBreakers",
+    "logisticsConsiderations",
     "applicationDeadline",
     "rawJobText",
   ],
@@ -539,6 +604,7 @@ const jobExtractionJsonSchema = {
     experienceRequirements: { type: "array", items: { type: "string" } },
     certifications: { type: "array", items: { type: "string" } },
     dealBreakers: { type: "array", items: dealBreakerJsonSchema },
+    logisticsConsiderations: { type: "array", items: logisticsConsiderationJsonSchema },
     applicationDeadline: { type: ["string", "null"] },
     rawJobText: { type: "string" },
   },
@@ -581,9 +647,13 @@ const analysisResultJsonSchema = {
       },
     },
     applicationRecommendation: { type: "string", enum: ["apply_now", "tailor_first", "consider", "skip", "upload_resume_first"] },
+    // Tighter than the DB/zod verdict enum on purpose: excellent_match,
+    // stretch_opportunity, and high_risk stay valid for old rows and manual
+    // selection (see schemas.ts), but the model itself now only chooses
+    // among these five — see VERDICT RULES in careerCoach.ts.
     verdict: {
       type: "string",
-      enum: ["excellent_match", "strong_match", "worth_applying", "stretch_opportunity", "high_risk", "not_recommended", "not_yet_assessed"],
+      enum: ["strong_match", "worth_applying", "consider", "not_recommended", "not_yet_assessed"],
     },
     nextStep: { type: "string" },
   },
@@ -636,6 +706,7 @@ export async function analyzeJobAndResumes(
   jobSource: { rawText: string; importStatus: "success" | "manual_fallback"; source: "url" | "manual" | "url_plus_manual"; fetchedUrl: string | null },
   resumes: Array<{ id: string; name: string; target_role: string | null; extracted_text: string }>,
   candidateEvidence: CandidateEvidenceContext,
+  candidatePreferences: CandidatePreferences,
 ) {
   const resumePayload = resumes.map((resume) => ({
     resume_id: resume.id,
@@ -660,6 +731,16 @@ export async function analyzeJobAndResumes(
               candidate_evidence: {
                 resume_evidence_available: candidateEvidence.hasResumeEvidence,
                 profile_evidence_available: candidateEvidence.hasProfileEvidence,
+              },
+              // Null in any of these three means the candidate hasn't said
+              // — see CANDIDATE PREFERENCES in the prompt: unspecified must
+              // be treated as "flag it as a consideration," never a
+              // rejection. Only an explicit stated preference (e.g.
+              // remote_only, not_open) may justify a "conflict" match.
+              candidate_preferences: {
+                relocation: candidatePreferences.relocationPreference,
+                travel: candidatePreferences.travelPreference,
+                work_arrangement: candidatePreferences.workArrangementPreference,
               },
               resumes: resumePayload,
             },

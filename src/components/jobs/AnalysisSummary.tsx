@@ -10,6 +10,7 @@ import {
   CONFIDENCE_META,
   DEAL_BREAKER_STATUS_META,
   IMPORT_STATUS_META,
+  LOGISTICS_MATCH_META,
   OPPORTUNITY_ASSESSMENT_META,
   RESUME_SUGGESTION_TYPE_META,
 } from "@/lib/constants";
@@ -149,7 +150,10 @@ export function AnalysisSummary({
       {analysis.jobExtraction.dealBreakers.length > 0 && (
         <Card className="border-border/60 bg-card/60">
           <CardContent className="p-4">
-            <p className="text-sm font-semibold">Potential deal breakers</p>
+            <p className="text-sm font-semibold">Hard requirements to confirm</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              These are the only things that can make you genuinely ineligible — not general considerations.
+            </p>
             <div className="mt-3 grid gap-2.5">
               {analysis.jobExtraction.dealBreakers.map((item) => {
                 const status = DEAL_BREAKER_STATUS_META[item.status];
@@ -163,6 +167,36 @@ export function AnalysisSummary({
                 );
               })}
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Logistics/lifestyle factors — relocation, travel, work arrangement,
+          schedule — are deliberately kept separate from the hard requirements
+          above. They may affect whether this role fits what the candidate
+          wants, never whether they're qualified for it. Optional: absent on
+          analyses saved before this field existed. */}
+      {(analysis.jobExtraction.logisticsConsiderations ?? []).length > 0 && (
+        <Card className="border-border/60 bg-card/60">
+          <CardContent className="p-4">
+            <p className="text-sm font-semibold">Things to consider</p>
+            <div className="mt-3 grid gap-2.5">
+              {(analysis.jobExtraction.logisticsConsiderations ?? []).map((item) => {
+                const match = LOGISTICS_MATCH_META[item.preferenceMatch];
+                return (
+                  <div key={item.label} className="rounded-xl border border-border/60 bg-card/50 px-3 py-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge className={cn("border-0", match.className)}>{match.label}</Badge>
+                      <p className="text-sm font-medium">{item.label}</p>
+                    </div>
+                    <p className="mt-1 text-sm text-muted-foreground">{item.detail}</p>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="mt-3 text-sm text-muted-foreground">
+              These factors don&apos;t necessarily make you unqualified, but they may affect whether this role fits what you want.
+            </p>
           </CardContent>
         </Card>
       )}

@@ -10,10 +10,18 @@ export const analyzeJobRequestSchema = z
     message: "Provide a job URL, a pasted description, or a saved job id.",
   });
 
+// The DB enum (job_verdict) and this zod enum both keep the three legacy
+// values (excellent_match, stretch_opportunity, high_risk) so old rows and
+// manual selection keep working — see migration 0040. The AI itself is no
+// longer asked for those three (see analysisResultJsonSchema's stricter
+// `verdict.enum` below and VERDICT RULES in careerCoach.ts); it now only
+// picks among strong_match / worth_applying / consider / not_recommended /
+// not_yet_assessed.
 const verdictEnum = z.enum([
   "excellent_match",
   "strong_match",
   "worth_applying",
+  "consider",
   "stretch_opportunity",
   "high_risk",
   "not_recommended",
@@ -23,9 +31,28 @@ const verdictEnum = z.enum([
 const opportunityAssessmentEnum = z.enum(["promising", "neutral", "risky", "ineligible"]);
 const applicationRecommendationEnum = z.enum(["apply_now", "tailor_first", "consider", "skip", "upload_resume_first"]);
 
+// Scoped to genuine hard-eligibility issues only (missing required degree,
+// license, work authorization, a clearly-stated mandatory years-of-experience
+// bar, or another explicit non-negotiable requirement). Logistics/lifestyle
+// factors — relocation, travel, on-site/hybrid, geography, schedule — are a
+// separate concept; see logisticsConsiderationSchema below. Conflating the
+// two is what previously made relocation/travel alone trigger "Not
+// Recommended" verdicts (see normalizeAndValidateAnalysis in utils.ts).
 export const dealBreakerSchema = z.object({
   label: z.string(),
   status: z.enum(["confirmed", "possible", "insufficient_information"]),
+});
+
+// Logistics/lifestyle factors that may affect whether the candidate WANTS
+// the job — never whether they're qualified for it. preferenceMatch is
+// computed against the candidate's saved settings preferences (relocation/
+// travel/work-arrangement): "conflict" only when the user has explicitly
+// said they don't want that logistics factor; "unspecified" when they
+// haven't said either way (the default — never treated as a rejection).
+export const logisticsConsiderationSchema = z.object({
+  label: z.string(),
+  detail: z.string(),
+  preferenceMatch: z.enum(["aligned", "conflict", "unspecified"]),
 });
 
 export const resumeRankingSchema = z.object({
@@ -59,6 +86,7 @@ export const jobExtractionSchema = z.object({
   experienceRequirements: z.array(z.string()),
   certifications: z.array(z.string()),
   dealBreakers: z.array(dealBreakerSchema),
+  logisticsConsiderations: z.array(logisticsConsiderationSchema),
   applicationDeadline: z.string().nullable(),
   rawJobText: z.string(),
 });

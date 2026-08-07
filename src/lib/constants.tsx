@@ -78,13 +78,18 @@ export function normalizeEditableJobStatus(status: JobStatus): EditableJobStatus
   return status;
 }
 
-// Six-tier verdict, from strongest to weakest fit. Deliberately reuses only
-// existing design tokens (success → sky → gold → peach → destructive) so no
-// new colors were introduced for this.
+// Verdict taxonomy, strongest to weakest fit. excellent_match/
+// stretch_opportunity/high_risk are legacy tiers — still rendered for old
+// rows and still manually selectable, but the AI itself only produces
+// strong_match/worth_applying/consider/not_recommended now (see
+// careerCoach.ts VERDICT RULES). Deliberately reuses only existing design
+// tokens (success → sky → gold → peach → destructive) so no new colors
+// were introduced for this.
 export const VERDICT_META: Record<JobVerdict, { label: string; emoji: string; className: string }> = {
   excellent_match: { label: "Excellent Match", emoji: "🌟", className: "bg-success/20 text-success font-semibold" },
   strong_match: { label: "Strong Match", emoji: "🟢", className: "bg-success/15 text-success" },
   worth_applying: { label: "Worth Applying", emoji: "🔵", className: "bg-sky/15 text-sky" },
+  consider: { label: "Consider", emoji: "🟡", className: "bg-gold/15 text-gold" },
   stretch_opportunity: { label: "Stretch Opportunity", emoji: "🌱", className: "bg-gold/15 text-gold" },
   high_risk: { label: "High Risk", emoji: "🟠", className: "bg-peach/20 text-peach-foreground" },
   not_recommended: { label: "Not Recommended", emoji: "🔴", className: "bg-destructive/15 text-destructive" },
@@ -143,6 +148,16 @@ export const DEAL_BREAKER_STATUS_META: Record<
   confirmed: { label: "Confirmed", className: "bg-destructive/15 text-destructive" },
   possible: { label: "Possible", className: "bg-gold/15 text-gold" },
   insufficient_information: { label: "Needs confirmation", className: "bg-muted text-muted-foreground" },
+};
+
+// How a logistics/lifestyle factor (relocation, travel, work arrangement…)
+// compares to the candidate's saved settings preferences. "unspecified" is
+// the common case — the candidate hasn't said either way — and is
+// deliberately neutral, never framed as a warning.
+export const LOGISTICS_MATCH_META: Record<"aligned" | "conflict" | "unspecified", { label: string; className: string }> = {
+  aligned: { label: "Matches your preference", className: "bg-success/15 text-success" },
+  conflict: { label: "Conflicts with your preference", className: "bg-destructive/15 text-destructive" },
+  unspecified: { label: "Worth weighing", className: "bg-muted text-muted-foreground" },
 };
 
 export const RESUME_SUGGESTION_TYPE_META: Record<

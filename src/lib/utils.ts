@@ -64,3 +64,20 @@ export function clamp(n: number, min: number, max: number): number {
 export function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
+
+// Whether the verdict/fit score about to be saved still matches the AI's
+// own last recommendation, or whether the user has changed one of them by
+// hand. Used by AddJobDialog/JobDetailDialog so a later AI re-analysis
+// knows never to silently overwrite a manual override — see
+// analyze-job/index.ts's verdictLocked check and migration 0040. Returns
+// null when there's no verdict at all (nothing to attribute a source to).
+export function deriveVerdictSource(
+  aiVerdict: string | null | undefined,
+  aiFitScore: number | null | undefined,
+  formVerdict: string,
+  formFitScore: number | null,
+): "ai" | "user" | null {
+  if (!formVerdict) return null;
+  const matchesAi = Boolean(aiVerdict) && aiVerdict === formVerdict && (aiFitScore ?? null) === (formFitScore ?? null);
+  return matchesAi ? "ai" : "user";
+}

@@ -44,6 +44,7 @@ function validAnalysisResponse(): AnalysisResponse {
       experienceRequirements: ["3+ years in software development"],
       certifications: [],
       dealBreakers: [{ label: "Must be authorized to work in the US", status: "possible" }],
+      logisticsConsiderations: [{ label: "Hybrid schedule", detail: "3 days on-site per week", preferenceMatch: "unspecified" }],
       applicationDeadline: null,
       rawJobText: "Job description text here",
     },
@@ -88,7 +89,7 @@ Deno.test("buildAnalysisPrompt includes anti-fabrication rules", () => {
 });
 
 Deno.test("buildAnalysisPrompt includes required-vs-preferred distinction", () => {
-  assertEquals(buildAnalysisPrompt().includes("Missing preferred qualifications"), true);
+  assertEquals(buildAnalysisPrompt().includes("A single missing preferred qualification must never collapse the score"), true);
 });
 
 Deno.test("buildAnalysisPrompt includes fitScore guidance", () => {
@@ -97,11 +98,25 @@ Deno.test("buildAnalysisPrompt includes fitScore guidance", () => {
   assertEquals(prompt.includes("The score represents current alignment with available candidate evidence"), true);
 });
 
-Deno.test("buildAnalysisPrompt includes all seven verdict values", () => {
+Deno.test("buildAnalysisPrompt tells the model to return only the five active verdict values", () => {
   const prompt = buildAnalysisPrompt();
-  for (const v of ["excellent_match", "strong_match", "worth_applying", "stretch_opportunity", "high_risk", "not_recommended", "not_yet_assessed"]) {
+  for (const v of ["strong_match", "worth_applying", "consider", "not_recommended", "not_yet_assessed"]) {
     assertEquals(prompt.includes(v), true, `Verdict "${v}" missing from prompt`);
   }
+  // The legacy tiers stay valid in the data model (old rows, manual
+  // selection) but the model must never be asked to produce them.
+  assertEquals(prompt.includes("never return them yourself"), true);
+});
+
+Deno.test("buildAnalysisPrompt separates hard requirements from logistics/lifestyle considerations", () => {
+  const prompt = buildAnalysisPrompt();
+  assertEquals(prompt.includes("HARD REQUIREMENTS"), true);
+  assertEquals(prompt.includes("LOGISTICS AND LIFESTYLE CONSIDERATIONS"), true);
+  assertEquals(prompt.includes("never include relocation, travel, work arrangement"), true);
+  assertEquals(
+    prompt.includes("Do not let relocation, travel, on-site/hybrid requirements, or any other logistics factor automatically produce not_recommended"),
+    true,
+  );
 });
 
 Deno.test("buildAnalysisPrompt includes the explicit weighted rubric categories", () => {
@@ -271,6 +286,62 @@ Deno.test("normalizeAndValidateAnalysis allows high_risk when confirmed deal bre
     HAS_EVIDENCE,
   );
   assertEquals(result.analysis.verdict, "high_risk");
+});
+
+Deno.test("normalizeAndValidateAnalysis rejects relocation/travel reported as a dealBreaker instead of a logistics consideration", () => {
+  // Regression test for the Epic Entry-Level PM bug: relocation and travel
+  // used to be reported as "confirmed" dealBreakers, which on their own
+  // forced a "Not Recommended" verdict despite a genuinely strong
+  // skill/experience fit. They must now be rejected from dealBreakers
+  // entirely (see LOGISTICS_KEYWORD_PATTERN in utils.ts) and reported via
+  // logisticsConsiderations instead.
+  const base = validAnalysisResponse();
+  assertThrows(
+    () =>
+      normalizeAndValidateAnalysis(
+        {
+          ...base,
+          analysis: { ...base.analysis, verdict: "not_recommended" },
+          jobExtraction: {
+            ...base.jobExtraction,
+            dealBreakers: [
+              { label: "Relocation required to Madison, WI", status: "confirmed" },
+              { label: "Travel up to 60%", status: "confirmed" },
+            ],
+          },
+        },
+        HAS_EVIDENCE,
+      ),
+    Error,
+  );
+});
+
+Deno.test("normalizeAndValidateAnalysis allows worth_applying with a 7/10 score when relocation/travel are reported as logistics considerations, not dealBreakers", () => {
+  // The corrected shape of the Epic Entry-Level PM example: strong
+  // skill/experience evidence, no hard requirement issues, relocation and
+  // travel surfaced separately — must validate cleanly at worth_applying.
+  const base = validAnalysisResponse();
+  const result = normalizeAndValidateAnalysis(
+    {
+      ...base,
+      analysis: {
+        ...base.analysis,
+        verdict: "worth_applying",
+        candidateFit: { ...base.analysis.candidateFit, fitScore: 7 },
+      },
+      jobExtraction: {
+        ...base.jobExtraction,
+        dealBreakers: [],
+        logisticsConsiderations: [
+          { label: "Relocation required", detail: "Relocation required: Madison, WI", preferenceMatch: "unspecified" },
+          { label: "Travel expectation", detail: "Travel: approximately 25-60%", preferenceMatch: "unspecified" },
+        ],
+      },
+    },
+    HAS_EVIDENCE,
+  );
+  assertEquals(result.analysis.verdict, "worth_applying");
+  assertEquals(result.analysis.candidateFit.fitScore, 7);
 });
 
 Deno.test("normalizeAndValidateAnalysis forces not_yet_assessed and nulls fitScore when there is no candidate evidence", () => {

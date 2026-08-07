@@ -23,8 +23,9 @@ import { useSettings } from "@/hooks/queries/useProfile";
 import { useToast } from "@/components/shared/toast";
 import { JOB_STATUSES, UNSET_SELECT_VALUE, VERDICT_OPTIONS } from "@/lib/constants";
 import { AnalysisSummary } from "@/components/jobs/AnalysisSummary";
-import { formatDate, toDateInputValue } from "@/lib/utils";
+import { deriveVerdictSource, formatDate, toDateInputValue } from "@/lib/utils";
 import type { JobAnalysisPayload } from "@/lib/ai";
+import { ANALYSIS_PROGRESS_STEPS, useProgressHint } from "@/hooks/useProgressHint";
 
 interface AddJobDialogProps {
   open: boolean;
@@ -64,6 +65,7 @@ export function AddJobDialog({ open, onOpenChange, resumes }: AddJobDialogProps)
   const { push } = useToast();
   const [analysis, setAnalysis] = React.useState<JobAnalysisPayload | null>(null);
   const [openSections, setOpenSections] = React.useState<string[]>([]);
+  const analyzingHint = useProgressHint(analyzeJob.isPending, ANALYSIS_PROGRESS_STEPS);
 
   const {
     register,
@@ -146,6 +148,12 @@ export function AddJobDialog({ open, onOpenChange, resumes }: AddJobDialogProps)
       job_description: values.jobDescription?.trim() || null,
       status: values.status,
       verdict: (values.verdict || null) as NewJob["verdict"],
+      verdict_source: deriveVerdictSource(
+        analysis?.analysis.verdict,
+        analysis?.analysis.candidateFit.fitScore,
+        values.verdict || "",
+        values.fitScore ?? null,
+      ),
       fit_score: values.fitScore ?? null,
       resume_id: values.resumeId || null,
       cover_letter_used: values.coverLetterUsed?.trim() || null,
@@ -196,8 +204,8 @@ export function AddJobDialog({ open, onOpenChange, resumes }: AddJobDialogProps)
                 </Button>
               </div>
               <Input id="jobUrl" placeholder="https://linkedin.com/jobs/view/…" {...register("jobUrl")} />
-              <p className="text-xs text-muted-foreground">
-                If the link is blocked or incomplete, paste the job description below and run the analysis again.
+              <p className="text-xs text-muted-foreground" aria-live="polite">
+                {analyzingHint ?? "If the link is blocked or incomplete, paste the job description below and run the analysis again."}
               </p>
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -265,7 +273,21 @@ export function AddJobDialog({ open, onOpenChange, resumes }: AddJobDialogProps)
                     </Select>
                   </div>
                   <div className="grid gap-1.5">
-                    <Label>Verdict</Label>
+                    <div className="flex items-center justify-between gap-2">
+                      <Label>Verdict</Label>
+                      {watch("verdict") && (
+                        <span className="text-xs text-muted-foreground">
+                          {deriveVerdictSource(
+                            analysis?.analysis.verdict,
+                            analysis?.analysis.candidateFit.fitScore,
+                            watch("verdict") || "",
+                            watch("fitScore") ?? null,
+                          ) === "user"
+                            ? "You set this"
+                            : "🤖 AI recommended"}
+                        </span>
+                      )}
+                    </div>
                     <Select
                       value={watch("verdict") || UNSET_SELECT_VALUE}
                       onValueChange={(v) => setValue("verdict", (v === UNSET_SELECT_VALUE ? "" : v) as JobFormValues["verdict"])}

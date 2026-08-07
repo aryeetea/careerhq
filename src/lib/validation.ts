@@ -70,6 +70,7 @@ export const jobFormSchema = jobBasicsSchema.extend({
         "excellent_match",
         "strong_match",
         "worth_applying",
+        "consider",
         "stretch_opportunity",
         "high_risk",
         "not_recommended",

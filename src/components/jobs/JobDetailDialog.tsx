@@ -27,8 +27,9 @@ import { useAnalyzeJob, useGenerateCoverLetter } from "@/hooks/queries/useJobAi"
 import { useToast } from "@/components/shared/toast";
 import { useCelebration } from "@/components/ambient/Celebration";
 import { JOB_STATUSES, STATUS_META, UNSET_SELECT_VALUE, VERDICT_OPTIONS, normalizeEditableJobStatus } from "@/lib/constants";
-import { dateInputToISO, formatDate, formatDateTime, toDateInputValue } from "@/lib/utils";
+import { dateInputToISO, deriveVerdictSource, formatDate, formatDateTime, toDateInputValue } from "@/lib/utils";
 import type { JobAnalysisPayload } from "@/lib/ai";
+import { ANALYSIS_PROGRESS_STEPS, COVER_LETTER_PROGRESS_STEPS, useProgressHint } from "@/hooks/useProgressHint";
 
 interface JobDetailDialogProps {
   job: Job | null;
@@ -82,6 +83,8 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
   const [coverLetter, setCoverLetter] = React.useState(job?.ai_cover_letter ?? "");
   const [activeTab, setActiveTab] = React.useState("overview");
   const coverLetterDirty = coverLetter !== (job?.ai_cover_letter ?? "");
+  const analyzingHint = useProgressHint(analyzeJob.isPending, ANALYSIS_PROGRESS_STEPS);
+  const generatingCoverLetterHint = useProgressHint(generateCoverLetter.isPending, COVER_LETTER_PROGRESS_STEPS);
 
   const {
     register,
@@ -135,6 +138,12 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
           job_description: values.jobDescription?.trim() || null,
           status: values.status,
           verdict: (values.verdict || null) as Job["verdict"],
+          verdict_source: deriveVerdictSource(
+            analysisState?.analysis.verdict,
+            analysisState?.analysis.candidateFit.fitScore,
+            values.verdict || "",
+            values.fitScore ?? null,
+          ),
           fit_score: values.fitScore ?? null,
           resume_id: values.resumeId || null,
           cover_letter_used: values.coverLetterUsed?.trim() || null,
@@ -384,7 +393,21 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
                   />
                 </div>
                 <div className="grid gap-1.5">
-                  <Label>Verdict</Label>
+                  <div className="flex items-center justify-between gap-2">
+                    <Label>Verdict</Label>
+                    {watch("verdict") && (
+                      <span className="text-xs text-muted-foreground">
+                        {deriveVerdictSource(
+                          analysisState?.analysis.verdict,
+                          analysisState?.analysis.candidateFit.fitScore,
+                          watch("verdict") || "",
+                          watch("fitScore") ?? null,
+                        ) === "user"
+                          ? "You set this"
+                          : "🤖 AI recommended"}
+                      </span>
+                    )}
+                  </div>
                   <Select
                     value={watch("verdict") || UNSET_SELECT_VALUE}
                     onValueChange={(v) => setValue("verdict", (v === UNSET_SELECT_VALUE ? "" : v) as JobFormValues["verdict"], { shouldDirty: true })}
@@ -512,8 +535,8 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
                     <Sparkles className="h-4 w-4 text-primary" />
                     AI Coach
                   </p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Re-import and analyze this job from the saved URL or description to see how it fits your resume.
+                  <p className="mt-1 text-sm text-muted-foreground" aria-live="polite">
+                    {analyzingHint ?? "Re-import and analyze this job from the saved URL or description to see how it fits your resume."}
                   </p>
                 </div>
                 <Button type="button" variant="outline" size="sm" onClick={handleAnalyze} disabled={analyzeJob.isPending}>
@@ -542,8 +565,8 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
                     <FileText className="h-4 w-4 text-primary" />
                     Cover letter
                   </p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Draws only on your selected resume, this job's saved text, and your career goal — nothing is invented.
+                  <p className="mt-1 text-sm text-muted-foreground" aria-live="polite">
+                    {generatingCoverLetterHint ?? "Draws only on your selected resume, this job's saved text, and your career goal — nothing is invented."}
                   </p>
                 </div>
                 <Button type="button" size="sm" onClick={handleGenerateCoverLetter} disabled={generateCoverLetter.isPending}>

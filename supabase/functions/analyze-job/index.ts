@@ -6,6 +6,7 @@ import {
   errorResponse,
   extractResumeText,
   fetchJobSource,
+  getCandidatePreferences,
   getJobForUser,
   getOpenAIClient,
   getUserResumes,
@@ -43,14 +44,25 @@ Deno.serve(async (request) => {
       Boolean(resume.extracted_text)
     );
 
-    const analysis = await analyzeJobAndResumes(openai, jobSource, readyResumes, {
-      hasResumeEvidence: readyResumes.length > 0,
-      hasProfileEvidence: false,
-    });
+    const candidatePreferences = await getCandidatePreferences(adminClient, user.id);
+
+    const analysis = await analyzeJobAndResumes(
+      openai,
+      jobSource,
+      readyResumes,
+      { hasResumeEvidence: readyResumes.length > 0, hasProfileEvidence: false },
+      candidatePreferences,
+    );
 
     if (savedJob) {
       const recommendedResumeId = analysis.recommendedResumeId;
       const nextResumeId = savedJob.resume_id ?? recommendedResumeId;
+      // A verdict/fit score the user set (or already kept) by hand must
+      // never be silently overwritten by a later AI re-analysis — the
+      // fresh AI take is still saved in full below (ai_analysis,
+      // ai_extracted_data, strengths, gaps, …), just not promoted to the
+      // job's headline verdict/fit_score fields. See migration 0040.
+      const verdictLocked = savedJob.verdict_source === "user";
       const { error } = await adminClient
         .from("jobs")
         .update({
@@ -62,8 +74,13 @@ Deno.serve(async (request) => {
           deadline: analysis.jobExtraction.applicationDeadline ?? savedJob.deadline,
           job_url: jobUrl ?? savedJob.job_url,
           job_description: analysis.jobExtraction.rawJobText,
-          fit_score: analysis.analysis.candidateFit.fitScore,
-          verdict: analysis.analysis.verdict === "not_yet_assessed" ? null : analysis.analysis.verdict,
+          fit_score: verdictLocked ? savedJob.fit_score : analysis.analysis.candidateFit.fitScore,
+          verdict: verdictLocked
+            ? savedJob.verdict
+            : analysis.analysis.verdict === "not_yet_assessed"
+              ? null
+              : analysis.analysis.verdict,
+          verdict_source: verdictLocked ? "user" : "ai",
           // Note: jobs.priority is the user's own manual urgency ranking
           // (1-3) — a different concept from the AI's applicationPriority
           // (apply_now/apply_soon/consider/skip, stored only inside
