@@ -43,7 +43,13 @@ export function initials(name: string): string {
 
 export function toDateInputValue(iso: string | null | undefined): string {
   if (!iso) return "";
-  return iso.slice(0, 10);
+  const value = iso.slice(0, 10);
+  // Guards against non-date text landing in a date input — e.g. AI job
+  // extraction occasionally returns freeform text ("Posted Jul 28") in a
+  // date field instead of an ISO date or null, which used to get sliced to
+  // a garbage 10-char string and sent straight to a Postgres `date` column,
+  // failing the save with a 400 the user had no way to make sense of.
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(new Date(value).getTime()) ? value : "";
 }
 
 export function dateInputToISO(value: string): string | null {
