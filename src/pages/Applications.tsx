@@ -49,17 +49,17 @@ export default function Applications() {
   const [view, setView] = React.useState<ApplicationsView>(defaultView);
   const [filters, setFilters] = React.useState<JobFilters>(DEFAULT_FILTERS);
   const [addOpen, setAddOpen] = React.useState(false);
-  const [selectedJob, setSelectedJob] = React.useState<Job | null>(null);
-
-  // Keeps the open Job Detail dialog in sync with the live jobs cache — a
-  // cover letter generated, a follow-up completed, a board move, or a
-  // realtime update from another tab all need to show up immediately in the
-  // dialog that's already open, not just the next time it's reopened.
-  React.useEffect(() => {
-    if (!selectedJob) return;
-    const fresh = jobs.find((j) => j.id === selectedJob.id);
-    if (fresh && fresh !== selectedJob) setSelectedJob(fresh);
-  }, [jobs, selectedJob]);
+  // Holds only the id, not the job object — the object is derived fresh
+  // from `jobs` below on every render. Keeping the whole object in state
+  // used to need a separate effect to re-sync it whenever `jobs` changed
+  // (a cover letter generated, a follow-up completed, a board move, a
+  // realtime update from another tab), and that effect's own setState
+  // could race the one Save/Cancel uses to close the dialog — closing it
+  // would occasionally get silently reopened a beat later. Deriving from
+  // the id removes the second copy of truth, and the race along with it.
+  const [selectedJobId, setSelectedJobId] = React.useState<string | null>(null);
+  const selectedJob = React.useMemo(() => jobs.find((j) => j.id === selectedJobId) ?? null, [jobs, selectedJobId]);
+  const openJob = React.useCallback((job: Job) => setSelectedJobId(job.id), []);
 
   const hidden = React.useMemo(() => new Set(settings?.hidden_statuses ?? []), [settings]);
   const visibleColumns = React.useMemo(() => ALL_BOARD_COLUMNS.filter((s) => !hidden.has(s)), [hidden]);
@@ -176,25 +176,25 @@ export default function Applications() {
           <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
             <div className="flex h-full gap-3" style={{ minWidth: visibleColumns.length * 296 }}>
               {visibleColumns.map((status) => (
-                <KanbanColumn key={status} status={status} jobs={byStatus.get(status) ?? []} resumeById={resumeById} onOpenJob={setSelectedJob} />
+                <KanbanColumn key={status} status={status} jobs={byStatus.get(status) ?? []} resumeById={resumeById} onOpenJob={openJob} />
               ))}
             </div>
           </DndContext>
         </div>
       ) : view === "list" ? (
         <div className="flex-1 overflow-y-auto pt-6">
-          <MobileJobList columns={visibleColumns} byStatus={byStatus} resumeById={resumeById} onOpenJob={setSelectedJob} />
+          <MobileJobList columns={visibleColumns} byStatus={byStatus} resumeById={resumeById} onOpenJob={openJob} />
         </div>
       ) : view === "calendar" ? (
-        <CalendarView events={calendarEvents} onOpenJob={setSelectedJob} />
+        <CalendarView events={calendarEvents} onOpenJob={openJob} />
       ) : (
         <div className="flex-1 overflow-y-auto pt-6">
-          <TimelineView events={timelineEvents} onOpenJob={setSelectedJob} />
+          <TimelineView events={timelineEvents} onOpenJob={openJob} />
         </div>
       )}
 
       <AddJobDialog open={addOpen} onOpenChange={setAddOpen} resumes={resumes} />
-      <JobDetailDialog job={selectedJob} resumes={resumes} open={Boolean(selectedJob)} onOpenChange={(open) => !open && setSelectedJob(null)} />
+      <JobDetailDialog job={selectedJob} resumes={resumes} open={Boolean(selectedJob)} onOpenChange={(open) => !open && setSelectedJobId(null)} />
     </div>
   );
 }
