@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Check, Copy, Download, ExternalLink, FileText, Sparkles, Trash2 } from "lucide-react";
+import { AlertTriangle, Check, Copy, Download, ExternalLink, FileText, Sparkles, Trash2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -26,7 +26,7 @@ import { useDeleteJob, useJobStatusHistory, useSaveCoverLetter, useUpdateJob } f
 import { useAnalyzeJob, useGenerateCoverLetter } from "@/hooks/queries/useJobAi";
 import { useToast } from "@/components/shared/toast";
 import { useCelebration } from "@/components/ambient/Celebration";
-import { JOB_STATUSES, STATUS_META, UNSET_SELECT_VALUE, VERDICT_OPTIONS, normalizeEditableJobStatus } from "@/lib/constants";
+import { JOB_STATUSES, STATUS_META, UNSET_SELECT_VALUE, VERDICT_META, VERDICT_OPTIONS, normalizeEditableJobStatus } from "@/lib/constants";
 import { dateInputToISO, deriveVerdictSource, formatDate, formatDateTime, toDateInputValue } from "@/lib/utils";
 import type { JobAnalysisPayload } from "@/lib/ai";
 import { ANALYSIS_PROGRESS_STEPS, COVER_LETTER_PROGRESS_STEPS, useProgressHint } from "@/hooks/useProgressHint";
@@ -573,6 +573,22 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
                   {generateCoverLetter.isPending ? "Generating…" : job.ai_cover_letter ? "Regenerate" : "Generate cover letter"}
                 </Button>
               </div>
+
+              {/* Cover letters stay available at every verdict — Bloom advises,
+                  it doesn't gate — but Stretch/Not Recommended roles get a
+                  clear reminder of that recommendation before generating. */}
+              {(job.verdict === "stretch_opportunity" || job.verdict === "not_recommended") && (
+                <div className="flex items-start gap-2 rounded-xl border border-gold/30 bg-gold/10 px-3 py-2.5 text-sm">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-gold" />
+                  <p className="text-foreground/85">
+                    Bloom's current read on this role is{" "}
+                    <span className="font-medium">
+                      {VERDICT_META[job.verdict].emoji} {VERDICT_META[job.verdict].label}
+                    </span>
+                    . You can still generate a cover letter — this is advisory, and the decision is yours.
+                  </p>
+                </div>
+              )}
 
               {!job.ai_cover_letter && !coverLetter ? (
                 <div className="rounded-xl border border-dashed border-border/70 px-4 py-10 text-center">

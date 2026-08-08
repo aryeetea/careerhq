@@ -3,9 +3,11 @@ import type {
   AiJobVerdict,
   ApplicationRecommendation,
   EditableJobStatus,
+  GapSeverity,
   JobStatus,
   JobVerdict,
   OpportunityAssessment,
+  RecommendationPriority,
   WorkArrangement,
   EmploymentType,
   ReactionType,
@@ -78,19 +80,20 @@ export function normalizeEditableJobStatus(status: JobStatus): EditableJobStatus
   return status;
 }
 
-// Verdict taxonomy, strongest to weakest fit. excellent_match/
-// stretch_opportunity/high_risk are legacy tiers — still rendered for old
-// rows and still manually selectable, but the AI itself only produces
-// strong_match/worth_applying/consider/not_recommended now (see
-// careerCoach.ts VERDICT RULES). Deliberately reuses only existing design
-// tokens (success → sky → gold → peach → destructive) so no new colors
-// were introduced for this.
+// Verdict taxonomy, strongest to weakest fit: Strong Match → Worth Applying
+// → Consider → Stretch → Not Recommended. excellent_match/high_risk are
+// legacy-only — still rendered for old rows and still manually selectable,
+// but the AI itself only produces the five active tiers now (see
+// careerCoach.ts VERDICT RULES). stretch_opportunity ("Stretch") is active
+// again as the tier between consider and not_recommended. Deliberately
+// reuses only existing design tokens (success → sky → gold → peach →
+// destructive) so no new colors were introduced for this.
 export const VERDICT_META: Record<JobVerdict, { label: string; emoji: string; className: string }> = {
   excellent_match: { label: "Excellent Match", emoji: "🌟", className: "bg-success/20 text-success font-semibold" },
   strong_match: { label: "Strong Match", emoji: "🟢", className: "bg-success/15 text-success" },
   worth_applying: { label: "Worth Applying", emoji: "🔵", className: "bg-sky/15 text-sky" },
   consider: { label: "Consider", emoji: "🟡", className: "bg-gold/15 text-gold" },
-  stretch_opportunity: { label: "Stretch Opportunity", emoji: "🌱", className: "bg-gold/15 text-gold" },
+  stretch_opportunity: { label: "Stretch", emoji: "🟠", className: "bg-peach/20 text-peach-foreground" },
   high_risk: { label: "High Risk", emoji: "🟠", className: "bg-peach/20 text-peach-foreground" },
   not_recommended: { label: "Not Recommended", emoji: "🔴", className: "bg-destructive/15 text-destructive" },
 };
@@ -158,6 +161,28 @@ export const LOGISTICS_MATCH_META: Record<"aligned" | "conflict" | "unspecified"
   aligned: { label: "Matches your preference", className: "bg-success/15 text-success" },
   conflict: { label: "Conflicts with your preference", className: "bg-destructive/15 text-destructive" },
   unspecified: { label: "Worth weighing", className: "bg-muted text-muted-foreground" },
+};
+
+// How seriously the single most significant missing qualification weighs
+// on the verdict — see [GAP SEVERITY] in AnalysisSummary. Only "hard"
+// pushes toward Not Recommended; minor/moderate/major never do on their own.
+export const GAP_SEVERITY_META: Record<GapSeverity, { label: string; className: string }> = {
+  none: { label: "No meaningful gap", className: "bg-success/15 text-success" },
+  minor: { label: "Minor", className: "bg-sky/15 text-sky" },
+  moderate: { label: "Moderate", className: "bg-gold/15 text-gold" },
+  major: { label: "Major", className: "bg-peach/20 text-peach-foreground" },
+  hard: { label: "Hard", className: "bg-destructive/15 text-destructive" },
+};
+
+// Advisory application-strength signal — see [PRIORITY] in AnalysisSummary.
+// Deliberately distinct from jobs.priority (the user's own manual 1-3
+// ranking, still overridable in the Evaluation tab) and from career
+// direction fit: a role outside someone's ideal direction can still be a
+// normal or even high-priority application.
+export const RECOMMENDATION_PRIORITY_META: Record<RecommendationPriority, { label: string; emoji: string; className: string }> = {
+  high: { label: "High Priority", emoji: "🔥", className: "bg-success/15 text-success" },
+  normal: { label: "Normal", emoji: "⭐", className: "bg-sky/15 text-sky" },
+  backup: { label: "Backup", emoji: "🌱", className: "bg-muted text-muted-foreground" },
 };
 
 export const RESUME_SUGGESTION_TYPE_META: Record<

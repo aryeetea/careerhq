@@ -60,7 +60,18 @@ function validAnalysisResponse(): AnalysisResponse {
         preferredGaps: ["React Native"],
         unknowns: [],
       },
+      scoringDimensions: {
+        qualificationFit: 8,
+        transferableSkillsFit: 7,
+        careerDirectionFit: 8,
+        experienceSeniorityFit: 7,
+        locationWorkArrangementFit: 8,
+      },
+      careerDirectionNote: "This role sits squarely in the candidate's stated target direction of full-stack engineering.",
+      gapSeverity: "moderate",
+      recommendationPriority: "normal",
       applicationRecommendation: "apply_now",
+      shouldApply: "Apply — your TypeScript and React evidence covers the core requirements well.",
       verdict: "strong_match",
       nextStep: "Submit application and tailor the summary to highlight TypeScript depth.",
     },
@@ -350,6 +361,225 @@ Deno.test("normalizeAndValidateAnalysis forces not_yet_assessed and nulls fitSco
   assertEquals(result.analysis.verdict, "not_yet_assessed");
   assertEquals(result.analysis.candidateFit.fitScore, null);
   assertEquals(result.analysis.applicationRecommendation, "upload_resume_first");
+});
+
+// ---------------------------------------------------------------------
+// Prompt content: transferable experience by role, career direction,
+// gap severity, and recommendation priority — the core of this redesign.
+// ---------------------------------------------------------------------
+
+Deno.test("buildAnalysisPrompt recognizes transferable experience for common role archetypes without requiring exact title matches", () => {
+  const prompt = buildAnalysisPrompt();
+  assertEquals(prompt.includes("Do not require exact job-title matching"), true);
+  for (const role of ["Product Designer", "Project Coordinator", "Business Analyst", "Product Manager"]) {
+    assertEquals(prompt.includes(`"${role}"`), true, `Missing role archetype: ${role}`);
+  }
+});
+
+Deno.test("buildAnalysisPrompt treats career direction fit as separate from qualification fit", () => {
+  const prompt = buildAnalysisPrompt();
+  assertEquals(prompt.includes("CAREER DIRECTION FIT"), true);
+  assertEquals(prompt.includes("Career direction fit is NOT the same as qualification fit"), true);
+  assertEquals(prompt.includes("that combination is CONSIDER, not NOT RECOMMENDED"), true);
+});
+
+Deno.test("buildAnalysisPrompt defines gap severity tiers and restricts hard-only escalation", () => {
+  const prompt = buildAnalysisPrompt();
+  for (const tier of ["minor", "moderate", "major", "hard"]) {
+    assertEquals(prompt.includes(tier), true, `Missing gap severity tier: ${tier}`);
+  }
+  assertEquals(prompt.includes("Only hard should strongly push the verdict toward not_recommended"), true);
+});
+
+Deno.test("buildAnalysisPrompt keeps recommendation priority distinct from career direction", () => {
+  const prompt = buildAnalysisPrompt();
+  assertEquals(prompt.includes("RECOMMENDATION PRIORITY"), true);
+  assertEquals(
+    prompt.includes("a job does not need to be a perfect career-direction match to be worth applying to, or even to be a high-priority application"),
+    true,
+  );
+});
+
+Deno.test("buildAnalysisPrompt tells the model to pick a resume for real experience, not keyword count", () => {
+  assertEquals(buildAnalysisPrompt().includes("do not choose one merely because it repeats more of the posting's keywords"), true);
+});
+
+// ---------------------------------------------------------------------
+// The seven scenarios from the redesign brief, exercised structurally
+// through normalizeAndValidateAnalysis (schema + guardrails), since a
+// live model call isn't available in a unit test. Each asserts that the
+// intended, nuanced outcome validates cleanly, and — where the whole
+// point is a contrast — that the overly harsh alternative is rejected.
+// ---------------------------------------------------------------------
+
+Deno.test("scenario 1: strong Product Designer match validates as strong_match with no meaningful gap", () => {
+  const base = validAnalysisResponse();
+  const result = normalizeAndValidateAnalysis(
+    {
+      ...base,
+      analysis: {
+        ...base.analysis,
+        verdict: "strong_match",
+        gapSeverity: "none",
+        recommendationPriority: "high",
+        scoringDimensions: { qualificationFit: 9, transferableSkillsFit: 9, careerDirectionFit: 9, experienceSeniorityFit: 8, locationWorkArrangementFit: 9 },
+        candidateFit: { ...base.analysis.candidateFit, fitScore: 8.8, criticalGaps: [] },
+      },
+    },
+    HAS_EVIDENCE,
+  );
+  assertEquals(result.analysis.verdict, "strong_match");
+});
+
+Deno.test("scenario 2: strong Project Coordinator match validates as worth_applying with only minor gaps", () => {
+  const base = validAnalysisResponse();
+  const result = normalizeAndValidateAnalysis(
+    {
+      ...base,
+      analysis: {
+        ...base.analysis,
+        verdict: "worth_applying",
+        gapSeverity: "minor",
+        recommendationPriority: "high",
+        scoringDimensions: { qualificationFit: 8, transferableSkillsFit: 8, careerDirectionFit: 7, experienceSeniorityFit: 8, locationWorkArrangementFit: 8 },
+        candidateFit: { ...base.analysis.candidateFit, fitScore: 7.8 },
+      },
+      jobExtraction: { ...base.jobExtraction, dealBreakers: [] },
+    },
+    HAS_EVIDENCE,
+  );
+  assertEquals(result.analysis.verdict, "worth_applying");
+});
+
+Deno.test("scenario 3: entry-level PM with transferable (not title-matched) experience validates as worth_applying", () => {
+  const base = validAnalysisResponse();
+  const result = normalizeAndValidateAnalysis(
+    {
+      ...base,
+      analysis: {
+        ...base.analysis,
+        verdict: "worth_applying",
+        gapSeverity: "minor",
+        recommendationPriority: "normal",
+        scoringDimensions: { qualificationFit: 7, transferableSkillsFit: 8, careerDirectionFit: 7, experienceSeniorityFit: 7, locationWorkArrangementFit: 8 },
+        candidateFit: {
+          ...base.analysis.candidateFit,
+          fitScore: 7.2,
+          strongMatches: ["B.S. in Information Technology", "Project coordination via ACE Web Studio"],
+          transferableStrengths: ["Timeline and deliverable management", "Client and stakeholder communication"],
+        },
+      },
+      jobExtraction: { ...base.jobExtraction, dealBreakers: [] },
+    },
+    HAS_EVIDENCE,
+  );
+  assertEquals(result.analysis.verdict, "worth_applying");
+});
+
+Deno.test('scenario 4/7: specialized PM with a moderate domain gap and lower career-direction fit validates as consider — the exact "Fair Market Value" shape — and rejects the same shape at not_recommended', () => {
+  const base = validAnalysisResponse();
+  const scoredForConsider = {
+    ...base,
+    analysis: {
+      ...base.analysis,
+      gapSeverity: "moderate" as const,
+      recommendationPriority: "backup" as const,
+      scoringDimensions: { qualificationFit: 7.5, transferableSkillsFit: 8, careerDirectionFit: 6, experienceSeniorityFit: 7, locationWorkArrangementFit: 8 },
+      candidateFit: {
+        ...base.analysis.candidateFit,
+        fitScore: 6.4,
+        strongMatches: ["Project coordination through ACE Web Studio", "B.S. in Information Technology"],
+        criticalGaps: [],
+        preferredGaps: ["Direct Fair Market Value / AXIA / vendor-metadata experience"],
+      },
+      careerDirectionNote: "More specialized operational project management than the product/digital roles primarily targeted.",
+    },
+    jobExtraction: { ...base.jobExtraction, dealBreakers: [] },
+  };
+
+  // The nuanced, correct outcome: CONSIDER.
+  const considerResult = normalizeAndValidateAnalysis({ ...scoredForConsider, analysis: { ...scoredForConsider.analysis, verdict: "consider" } }, HAS_EVIDENCE);
+  assertEquals(considerResult.analysis.verdict, "consider");
+
+  // The old, too-binary outcome this redesign fixes: the same evidence
+  // must NOT be allowed to reach NOT RECOMMENDED — no confirmed hard
+  // requirement issue and gapSeverity is only "moderate."
+  assertThrows(
+    () => normalizeAndValidateAnalysis({ ...scoredForConsider, analysis: { ...scoredForConsider.analysis, verdict: "not_recommended" } }, HAS_EVIDENCE),
+    Error,
+  );
+});
+
+Deno.test("scenario 5: mid-senior role exceeding the candidate's experience validates as stretch_opportunity with a major gap", () => {
+  const base = validAnalysisResponse();
+  const result = normalizeAndValidateAnalysis(
+    {
+      ...base,
+      analysis: {
+        ...base.analysis,
+        verdict: "stretch_opportunity",
+        gapSeverity: "major",
+        recommendationPriority: "backup",
+        scoringDimensions: { qualificationFit: 5, transferableSkillsFit: 6, careerDirectionFit: 7, experienceSeniorityFit: 3, locationWorkArrangementFit: 8 },
+        candidateFit: { ...base.analysis.candidateFit, fitScore: 4.2, criticalGaps: ["8+ years leading engineering orgs, candidate has 2"] },
+      },
+      jobExtraction: { ...base.jobExtraction, dealBreakers: [] },
+    },
+    HAS_EVIDENCE,
+  );
+  assertEquals(result.analysis.verdict, "stretch_opportunity");
+});
+
+Deno.test("scenario 6: role with a hard certification requirement the candidate lacks validates as not_recommended, but only because of the confirmed hard requirement", () => {
+  const base = validAnalysisResponse();
+  const result = normalizeAndValidateAnalysis(
+    {
+      ...base,
+      analysis: {
+        ...base.analysis,
+        verdict: "not_recommended",
+        gapSeverity: "hard",
+        recommendationPriority: "backup",
+        applicationRecommendation: "skip",
+        candidateFit: { ...base.analysis.candidateFit, criticalGaps: ["Active PMP certification required; candidate does not hold one"] },
+      },
+      jobExtraction: {
+        ...base.jobExtraction,
+        dealBreakers: [{ label: "Active PMP certification required", status: "confirmed" }],
+      },
+    },
+    HAS_EVIDENCE,
+  );
+  assertEquals(result.analysis.verdict, "not_recommended");
+  assertEquals(result.analysis.gapSeverity, "hard");
+});
+
+Deno.test("guard: stretch_opportunity requires gapSeverity major or hard, not moderate", () => {
+  const base = validAnalysisResponse();
+  assertThrows(
+    () =>
+      normalizeAndValidateAnalysis(
+        { ...base, analysis: { ...base.analysis, verdict: "stretch_opportunity", gapSeverity: "moderate" } },
+        HAS_EVIDENCE,
+      ),
+    Error,
+  );
+});
+
+Deno.test("guard: recommendationPriority high cannot coexist with verdict not_recommended", () => {
+  const base = validAnalysisResponse();
+  assertThrows(
+    () =>
+      normalizeAndValidateAnalysis(
+        {
+          ...base,
+          analysis: { ...base.analysis, verdict: "not_recommended", gapSeverity: "hard", recommendationPriority: "high" },
+          jobExtraction: { ...base.jobExtraction, dealBreakers: [{ label: "Required security clearance", status: "confirmed" }] },
+        },
+        HAS_EVIDENCE,
+      ),
+    Error,
+  );
 });
 
 Deno.test("analysisResponseSchema throws ZodError on empty object", () => {

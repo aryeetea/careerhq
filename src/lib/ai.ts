@@ -1,9 +1,10 @@
 import { z } from "zod";
 
 const workArrangementSchema = z.union([z.enum(["remote", "hybrid", "onsite"]), z.null()]);
-// excellent_match/stretch_opportunity/high_risk are legacy-only — the AI no
-// longer returns them (see careerCoach.ts VERDICT RULES), but they're kept
-// here so old saved analyses and manually-set verdicts still validate.
+// excellent_match/high_risk are legacy-only — the AI no longer returns them
+// (see careerCoach.ts VERDICT RULES), but they're kept here so old saved
+// analyses and manually-set verdicts still validate. stretch_opportunity is
+// active again as the "Stretch" tier.
 const verdictSchema = z.enum([
   "excellent_match",
   "strong_match",
@@ -21,6 +22,18 @@ const opportunityAssessmentSchema = z.enum(["promising", "neutral", "risky", "in
 const applicationRecommendationSchema = z.enum(["apply_now", "tailor_first", "consider", "skip", "upload_resume_first"]);
 const resumeSuggestionTypeSchema = z.enum(["safe_wording", "reorder", "confirm_with_user", "genuine_gap"]);
 const dealBreakerStatusSchema = z.enum(["confirmed", "possible", "insufficient_information"]);
+const gapSeveritySchema = z.enum(["none", "minor", "moderate", "major", "hard"]);
+const recommendationPrioritySchema = z.enum(["high", "normal", "backup"]);
+
+// Five separate numeric sub-scores behind the single 0-10 fitScore, so
+// "why" is inspectable — see [FIT]/detailed-scoring in AnalysisSummary.
+export const scoringDimensionsSchema = z.object({
+  qualificationFit: z.number().min(0).max(10).nullable(),
+  transferableSkillsFit: z.number().min(0).max(10).nullable(),
+  careerDirectionFit: z.number().min(0).max(10).nullable(),
+  experienceSeniorityFit: z.number().min(0).max(10).nullable(),
+  locationWorkArrangementFit: z.number().min(0).max(10).nullable(),
+});
 
 export const extractedJobSchema = z.object({
   company: z.string().nullable(),
@@ -89,7 +102,12 @@ export const candidateFitSchema = z.object({
 export const analysisResultSchema = z.object({
   opportunityAssessment: opportunityAssessmentSchema,
   candidateFit: candidateFitSchema,
+  scoringDimensions: scoringDimensionsSchema,
+  careerDirectionNote: z.string(),
+  gapSeverity: gapSeveritySchema,
+  recommendationPriority: recommendationPrioritySchema,
   applicationRecommendation: applicationRecommendationSchema,
+  shouldApply: z.string(),
   verdict: verdictSchema,
   nextStep: z.string(),
 });

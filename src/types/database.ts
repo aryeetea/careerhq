@@ -112,6 +112,27 @@ export interface JobAiJobExtraction {
   rawJobText: string;
 }
 
+// Five sub-scores backing the single 0-10 fitScore — see JobAiAnalysisResult
+// and AnalysisSummary's "detailed scoring" section. null = no usable
+// evidence for that dimension (never a guessed number).
+export interface JobAiScoringDimensions {
+  qualificationFit: number | null;
+  transferableSkillsFit: number | null;
+  careerDirectionFit: number | null;
+  experienceSeniorityFit: number | null;
+  locationWorkArrangementFit: number | null;
+}
+
+// How seriously the most significant missing qualification should weigh on
+// the verdict. Only "hard" should push toward not_recommended — see
+// careerCoach.ts SPECIALIZED EXPERIENCE GAPS.
+export type GapSeverity = "none" | "minor" | "moderate" | "major" | "hard";
+
+// Advisory only — separate from both jobs.priority (the user's own manual
+// 1-3 ranking) and applicationRecommendation. Reflects overall application
+// strength, not career-direction fit.
+export type RecommendationPriority = "high" | "normal" | "backup";
+
 export interface JobAiAnalysisResult {
   opportunityAssessment: OpportunityAssessment;
   candidateFit: {
@@ -124,7 +145,16 @@ export interface JobAiAnalysisResult {
     preferredGaps: string[];
     unknowns: string[];
   };
+  // Every fresh analysis includes these, but analyses saved before this
+  // field set existed won't have them in their stored JSONB — always read
+  // with a fallback (`?? null`/`?? []`) rather than trusting the type at
+  // runtime for old rows, same as JobAiJobExtraction.logisticsConsiderations.
+  scoringDimensions: JobAiScoringDimensions;
+  careerDirectionNote: string;
+  gapSeverity: GapSeverity;
+  recommendationPriority: RecommendationPriority;
   applicationRecommendation: ApplicationRecommendation;
+  shouldApply: string;
   verdict: AiJobVerdict;
   nextStep: string;
 }

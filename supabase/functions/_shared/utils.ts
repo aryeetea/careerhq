@@ -158,6 +158,15 @@ export interface CandidatePreferences {
   workArrangementPreference: "remote_only" | "hybrid_ok" | "onsite_ok" | "flexible" | null;
 }
 
+// Mirrors profiles.career_goal / primary_job_titles — the candidate's own
+// stated target career direction, fed to scoringDimensions.careerDirectionFit
+// (see CAREER DIRECTION FIT in careerCoach.ts). Never invented from job
+// history or resume content; only what the candidate explicitly set.
+export interface CandidateCareerDirection {
+  careerGoal: string | null;
+  targetJobTitles: string[];
+}
+
 function withMissingEvidenceUnknowns(existing: string[], context: CandidateEvidenceContext): string[] {
   const unknowns = [...existing];
   if (!context.hasResumeEvidence) unknowns.push("No resume evidence was available to assess your fit.");
@@ -196,6 +205,17 @@ export function normalizeAndValidateAnalysis(response: AnalysisResponse, context
     normalized.analysis.candidateFit.criticalGaps = [];
     normalized.analysis.candidateFit.preferredGaps = [];
     normalized.analysis.candidateFit.unknowns = withMissingEvidenceUnknowns(normalized.analysis.candidateFit.unknowns, context);
+    normalized.analysis.scoringDimensions = {
+      qualificationFit: null,
+      transferableSkillsFit: null,
+      careerDirectionFit: null,
+      experienceSeniorityFit: null,
+      locationWorkArrangementFit: null,
+    };
+    normalized.analysis.careerDirectionNote = "Career direction fit isn't assessed yet — upload or select a resume first.";
+    normalized.analysis.gapSeverity = "none";
+    normalized.analysis.recommendationPriority = "backup";
+    normalized.analysis.shouldApply = "Upload or select a resume to see whether this role is worth applying to.";
     normalized.analysis.verdict = "not_yet_assessed";
     normalized.analysis.applicationRecommendation = "upload_resume_first";
   }
@@ -219,8 +239,58 @@ export function normalizeAndValidateAnalysis(response: AnalysisResponse, context
     issues.push(`${normalized.analysis.verdict} requires actual resume or profile evidence`);
   }
 
-  if (normalized.analysis.verdict === "not_recommended" && confirmedDealBreakers.length === 0 && criticalGapCount === 0) {
-    issues.push("not_recommended requires confirmed hard gaps or clear critical misalignment");
+  // Only a confirmed hard requirement issue or gapSeverity "hard" may
+  // justify not_recommended — critical gaps alone (minor/moderate/major)
+  // are exactly what consider/stretch_opportunity are for. See SPECIALIZED
+  // EXPERIENCE GAPS: "Only HARD GAP situations should strongly push the
+  // recommendation toward NOT RECOMMENDED."
+  if (
+    normalized.analysis.verdict === "not_recommended" &&
+    confirmedDealBreakers.length === 0 &&
+    normalized.analysis.gapSeverity !== "hard"
+  ) {
+    issues.push(
+      `not_recommended requires a confirmed hard requirement issue or gapSeverity "hard" — found ${criticalGapCount} critical gap(s) and gapSeverity "${normalized.analysis.gapSeverity}", which belongs at consider or stretch_opportunity instead`,
+    );
+  }
+
+  // stretch_opportunity ("Stretch") is for significant-but-bridgeable gaps —
+  // not a synonym for an ordinary good application (that's worth_applying
+  // or consider).
+  if (
+    normalized.analysis.verdict === "stretch_opportunity" &&
+    normalized.analysis.gapSeverity !== "major" &&
+    normalized.analysis.gapSeverity !== "hard"
+  ) {
+    issues.push("stretch_opportunity requires gapSeverity major or hard");
+  }
+
+  // recommendationPriority reflects overall application strength — it can't
+  // be "high" for a role Bloom just told the candidate not to pursue.
+  if (normalized.analysis.recommendationPriority === "high" && normalized.analysis.verdict === "not_recommended") {
+    issues.push("recommendationPriority high cannot coexist with verdict not_recommended");
+  }
+
+  // Career direction fit is explicitly NOT allowed to be the sole reason a
+  // verdict goes past consider — see CAREER DIRECTION FIT / VERDICT RULES.
+  // A low careerDirectionFit alongside solid qualification/transferable fit
+  // and no hard requirement issue must not land on stretch_opportunity or
+  // not_recommended.
+  const { qualificationFit, transferableSkillsFit, careerDirectionFit } = normalized.analysis.scoringDimensions;
+  if (
+    (normalized.analysis.verdict === "stretch_opportunity" || normalized.analysis.verdict === "not_recommended") &&
+    careerDirectionFit !== null &&
+    careerDirectionFit <= 6 &&
+    qualificationFit !== null &&
+    qualificationFit >= 7 &&
+    transferableSkillsFit !== null &&
+    transferableSkillsFit >= 7 &&
+    confirmedDealBreakers.length === 0 &&
+    normalized.analysis.gapSeverity !== "hard"
+  ) {
+    issues.push(
+      `verdict "${normalized.analysis.verdict}" appears driven by low careerDirectionFit alone despite strong qualificationFit/transferableSkillsFit and no hard requirement issue — that combination belongs at consider`,
+    );
   }
 
   if (
@@ -384,6 +454,19 @@ export async function getCandidatePreferences(adminClient: any, userId: string):
     relocationPreference: data?.relocation_preference ?? null,
     travelPreference: data?.travel_preference ?? null,
     workArrangementPreference: data?.work_arrangement_preference ?? null,
+  };
+}
+
+// Best-effort, same pattern — feeds scoringDimensions.careerDirectionFit
+// (see CAREER DIRECTION FIT in careerCoach.ts). Empty/missing on both
+// fields means the candidate hasn't stated a direction; the prompt is
+// instructed to return careerDirectionFit null in that case, never a
+// guessed low score.
+export async function getCandidateCareerDirection(adminClient: any, userId: string): Promise<CandidateCareerDirection> {
+  const { data } = await adminClient.from("profiles").select("career_goal,primary_job_titles").eq("id", userId).maybeSingle();
+  return {
+    careerGoal: (data?.career_goal as string | null) ?? null,
+    targetJobTitles: (data?.primary_job_titles as string[] | null) ?? [],
   };
 }
 
@@ -610,13 +693,31 @@ const jobExtractionJsonSchema = {
   },
 } as const;
 
+const scoringDimensionsJsonSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["qualificationFit", "transferableSkillsFit", "careerDirectionFit", "experienceSeniorityFit", "locationWorkArrangementFit"],
+  properties: {
+    qualificationFit: { type: ["number", "null"], minimum: 0, maximum: 10 },
+    transferableSkillsFit: { type: ["number", "null"], minimum: 0, maximum: 10 },
+    careerDirectionFit: { type: ["number", "null"], minimum: 0, maximum: 10 },
+    experienceSeniorityFit: { type: ["number", "null"], minimum: 0, maximum: 10 },
+    locationWorkArrangementFit: { type: ["number", "null"], minimum: 0, maximum: 10 },
+  },
+} as const;
+
 const analysisResultJsonSchema = {
   type: "object",
   additionalProperties: false,
   required: [
     "opportunityAssessment",
     "candidateFit",
+    "scoringDimensions",
+    "careerDirectionNote",
+    "gapSeverity",
+    "recommendationPriority",
     "applicationRecommendation",
+    "shouldApply",
     "verdict",
     "nextStep",
   ],
@@ -646,14 +747,20 @@ const analysisResultJsonSchema = {
         unknowns: { type: "array", items: { type: "string" } },
       },
     },
+    scoringDimensions: scoringDimensionsJsonSchema,
+    careerDirectionNote: { type: "string" },
+    gapSeverity: { type: "string", enum: ["none", "minor", "moderate", "major", "hard"] },
+    recommendationPriority: { type: "string", enum: ["high", "normal", "backup"] },
     applicationRecommendation: { type: "string", enum: ["apply_now", "tailor_first", "consider", "skip", "upload_resume_first"] },
-    // Tighter than the DB/zod verdict enum on purpose: excellent_match,
-    // stretch_opportunity, and high_risk stay valid for old rows and manual
-    // selection (see schemas.ts), but the model itself now only chooses
-    // among these five — see VERDICT RULES in careerCoach.ts.
+    shouldApply: { type: "string" },
+    // Tighter than the DB/zod verdict enum on purpose: excellent_match and
+    // high_risk stay valid for old rows and manual selection (see
+    // schemas.ts), but the model itself only chooses among these six —
+    // see VERDICT RULES in careerCoach.ts. stretch_opportunity ("Stretch")
+    // is active again as the tier between consider and not_recommended.
     verdict: {
       type: "string",
-      enum: ["strong_match", "worth_applying", "consider", "not_recommended", "not_yet_assessed"],
+      enum: ["strong_match", "worth_applying", "consider", "stretch_opportunity", "not_recommended", "not_yet_assessed"],
     },
     nextStep: { type: "string" },
   },
@@ -707,6 +814,7 @@ export async function analyzeJobAndResumes(
   resumes: Array<{ id: string; name: string; target_role: string | null; extracted_text: string }>,
   candidateEvidence: CandidateEvidenceContext,
   candidatePreferences: CandidatePreferences,
+  candidateCareerDirection: CandidateCareerDirection,
 ) {
   const resumePayload = resumes.map((resume) => ({
     resume_id: resume.id,
@@ -741,6 +849,13 @@ export async function analyzeJobAndResumes(
                 relocation: candidatePreferences.relocationPreference,
                 travel: candidatePreferences.travelPreference,
                 work_arrangement: candidatePreferences.workArrangementPreference,
+              },
+              // Empty/null means the candidate hasn't stated a direction —
+              // see CAREER DIRECTION FIT: careerDirectionFit must be null,
+              // never a guessed low score, when this is empty.
+              candidate_career_direction: {
+                career_goal: candidateCareerDirection.careerGoal,
+                target_job_titles: candidateCareerDirection.targetJobTitles,
               },
               resumes: resumePayload,
             },

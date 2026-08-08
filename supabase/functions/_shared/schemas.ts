@@ -10,13 +10,12 @@ export const analyzeJobRequestSchema = z
     message: "Provide a job URL, a pasted description, or a saved job id.",
   });
 
-// The DB enum (job_verdict) and this zod enum both keep the three legacy
-// values (excellent_match, stretch_opportunity, high_risk) so old rows and
-// manual selection keep working — see migration 0040. The AI itself is no
-// longer asked for those three (see analysisResultJsonSchema's stricter
-// `verdict.enum` below and VERDICT RULES in careerCoach.ts); it now only
-// picks among strong_match / worth_applying / consider / not_recommended /
-// not_yet_assessed.
+// The DB enum (job_verdict) and this zod enum keep excellent_match and
+// high_risk as legacy-only values so old rows and manual selection keep
+// working — see migration 0040. stretch_opportunity is active again as the
+// fifth tier ("Stretch" — see VERDICT RULES in careerCoach.ts): strong_match
+// / worth_applying / consider / stretch_opportunity / not_recommended /
+// not_yet_assessed is the full active set the model now picks from.
 const verdictEnum = z.enum([
   "excellent_match",
   "strong_match",
@@ -30,6 +29,31 @@ const verdictEnum = z.enum([
 
 const opportunityAssessmentEnum = z.enum(["promising", "neutral", "risky", "ineligible"]);
 const applicationRecommendationEnum = z.enum(["apply_now", "tailor_first", "consider", "skip", "upload_resume_first"]);
+// How seriously a missing specialized qualification should weigh on the
+// verdict — "none" when there's nothing meaningful missing. Only "hard"
+// (a requirement the candidate cannot reasonably satisfy) should push a
+// verdict toward not_recommended; minor/moderate/major gaps on their own
+// must not.
+const gapSeverityEnum = z.enum(["none", "minor", "moderate", "major", "hard"]);
+// Advisory only, separate from both jobs.priority (the user's own manual
+// 1-3 urgency ranking) and applicationRecommendation (apply_now/tailor_
+// first/…). Reflects how strong an application opportunity this is overall
+// — distinct from careerDirectionFit, since a role outside someone's ideal
+// direction can still be worth a normal or even high-priority application.
+const recommendationPriorityEnum = z.enum(["high", "normal", "backup"]);
+
+// The 0-10 fit score stays the single headline number, but it's now backed
+// by five separate sub-scores so "why" is inspectable rather than one
+// opaque figure. requirementGaps and hardRequirements aren't scores here —
+// they're covered by candidateFit's gap lists and jobExtraction.dealBreakers
+// respectively, so this only covers the five genuinely numeric dimensions.
+export const scoringDimensionsSchema = z.object({
+  qualificationFit: z.number().min(0).max(10).nullable(),
+  transferableSkillsFit: z.number().min(0).max(10).nullable(),
+  careerDirectionFit: z.number().min(0).max(10).nullable(),
+  experienceSeniorityFit: z.number().min(0).max(10).nullable(),
+  locationWorkArrangementFit: z.number().min(0).max(10).nullable(),
+});
 
 // Scoped to genuine hard-eligibility issues only (missing required degree,
 // license, work authorization, a clearly-stated mandatory years-of-experience
@@ -105,7 +129,18 @@ export const candidateFitSchema = z.object({
 export const analysisResultSchema = z.object({
   opportunityAssessment: opportunityAssessmentEnum,
   candidateFit: candidateFitSchema,
+  scoringDimensions: scoringDimensionsSchema,
+  // Short (1-2 sentence), grounded explanation of the careerDirectionFit
+  // number — e.g. why this role sits closer to or further from the
+  // candidate's stated target roles. Never generic filler.
+  careerDirectionNote: z.string(),
+  gapSeverity: gapSeverityEnum,
+  recommendationPriority: recommendationPriorityEnum,
   applicationRecommendation: applicationRecommendationEnum,
+  // A direct, concise answer to "should I apply?" — distinct from nextStep
+  // (the single highest-impact next action). E.g. "Apply if you're
+  // comfortable tailoring your resume toward X, Y, Z."
+  shouldApply: z.string(),
   verdict: verdictEnum,
   nextStep: z.string(),
 });

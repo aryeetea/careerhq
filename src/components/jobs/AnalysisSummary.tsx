@@ -1,7 +1,9 @@
-import { AlertCircle, Sparkles, Target } from "lucide-react";
+import * as React from "react";
+import { AlertCircle, ChevronsUpDown, Sparkles, Target } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
 import {
   ANALYSIS_SOURCE_META,
@@ -9,9 +11,11 @@ import {
   APPLICATION_PRIORITY_META,
   CONFIDENCE_META,
   DEAL_BREAKER_STATUS_META,
+  GAP_SEVERITY_META,
   IMPORT_STATUS_META,
   LOGISTICS_MATCH_META,
   OPPORTUNITY_ASSESSMENT_META,
+  RECOMMENDATION_PRIORITY_META,
   RESUME_SUGGESTION_TYPE_META,
 } from "@/lib/constants";
 import type { JobAnalysisPayload } from "@/lib/ai";
@@ -31,6 +35,28 @@ function ListBlock({ title, items, empty, muted }: { title: string; items: strin
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+// The four headline numbers/badges from the redesign — [VERDICT] [FIT]
+// [PRIORITY] [CAREER DIRECTION]. Kept to just these four so the summary
+// reads at a glance; everything else (sub-scores, résumé ranking, raw
+// metadata) lives in the "Detailed scoring" accordion below.
+function StatTile({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-xl border border-border/60 bg-card/50 px-3 py-2.5">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
+      <div className="mt-1">{children}</div>
+    </div>
+  );
+}
+
+function ScoreTile({ label, value }: { label: string; value: number | null }) {
+  return (
+    <div className="rounded-lg border border-border/50 bg-card/40 px-2.5 py-2">
+      <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="mt-0.5 text-sm font-semibold">{value === null ? "—" : `${value}/10`}</p>
     </div>
   );
 }
@@ -55,39 +81,25 @@ export function AnalysisSummary({
   const recommended = analysis.resumeRanking.find((resume) => resume.resumeId === recommendedResumeId) ?? null;
   const fitScore = analysis.analysis.candidateFit.fitScore;
   const fitNotAssessed = fitScore === null;
+  const priority = RECOMMENDATION_PRIORITY_META[analysis.analysis.recommendationPriority];
+  const gapSeverity = GAP_SEVERITY_META[analysis.analysis.gapSeverity];
+  // Optional: absent on analyses saved before scoringDimensions existed —
+  // never trust the type at runtime for old rows.
+  const scoring = analysis.analysis.scoringDimensions as JobAnalysisPayload["analysis"]["scoringDimensions"] | undefined;
+  const careerDirectionFit = scoring?.careerDirectionFit ?? null;
 
   return (
     <div className="grid gap-3">
       <Card className="border-border/60 bg-card/60">
         <CardContent className="p-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-primary" />
-                <p className="text-sm font-semibold">AI analysis</p>
-              </div>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Imported from {ANALYSIS_SOURCE_META[analysis.source]}.
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge className={cn("border-0", verdict.className)}>{verdict.emoji} {verdict.label}</Badge>
-              <Badge className={cn("border-0", opportunityAssessment.className)}>{opportunityAssessment.label}</Badge>
-              <Badge variant="outline">{fitNotAssessed ? "Fit not assessed yet" : `${fitScore}/10 fit`}</Badge>
-              <Badge className={cn("border-0", applicationPriority.className)}>{applicationPriority.label}</Badge>
-              <span className={cn("text-xs", confidence.className)}>{confidence.label}</span>
-            </div>
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-primary" />
+            <p className="text-sm font-semibold">AI analysis</p>
+            <span className="text-xs text-muted-foreground">· Imported from {ANALYSIS_SOURCE_META[analysis.source]}</span>
           </div>
 
-          <p className="mt-3 rounded-xl bg-secondary/40 p-3 text-sm leading-6 text-foreground/85">{analysis.analysis.candidateFit.explanation}</p>
-
-          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            <span className={cn("font-medium", importStatus.className)}>{importStatus.label}</span>
-            <span>Prompt v{analysis.promptVersion}</span>
-          </div>
-
-          {fitNotAssessed && (
-            <div className="mt-4 rounded-xl border border-gold/30 bg-gold/10 p-3">
+          {fitNotAssessed ? (
+            <div className="mt-3 rounded-xl border border-gold/30 bg-gold/10 p-3">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="flex items-start gap-2">
                   <AlertCircle className="mt-0.5 h-4 w-4 text-gold" />
@@ -103,10 +115,30 @@ export function AnalysisSummary({
                 )}
               </div>
             </div>
+          ) : (
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <StatTile label="Verdict">
+                <Badge className={cn("border-0", verdict.className)}>{verdict.emoji} {verdict.label}</Badge>
+              </StatTile>
+              <StatTile label="Fit">
+                <p className="text-lg font-semibold leading-none">{fitScore}<span className="text-sm font-normal text-muted-foreground">/10</span></p>
+              </StatTile>
+              <StatTile label="Priority">
+                <Badge className={cn("border-0", priority.className)}>{priority.emoji} {priority.label}</Badge>
+              </StatTile>
+              <StatTile label="Career direction">
+                <p className="text-lg font-semibold leading-none">
+                  {careerDirectionFit === null ? "—" : careerDirectionFit}
+                  {careerDirectionFit !== null && <span className="text-sm font-normal text-muted-foreground">/10</span>}
+                </p>
+              </StatTile>
+            </div>
           )}
 
+          <p className="mt-3 rounded-xl bg-secondary/40 p-3 text-sm leading-6 text-foreground/85">{analysis.analysis.candidateFit.explanation}</p>
+
           {recommended && (
-            <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-3">
+            <div className="mt-3 rounded-xl border border-primary/20 bg-primary/5 p-3">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <p className="text-sm font-medium">Recommended resume: {recommended.resumeName}</p>
@@ -123,27 +155,64 @@ export function AnalysisSummary({
         </CardContent>
       </Card>
 
-      <div className="grid gap-3 lg:grid-cols-2">
-        <ListBlock title="Strong matches" items={analysis.analysis.candidateFit.strongMatches} empty="No strong matches were identified from the available evidence." />
-        <ListBlock
-          title="Transferable strengths"
-          items={analysis.analysis.candidateFit.transferableStrengths}
-          empty="No major transferable strengths were highlighted from the available evidence."
-        />
-      </div>
+      <Card className="border-border/60 bg-card/60">
+        <CardContent className="p-4">
+          <p className="text-sm font-semibold">Why you match</p>
+          <div className="mt-3 grid gap-3 lg:grid-cols-2">
+            <ListBlock title="Strong matches" items={analysis.analysis.candidateFit.strongMatches} empty="No strong matches were identified from the available evidence." />
+            <ListBlock
+              title="Transferable strengths"
+              items={analysis.analysis.candidateFit.transferableStrengths}
+              empty="No major transferable strengths were highlighted from the available evidence."
+            />
+          </div>
+        </CardContent>
+      </Card>
 
-      <div className="grid gap-3 lg:grid-cols-2">
-        <ListBlock title="Critical gaps" items={analysis.analysis.candidateFit.criticalGaps} empty="No gaps identified that would meaningfully hurt your chances." />
-        <ListBlock title="Preferred gaps" items={analysis.analysis.candidateFit.preferredGaps} empty="No preferred-only gaps stood out from the available evidence." />
-      </div>
+      <Card className="border-border/60 bg-card/60">
+        <CardContent className="p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm font-semibold">What&apos;s missing</p>
+            {!fitNotAssessed && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                Gap severity
+                <Badge className={cn("border-0", gapSeverity.className)}>{gapSeverity.label}</Badge>
+              </div>
+            )}
+          </div>
+          <div className="mt-3 grid gap-3 lg:grid-cols-2">
+            <ListBlock title="Critical gaps" items={analysis.analysis.candidateFit.criticalGaps} empty="No gaps identified that would meaningfully hurt your chances." />
+            <ListBlock title="Preferred gaps" items={analysis.analysis.candidateFit.preferredGaps} empty="No preferred-only gaps stood out from the available evidence." />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Career direction fit is deliberately separate from qualification —
+          a role can be technically possible and worth applying to even when
+          it's not the candidate's ideal target direction. See
+          careerCoach.ts CAREER DIRECTION FIT. */}
+      {!fitNotAssessed && analysis.analysis.careerDirectionNote && (
+        <Card className="border-border/60 bg-card/60">
+          <CardContent className="p-4">
+            <p className="text-sm font-semibold">Career direction</p>
+            <p className="mt-2 text-sm leading-6 text-foreground/85">{analysis.analysis.careerDirectionNote}</p>
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="border-primary/25 bg-primary/5">
-        <CardContent className="flex items-start gap-3 p-4">
-          <Target className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-primary">Highest-impact next step</p>
-            <p className="mt-1 text-sm leading-6 text-foreground/85">{analysis.analysis.nextStep}</p>
+        <CardContent className="p-4">
+          <div className="flex items-start gap-3">
+            <Target className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-primary">Should I apply?</p>
+              <p className="mt-1 text-sm leading-6 text-foreground/85">{analysis.analysis.shouldApply}</p>
+            </div>
           </div>
+          <p className="mt-3 border-t border-primary/15 pt-3 text-sm leading-6 text-foreground/70">
+            <span className="font-medium text-foreground/85">Next step: </span>
+            {analysis.analysis.nextStep}
+          </p>
         </CardContent>
       </Card>
 
@@ -210,50 +279,76 @@ export function AnalysisSummary({
         />
       )}
 
-      <Card className="border-border/60 bg-card/60">
-        <CardContent className="p-4">
-          <p className="text-sm font-semibold">Resume ranking</p>
-          {analysis.resumeRanking.length === 0 ? (
-            <p className="mt-2 text-sm text-muted-foreground">No active resumes with extractable text were available to compare.</p>
-          ) : (
-            <div className="mt-3 grid gap-2.5">
-              {analysis.resumeRanking.map((resume, index) => (
-                <div key={resume.resumeId} className={cn("rounded-xl border px-3 py-3", selectedResumeId === resume.resumeId ? "border-primary/40 bg-primary/5" : "border-border/60 bg-card/50")}>
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-sm font-medium">
-                      {index + 1}. {resume.resumeName}
-                    </p>
-                    <Badge variant="outline">{resume.compatibilityScore}/100</Badge>
-                  </div>
-                  <p className="mt-1 text-sm text-muted-foreground">{resume.recommendationReason}</p>
-                </div>
-              ))}
+      {/* Everything below is real, but secondary — the five numeric
+          sub-scores behind [FIT], the raw assessment/confidence metadata,
+          and the full résumé breakdown. Collapsed by default so the
+          headline above doesn't get buried in metrics. */}
+      <Accordion type="single" collapsible className="rounded-xl border border-border/60 bg-card/60 px-4">
+        <AccordionItem value="detailed-scoring" className="border-b-0">
+          <AccordionTrigger className="gap-2 text-sm">
+            <span className="flex items-center gap-1.5">
+              <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground" />
+              Detailed scoring &amp; résumé analysis
+            </span>
+          </AccordionTrigger>
+          <AccordionContent className="grid gap-4 pb-4">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+              <ScoreTile label="Qualification" value={scoring?.qualificationFit ?? null} />
+              <ScoreTile label="Transferable" value={scoring?.transferableSkillsFit ?? null} />
+              <ScoreTile label="Career direction" value={scoring?.careerDirectionFit ?? null} />
+              <ScoreTile label="Experience/seniority" value={scoring?.experienceSeniorityFit ?? null} />
+              <ScoreTile label="Location/arrangement" value={scoring?.locationWorkArrangementFit ?? null} />
             </div>
-          )}
-        </CardContent>
-      </Card>
 
-      <Card className="border-border/60 bg-card/60">
-        <CardContent className="p-4">
-          <p className="text-sm font-semibold">Resume improvement suggestions</p>
-          {analysis.resumeSuggestions.length === 0 ? (
-            <p className="mt-2 text-sm text-muted-foreground">No resume-improvement suggestions were needed from the available evidence.</p>
-          ) : (
-            <div className="mt-3 grid gap-2.5">
-              {analysis.resumeSuggestions.map((suggestion, index) => (
-                <div key={`${suggestion.type}-${index}`} className="rounded-xl border border-border/60 bg-card/50 px-3 py-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant="outline">{RESUME_SUGGESTION_TYPE_META[suggestion.type]}</Badge>
-                  </div>
-                  <p className="mt-2 text-sm text-foreground/90">{suggestion.suggestion}</p>
-                  <p className="mt-1 text-sm text-muted-foreground">{suggestion.reason}</p>
-                </div>
-              ))}
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              <Badge className={cn("border-0", opportunityAssessment.className)}>{opportunityAssessment.label}</Badge>
+              <span className={cn("font-medium", confidence.className)}>{confidence.label}</span>
+              <span className={cn("font-medium", importStatus.className)}>{importStatus.label}</span>
+              <span>Prompt v{analysis.promptVersion}</span>
             </div>
-          )}
-        </CardContent>
-      </Card>
 
+            <div>
+              <p className="text-sm font-semibold">Résumé ranking</p>
+              {analysis.resumeRanking.length === 0 ? (
+                <p className="mt-2 text-sm text-muted-foreground">No active resumes with extractable text were available to compare.</p>
+              ) : (
+                <div className="mt-3 grid gap-2.5">
+                  {analysis.resumeRanking.map((resume, index) => (
+                    <div key={resume.resumeId} className={cn("rounded-xl border px-3 py-3", selectedResumeId === resume.resumeId ? "border-primary/40 bg-primary/5" : "border-border/60 bg-card/50")}>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-sm font-medium">
+                          {index + 1}. {resume.resumeName}
+                        </p>
+                        <Badge variant="outline">{resume.compatibilityScore}/100</Badge>
+                      </div>
+                      <p className="mt-1 text-sm text-muted-foreground">{resume.recommendationReason}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <p className="text-sm font-semibold">Résumé improvement suggestions</p>
+              {analysis.resumeSuggestions.length === 0 ? (
+                <p className="mt-2 text-sm text-muted-foreground">No resume-improvement suggestions were needed from the available evidence.</p>
+              ) : (
+                <div className="mt-3 grid gap-2.5">
+                  {analysis.resumeSuggestions.map((suggestion, index) => (
+                    <div key={`${suggestion.type}-${index}`} className="rounded-xl border border-border/60 bg-card/50 px-3 py-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="outline">{RESUME_SUGGESTION_TYPE_META[suggestion.type]}</Badge>
+                      </div>
+                      <p className="mt-2 text-sm text-foreground/90">{suggestion.suggestion}</p>
+                      <p className="mt-1 text-sm text-muted-foreground">{suggestion.reason}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
     </div>
   );
 }

@@ -6,6 +6,7 @@ import {
   errorResponse,
   extractResumeText,
   fetchJobSource,
+  getCandidateCareerDirection,
   getCandidatePreferences,
   getJobForUser,
   getOpenAIClient,
@@ -45,6 +46,7 @@ Deno.serve(async (request) => {
     );
 
     const candidatePreferences = await getCandidatePreferences(adminClient, user.id);
+    const candidateCareerDirection = await getCandidateCareerDirection(adminClient, user.id);
 
     const analysis = await analyzeJobAndResumes(
       openai,
@@ -52,6 +54,7 @@ Deno.serve(async (request) => {
       readyResumes,
       { hasResumeEvidence: readyResumes.length > 0, hasProfileEvidence: false },
       candidatePreferences,
+      candidateCareerDirection,
     );
 
     if (savedJob) {
