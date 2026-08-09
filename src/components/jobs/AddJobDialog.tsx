@@ -205,7 +205,7 @@ export function AddJobDialog({ open, onOpenChange, resumes }: AddJobDialogProps)
               </div>
               <Input id="jobUrl" placeholder="https://linkedin.com/jobs/view/…" {...register("jobUrl")} />
               <p className="text-xs text-muted-foreground" aria-live="polite">
-                {analyzingHint ?? "If the link is blocked or incomplete, paste the job description below and run the analysis again."}
+                {analyzingHint ?? "Indeed, LinkedIn, and Glassdoor block automated imports — if the link doesn't work, paste the job description below and run the analysis again."}
               </p>
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

@@ -366,6 +366,28 @@ function matchMeta(html: string, property: string): string | null {
   return null;
 }
 
+// Indeed, LinkedIn, and Glassdoor all run bot-detection (Akamai/PerimeterX-
+// style) that returns a 403/challenge page to any non-browser fetch —
+// verified directly against a real Indeed job URL, which came back 403
+// regardless of User-Agent. There's no header tweak that reliably gets
+// through this from a server-side fetch, and a headless-browser workaround
+// would be a fragile, ToS-adjacent arms race, not a real fix. The one
+// honest fix is telling the user immediately which site did this and that
+// pasting the description is the reliable path, instead of a generic
+// "couldn't import" message that reads like Bloom's own bug.
+export function knownBlockingSiteName(url: string): string | null {
+  let host: string;
+  try {
+    host = new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return null;
+  }
+  if (host === "indeed.com" || host.endsWith(".indeed.com")) return "Indeed";
+  if (host === "linkedin.com" || host.endsWith(".linkedin.com")) return "LinkedIn";
+  if (host === "glassdoor.com" || host.endsWith(".glassdoor.com")) return "Glassdoor";
+  return null;
+}
+
 export async function fetchJobSource(jobUrl: string | undefined, manualJobDescription: string | undefined) {
   let fetchedText = "";
   let importStatus: "success" | "manual_fallback" = "success";
@@ -394,7 +416,14 @@ export async function fetchJobSource(jobUrl: string | undefined, manualJobDescri
       source = manualJobDescription ? "url_plus_manual" : "url";
     } catch {
       if (!manualJobDescription) {
-        throw new AppError("We couldn't import that URL. Paste the job description to continue.", 422, "validation_error");
+        const blockingSite = knownBlockingSiteName(jobUrl);
+        throw new AppError(
+          blockingSite
+            ? `${blockingSite} blocks automated imports, so Bloom can't fetch this link directly. Paste the job description below and run the analysis again.`
+            : "We couldn't import that URL. Paste the job description to continue.",
+          422,
+          "validation_error",
+        );
       }
       importStatus = "manual_fallback";
       source = "manual";

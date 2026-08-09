@@ -17,7 +17,7 @@
 import { assertEquals, assertThrows } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import { ZodError } from "npm:zod";
 import { analysisResponseSchema, jobExtractionSchema, resumeRankingSchema, resumeSuggestionSchema, type AnalysisResponse } from "../schemas.ts";
-import { AppError, normalizeAndValidateAnalysis, type CandidateEvidenceContext } from "../utils.ts";
+import { AppError, knownBlockingSiteName, normalizeAndValidateAnalysis, type CandidateEvidenceContext } from "../utils.ts";
 import { CAREER_COACH_PROMPT_VERSION, buildAnalysisPrompt, buildCoverLetterPrompt } from "../prompts/careerCoach.ts";
 
 const HAS_EVIDENCE: CandidateEvidenceContext = { hasResumeEvidence: true, hasProfileEvidence: true };
@@ -580,6 +580,31 @@ Deno.test("guard: recommendationPriority high cannot coexist with verdict not_re
       ),
     Error,
   );
+});
+
+// ---------------------------------------------------------------------
+// knownBlockingSiteName — Indeed/LinkedIn/Glassdoor return a 403 to
+// server-side fetches (verified directly against a live Indeed job URL
+// during this investigation) regardless of headers used. This just needs
+// to name the site correctly so fetchJobSource's 422 error is specific
+// instead of a generic "couldn't import" that reads like Bloom's own bug.
+// ---------------------------------------------------------------------
+
+Deno.test("knownBlockingSiteName recognizes Indeed, including www and job-view paths", () => {
+  assertEquals(knownBlockingSiteName("https://www.indeed.com/viewjob?jk=2296af613d86e685"), "Indeed");
+  assertEquals(knownBlockingSiteName("https://indeed.com/jobs?q=engineer"), "Indeed");
+});
+
+Deno.test("knownBlockingSiteName recognizes LinkedIn and Glassdoor, including subdomains", () => {
+  assertEquals(knownBlockingSiteName("https://www.linkedin.com/jobs/view/12345"), "LinkedIn");
+  assertEquals(knownBlockingSiteName("https://de.linkedin.com/jobs/view/12345"), "LinkedIn");
+  assertEquals(knownBlockingSiteName("https://www.glassdoor.com/job-listing/x"), "Glassdoor");
+});
+
+Deno.test("knownBlockingSiteName returns null for unrelated hosts and malformed URLs", () => {
+  assertEquals(knownBlockingSiteName("https://boards.greenhouse.io/acme/jobs/123"), null);
+  assertEquals(knownBlockingSiteName("https://myindeedjobs.example.com/x"), null);
+  assertEquals(knownBlockingSiteName("not a url"), null);
 });
 
 Deno.test("analysisResponseSchema throws ZodError on empty object", () => {

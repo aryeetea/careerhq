@@ -81,12 +81,18 @@ export function AnalysisSummary({
   const recommended = analysis.resumeRanking.find((resume) => resume.resumeId === recommendedResumeId) ?? null;
   const fitScore = analysis.analysis.candidateFit.fitScore;
   const fitNotAssessed = fitScore === null;
-  const priority = RECOMMENDATION_PRIORITY_META[analysis.analysis.recommendationPriority];
-  const gapSeverity = GAP_SEVERITY_META[analysis.analysis.gapSeverity];
-  // Optional: absent on analyses saved before scoringDimensions existed —
-  // never trust the type at runtime for old rows.
+  // scoringDimensions/gapSeverity/recommendationPriority/careerDirectionNote/
+  // shouldApply are all absent on analyses saved before this redesign (or
+  // saved by a browser tab that hadn't picked up this schema yet) — the type
+  // says they're required, but that's only true for freshly-validated
+  // responses, never for old JSONB read back off the row. Fall back to safe
+  // "unknown" values rather than indexing META records with undefined and
+  // crashing the dialog.
+  const priority = RECOMMENDATION_PRIORITY_META[analysis.analysis.recommendationPriority] ?? RECOMMENDATION_PRIORITY_META.normal;
+  const gapSeverity = GAP_SEVERITY_META[analysis.analysis.gapSeverity] ?? GAP_SEVERITY_META.none;
   const scoring = analysis.analysis.scoringDimensions as JobAnalysisPayload["analysis"]["scoringDimensions"] | undefined;
   const careerDirectionFit = scoring?.careerDirectionFit ?? null;
+  const hasNewFields = Boolean(analysis.analysis.scoringDimensions && analysis.analysis.gapSeverity && analysis.analysis.recommendationPriority);
 
   return (
     <div className="grid gap-3">
@@ -124,7 +130,11 @@ export function AnalysisSummary({
                 <p className="text-lg font-semibold leading-none">{fitScore}<span className="text-sm font-normal text-muted-foreground">/10</span></p>
               </StatTile>
               <StatTile label="Priority">
-                <Badge className={cn("border-0", priority.className)}>{priority.emoji} {priority.label}</Badge>
+                {hasNewFields ? (
+                  <Badge className={cn("border-0", priority.className)}>{priority.emoji} {priority.label}</Badge>
+                ) : (
+                  <p className="text-sm text-muted-foreground">—</p>
+                )}
               </StatTile>
               <StatTile label="Career direction">
                 <p className="text-lg font-semibold leading-none">
@@ -133,6 +143,12 @@ export function AnalysisSummary({
                 </p>
               </StatTile>
             </div>
+          )}
+
+          {!fitNotAssessed && !hasNewFields && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              This analysis predates priority/gap-severity scoring — re-run analysis to see it here.
+            </p>
           )}
 
           <p className="mt-3 rounded-xl bg-secondary/40 p-3 text-sm leading-6 text-foreground/85">{analysis.analysis.candidateFit.explanation}</p>
@@ -173,7 +189,7 @@ export function AnalysisSummary({
         <CardContent className="p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm font-semibold">What&apos;s missing</p>
-            {!fitNotAssessed && (
+            {!fitNotAssessed && hasNewFields && (
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 Gap severity
                 <Badge className={cn("border-0", gapSeverity.className)}>{gapSeverity.label}</Badge>
@@ -206,7 +222,9 @@ export function AnalysisSummary({
             <Target className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-primary">Should I apply?</p>
-              <p className="mt-1 text-sm leading-6 text-foreground/85">{analysis.analysis.shouldApply}</p>
+              <p className="mt-1 text-sm leading-6 text-foreground/85">
+                {analysis.analysis.shouldApply || "This analysis predates a direct recommendation — re-run analysis to see one here."}
+              </p>
             </div>
           </div>
           <p className="mt-3 border-t border-primary/15 pt-3 text-sm leading-6 text-foreground/70">
