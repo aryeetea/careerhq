@@ -199,13 +199,24 @@ export function AddJobDialog({ open, onOpenChange, resumes }: AddJobDialogProps)
             <div className="grid gap-1.5">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <Label htmlFor="jobUrl">Job link</Label>
-                <Button type="button" variant="outline" size="sm" onClick={handleAnalyze} disabled={analyzeJob.isPending}>
-                  {analyzeJob.isPending ? "Analyzing…" : "Import & analyze with AI"}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAnalyze}
+                  disabled={analyzeJob.isPending || (!watch("jobUrl")?.trim() && !watch("jobDescription")?.trim())}
+                >
+                  {analyzeJob.isPending
+                    ? "Analyzing…"
+                    : watch("jobUrl")?.trim()
+                      ? "Import & analyze with AI"
+                      : "Analyze pasted description"}
                 </Button>
               </div>
               <Input id="jobUrl" placeholder="https://linkedin.com/jobs/view/…" {...register("jobUrl")} />
               <p className="text-xs text-muted-foreground" aria-live="polite">
-                {analyzingHint ?? "Indeed, LinkedIn, and Glassdoor block automated imports — if the link doesn't work, paste the job description below and run the analysis again."}
+                {analyzingHint ??
+                  "Indeed, LinkedIn, and Glassdoor block automated imports. You don't need a link at all — paste the full job description below and analyze that directly."}
               </p>
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
