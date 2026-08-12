@@ -30,7 +30,12 @@ export function computeDashboardStats(jobs: Job[]): DashboardStats {
   monthAgo.setMonth(now.getMonth() - 1);
 
   const applied = jobs.filter((j) => j.date_applied);
-  const jobsSaved = jobs.length;
+  // Jobs currently sitting at "Saved" — not a lifetime count of everything
+  // ever added. A job that's moved on to Applied (or any later stage)
+  // belongs in that bucket, not this one; counting it in both would make
+  // "Jobs saved" look inflated and disconnected from the Board's Saved
+  // column right next to it.
+  const jobsSaved = jobs.filter((j) => j.status === "saved").length;
   const applicationsSubmitted = applied.length;
   const interviews = jobs.filter((j) => j.status === "interview" || j.status === "final_interview").length;
   const offers = jobs.filter((j) => j.status === "offer").length;
