@@ -39,6 +39,10 @@ function normalizeAuthError(error: unknown) {
       return new Error("We couldn't find an account with that email. Try creating one instead.");
     }
 
+    if (normalized.includes("token has expired") || normalized.includes("token is invalid") || normalized.includes("otp")) {
+      return new Error("That code is incorrect or has expired. Request a new one and try again.");
+    }
+
     if (normalized.includes("network") || normalized.includes("fetch")) {
       return new Error("Bloom couldn't reach the server. Check your connection and try again.");
     }
@@ -122,6 +126,27 @@ export async function updatePassword(newPassword: string) {
     await ensureActiveSession();
     const { error } = await supabase.auth.updateUser({ password: newPassword });
     if (error) throw error;
+  } catch (error) {
+    throw normalizeAuthError(error);
+  }
+}
+
+// The code-entry alternative to the emailed reset link (see ForgotPassword.tsx
+// and requestPasswordReset above — same resetPasswordForEmail() call sends
+// both; which one the user sees depends on the "Reset Password" email
+// template configured in the Supabase dashboard). A link is single-use and
+// gets silently burned if an email provider's security scanner prefetches
+// it before the user ever clicks — this sidesteps that entirely, since a
+// 6-digit code typed by hand is never fetched by anything but the user.
+// verifyOtp() itself establishes the recovery session, so this needs no
+// prior session the way updatePassword() (reached via the link) does.
+export async function resetPasswordWithOtp(email: string, token: string, newPassword: string) {
+  assertSupabaseConfigured();
+  try {
+    const { error: verifyError } = await supabase.auth.verifyOtp({ email, token, type: "recovery" });
+    if (verifyError) throw verifyError;
+    const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+    if (updateError) throw updateError;
   } catch (error) {
     throw normalizeAuthError(error);
   }

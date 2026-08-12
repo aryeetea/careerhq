@@ -31,6 +31,19 @@ export const resetPasswordSchema = z
   .refine((v) => v.password === v.confirmPassword, { message: "Passwords don't match", path: ["confirmPassword"] });
 export type ResetPasswordValues = z.infer<typeof resetPasswordSchema>;
 
+// The code-entry step of password reset — see ForgotPassword.tsx. Six
+// digits, matching Supabase's email OTP length. Trimmed so a stray space
+// from copy-pasting out of the email doesn't fail validation.
+export const otpCodeSchema = z
+  .string()
+  .trim()
+  .regex(/^\d{6}$/, "Enter the 6-digit code from your email");
+
+export const resetPasswordWithOtpSchema = z
+  .object({ token: otpCodeSchema, password: passwordSchema, confirmPassword: z.string() })
+  .refine((v) => v.password === v.confirmPassword, { message: "Passwords don't match", path: ["confirmPassword"] });
+export type ResetPasswordWithOtpValues = z.infer<typeof resetPasswordWithOtpSchema>;
+
 export const usernameSchema = z
   .string()
   .trim()
