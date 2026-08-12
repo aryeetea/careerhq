@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { queryKeys } from "@/lib/queryClient";
+import { useRealtimeTable } from "@/hooks/useRealtimeTable";
 import * as profilesService from "@/services/profiles";
 import { logActivity } from "@/services/activity";
 import type { PrivacySettings, Profile, Settings } from "@/types/database";
@@ -12,6 +13,33 @@ export function useProfile() {
     queryKey: queryKeys.profile(userId),
     queryFn: () => profilesService.getProfile(userId),
     enabled: Boolean(userId),
+  });
+}
+
+// Mounted once in RealtimeSync (see AppShell) so a profile field edited in
+// another tab or on another device — "Today's thought" chief among them,
+// since it's meant to be jotted down quickly and often — shows up here
+// without a manual reload. Every other realtime-backed domain (jobs,
+// journal, friends, groups, goals) already had this; profiles was the one
+// gap. Filtered to this user's own row (`id`, profiles' primary key, not
+// `user_id`) — profiles are readable cross-user for the friends/community
+// features, and an unfiltered subscription would otherwise fire for every
+// other visible profile too.
+export function useProfileRealtime() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  const userId = user?.id ?? "";
+
+  useRealtimeTable<Profile>({
+    channel: `profile:${userId}`,
+    table: "profiles",
+    filter: userId ? `id=eq.${userId}` : undefined,
+    enabled: Boolean(userId),
+    onChange: (payload) => {
+      if (payload.eventType === "UPDATE") {
+        qc.setQueryData<Profile>(queryKeys.profile(userId), payload.new as Profile);
+      }
+    },
   });
 }
 
