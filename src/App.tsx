@@ -1,5 +1,5 @@
-import { lazy, Suspense } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Suspense, type ReactNode } from "react";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { AuthProvider } from "@/hooks/useAuth";
@@ -11,6 +11,7 @@ import { RequireOnboarding } from "@/routes/RequireOnboarding";
 import { AppShell } from "@/components/layout/AppShell";
 import { FullScreenSpinner } from "@/components/shared/FullScreenSpinner";
 import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
+import { lazyWithRetry } from "@/lib/lazyWithRetry";
 
 import Landing from "@/pages/Landing";
 import About from "@/pages/About";
@@ -24,22 +25,41 @@ import LegacyFriendLink from "@/pages/LegacyFriendLink";
 
 // Route-level code splitting: everything past the marketing/auth pages is
 // lazy-loaded so first paint only ships what a signed-out visitor needs.
-const Onboarding = lazy(() => import("@/pages/Onboarding"));
-const Dashboard = lazy(() => import("@/pages/Dashboard"));
-const Applications = lazy(() => import("@/pages/Applications"));
-const ProfilePage = lazy(() => import("@/pages/Profile"));
-const PeopleProfile = lazy(() => import("@/pages/PeopleProfile"));
-const Resumes = lazy(() => import("@/pages/Resumes"));
-const Certifications = lazy(() => import("@/pages/Certifications"));
-const CommunityLayout = lazy(() => import("@/pages/community/CommunityLayout"));
-const CommunityFriends = lazy(() => import("@/pages/community/CommunityFriends"));
-const CommunityGroups = lazy(() => import("@/pages/community/CommunityGroups"));
-const CommunityInvites = lazy(() => import("@/pages/community/CommunityInvites"));
-const GroupDetail = lazy(() => import("@/pages/GroupDetail"));
-const Goals = lazy(() => import("@/pages/Goals"));
-const Journal = lazy(() => import("@/pages/Journal"));
-const SettingsPage = lazy(() => import("@/pages/Settings"));
-const NotFound = lazy(() => import("@/pages/NotFound"));
+// lazyWithRetry (not React's plain lazy) because a chunk that 404s — a
+// stale tab open across a deploy, or a one-off network blip — otherwise
+// leaves that route permanently broken until a manual reload: React.lazy
+// caches the rejected import() and keeps re-throwing it on every retry.
+// See src/lib/lazyWithRetry.ts.
+const Onboarding = lazyWithRetry(() => import("@/pages/Onboarding"));
+const Dashboard = lazyWithRetry(() => import("@/pages/Dashboard"));
+const Applications = lazyWithRetry(() => import("@/pages/Applications"));
+const ProfilePage = lazyWithRetry(() => import("@/pages/Profile"));
+const PeopleProfile = lazyWithRetry(() => import("@/pages/PeopleProfile"));
+const Resumes = lazyWithRetry(() => import("@/pages/Resumes"));
+const Certifications = lazyWithRetry(() => import("@/pages/Certifications"));
+const CommunityLayout = lazyWithRetry(() => import("@/pages/community/CommunityLayout"));
+const CommunityFriends = lazyWithRetry(() => import("@/pages/community/CommunityFriends"));
+const CommunityGroups = lazyWithRetry(() => import("@/pages/community/CommunityGroups"));
+const CommunityInvites = lazyWithRetry(() => import("@/pages/community/CommunityInvites"));
+const GroupDetail = lazyWithRetry(() => import("@/pages/GroupDetail"));
+const Goals = lazyWithRetry(() => import("@/pages/Goals"));
+const Journal = lazyWithRetry(() => import("@/pages/Journal"));
+const SettingsPage = lazyWithRetry(() => import("@/pages/Settings"));
+const NotFound = lazyWithRetry(() => import("@/pages/NotFound"));
+
+// Resets the app-level ErrorBoundary on every route change. Without this,
+// ErrorBoundary sits above <Routes> and is never remounted by React Router,
+// so one bad render (a stale chunk, a one-off crash) leaves every future
+// navigation stuck on the same "Something broke" screen — keyed by pathname
+// so only an actual navigation clears it, not e.g. a tab switch re-render.
+function RouteErrorBoundary({ children }: { children: ReactNode }) {
+  const location = useLocation();
+  return (
+    <ErrorBoundary key={location.pathname} variant="app">
+      {children}
+    </ErrorBoundary>
+  );
+}
 
 export default function App() {
   return (
@@ -50,7 +70,7 @@ export default function App() {
             <AuthProvider>
               <BrowserRouter>
                 <Suspense fallback={<FullScreenSpinner />}>
-                <ErrorBoundary variant="app">
+                <RouteErrorBoundary>
                   <Routes>
                     <Route path="/" element={<Landing />} />
                     <Route path="/about" element={<About />} />
@@ -104,7 +124,7 @@ export default function App() {
 
                     <Route path="*" element={<NotFound />} />
                   </Routes>
-                </ErrorBoundary>
+                </RouteErrorBoundary>
                 </Suspense>
               </BrowserRouter>
             </AuthProvider>
