@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { QuickThoughtEditor } from "@/components/profile/QuickThoughtEditor";
+import { DailyEncouragement } from "@/components/shared/DailyEncouragement";
 import { CareerGoalCard } from "@/components/profile/CareerGoalCard";
 import { SkillsRow } from "@/components/profile/SkillsRow";
 import { ProgressSection } from "@/components/profile/ProgressSection";
@@ -117,6 +118,9 @@ export default function ProfilePage() {
             <div>
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Today's thought</p>
               <QuickThoughtEditor value={profile.status_message} />
+              <div className="mt-2.5">
+                <DailyEncouragement variant="profile" />
+              </div>
             </div>
 
             <div>

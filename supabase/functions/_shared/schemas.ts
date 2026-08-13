@@ -178,8 +178,14 @@ export const suggestProfileCopyResponseSchema = z.object({
   reason: z.string(),
 });
 
+export const dailyEncouragementResponseSchema = z.object({
+  dashboardMessage: z.string().min(1).max(400),
+  profileMessage: z.string().min(1).max(600),
+});
+
 export type AnalyzeJobRequest = z.infer<typeof analyzeJobRequestSchema>;
 export type AnalysisResponse = z.infer<typeof analysisResponseSchema>;
 export type CoverLetterRequest = z.infer<typeof coverLetterRequestSchema>;
 export type SuggestProfileCopyRequest = z.infer<typeof suggestProfileCopyRequestSchema>;
 export type SuggestProfileCopyResponse = z.infer<typeof suggestProfileCopyResponseSchema>;
+export type DailyEncouragementResponse = z.infer<typeof dailyEncouragementResponseSchema>;

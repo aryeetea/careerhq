@@ -11,6 +11,7 @@ import { ErrorState } from "@/components/shared/ErrorState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { GoalProgress } from "@/components/dashboard/GoalProgress";
+import { DailyEncouragement } from "@/components/shared/DailyEncouragement";
 import { MiniBarChart } from "@/components/dashboard/MiniBarChart";
 import { UpcomingList, type UpcomingRow } from "@/components/dashboard/UpcomingList";
 import { AddJobDialog } from "@/components/jobs/AddJobDialog";
@@ -107,6 +108,10 @@ export default function Dashboard() {
 
       <PageContent>
         <PageContainer>
+        <div className="mb-4">
+          <DailyEncouragement variant="dashboard" />
+        </div>
+
         {isError ? (
           <ErrorState description="Your dashboard couldn't load. Your data is safe — try again." onRetry={() => refetch()} />
         ) : isLoading ? (

@@ -44,4 +44,9 @@ export const queryKeys = {
   suggestedFriends: (userId: string) => ["suggested-friends", userId] as const,
   peopleProfile: (userId: string, preview?: string) => ["people-profile", userId, preview ?? "live"] as const,
   journalEntries: (userId: string) => ["journal-entries", userId] as const,
+  // Keyed by calendar day (local time) as well as user — once the date
+  // rolls over, this key changes and react-query treats it as a fresh,
+  // uncached query, which is what naturally triggers tomorrow's message
+  // instead of yesterday's staying stuck in the cache.
+  dailyEncouragement: (userId: string, dayKey: string) => ["daily-encouragement", userId, dayKey] as const,
 };

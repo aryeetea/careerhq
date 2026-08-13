@@ -182,3 +182,9 @@ export const suggestProfileCopyResponseSchema = z.object({
   reason: z.string(),
 });
 export type SuggestProfileCopyResponse = z.infer<typeof suggestProfileCopyResponseSchema>;
+
+export const dailyEncouragementResponseSchema = z.object({
+  dashboardMessage: z.string(),
+  profileMessage: z.string(),
+});
+export type DailyEncouragementResponse = z.infer<typeof dailyEncouragementResponseSchema>;

@@ -1,12 +1,14 @@
 import { invokeEdgeFunction } from "@/lib/edgeFunctions";
 import {
   analyzeJobRequestSchema,
+  dailyEncouragementResponseSchema,
   generateCoverLetterRequestSchema,
   generateCoverLetterResponseSchema,
   jobAnalysisPayloadSchema,
   suggestProfileCopyRequestSchema,
   suggestProfileCopyResponseSchema,
   type AnalyzeJobRequest,
+  type DailyEncouragementResponse,
   type GenerateCoverLetterRequest,
   type GenerateCoverLetterResponse,
   type JobAnalysisPayload,
@@ -33,4 +35,12 @@ export async function suggestProfileCopy(request: SuggestProfileCopyRequest): Pr
   const payload = suggestProfileCopyRequestSchema.parse(request);
   const data = await invokeEdgeFunction<unknown>("suggest-profile-copy", payload);
   return suggestProfileCopyResponseSchema.parse(data);
+}
+
+// One AI call produces both the Dashboard and Profile messages together —
+// the edge function itself caches per (user, calendar day), so calling
+// this from both pages on the same day never triggers a second AI call.
+export async function getDailyEncouragement(): Promise<DailyEncouragementResponse> {
+  const data = await invokeEdgeFunction<unknown>("generate-daily-encouragement", {});
+  return dailyEncouragementResponseSchema.parse(data);
 }
