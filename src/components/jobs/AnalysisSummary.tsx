@@ -54,8 +54,8 @@ function StatTile({ label, children }: { label: string; children: React.ReactNod
 
 function ScoreTile({ label, value }: { label: string; value: number | null }) {
   return (
-    <div className="rounded-lg border border-border/50 bg-card/40 px-2.5 py-2">
-      <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+    <div className="min-w-0 rounded-lg border border-border/50 bg-card/40 px-2.5 py-2">
+      <p className="break-words text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className="mt-0.5 text-sm font-semibold">{value === null ? "—" : `${value}/10`}</p>
     </div>
   );
