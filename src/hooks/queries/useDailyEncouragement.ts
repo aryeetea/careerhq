@@ -19,9 +19,20 @@ function localDayKey(): string {
 export function useDailyEncouragement() {
   const { user } = useAuth();
   const userId = user?.id ?? "";
+  // Computed once and reused for both the cache key and the request body —
+  // the edge function used to compute "today" itself from its own server
+  // clock (UTC), while this key is the user's local calendar date. Anyone
+  // not near UTC had a multi-hour window each day (from their local
+  // midnight until UTC's) where this hook already considered it a new day
+  // and asked for a fresh message, but the server was still mid-way through
+  // "yesterday" and handed back the cached row from before — the message
+  // looked stuck instead of refreshing. Sending the same date the cache key
+  // is built from means the server's cache partition always agrees with
+  // what the client already decided "today" is.
+  const dayKey = localDayKey();
   return useQuery({
-    queryKey: queryKeys.dailyEncouragement(userId, localDayKey()),
-    queryFn: () => aiService.getDailyEncouragement(),
+    queryKey: queryKeys.dailyEncouragement(userId, dayKey),
+    queryFn: () => aiService.getDailyEncouragement(dayKey),
     enabled: Boolean(userId),
     staleTime: 60 * 60 * 1000,
     retry: 1,

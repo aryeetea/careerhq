@@ -183,6 +183,14 @@ export const suggestProfileCopyResponseSchema = z.object({
 });
 export type SuggestProfileCopyResponse = z.infer<typeof suggestProfileCopyResponseSchema>;
 
+export const dailyEncouragementRequestSchema = z.object({
+  // The caller's local calendar date (YYYY-MM-DD), not the server's UTC
+  // date — see useDailyEncouragement for why this has to travel with the
+  // request instead of being computed server-side.
+  localDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+});
+export type DailyEncouragementRequest = z.infer<typeof dailyEncouragementRequestSchema>;
+
 export const dailyEncouragementResponseSchema = z.object({
   dashboardMessage: z.string(),
   profileMessage: z.string(),

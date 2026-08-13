@@ -1,5 +1,5 @@
 import { corsHeaders, json } from "../_shared/cors.ts";
-import { dailyEncouragementResponseSchema } from "../_shared/schemas.ts";
+import { dailyEncouragementRequestSchema, dailyEncouragementResponseSchema } from "../_shared/schemas.ts";
 import { buildDailyEncouragementPrompt, type DailyEncouragementContext } from "../_shared/prompts/dailyEncouragement.ts";
 import { AppError, enforceRateLimit, errorResponse, getOpenAIClient, requireUser } from "../_shared/utils.ts";
 
@@ -91,7 +91,22 @@ Deno.serve(async (request) => {
 
   try {
     const { user, adminClient } = await requireUser(request.headers.get("Authorization"));
-    const todayKey = new Date().toISOString().slice(0, 10);
+    // The caller's own local calendar date, not this server's UTC clock —
+    // without this, anyone not near UTC had a multi-hour window each day
+    // (from their local midnight until UTC's) where the client already
+    // considered it a new day and asked for a fresh message, but this
+    // function was still mid-way through "yesterday" by its own clock and
+    // handed back the previous day's cached row. That's what looked like
+    // the message never refreshing. Falls back to the server's UTC date
+    // only if the request is missing it (older client, direct API call).
+    let todayKey = new Date().toISOString().slice(0, 10);
+    try {
+      const body = await request.json();
+      const parsed = dailyEncouragementRequestSchema.safeParse(body);
+      if (parsed.success) todayKey = parsed.data.localDate;
+    } catch {
+      // No/invalid JSON body — fall back to the UTC date computed above.
+    }
 
     // Cache hit — today's pair already exists, never re-call the model.
     // Keeps repeat page loads and having Dashboard + Profile both open in

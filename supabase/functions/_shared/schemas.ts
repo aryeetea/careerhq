@@ -178,6 +178,14 @@ export const suggestProfileCopyResponseSchema = z.object({
   reason: z.string(),
 });
 
+export const dailyEncouragementRequestSchema = z.object({
+  // The caller's local calendar date (YYYY-MM-DD) — the cache partition
+  // key has to agree with whatever "today" the client already used to
+  // build its own cache key, not the server's UTC clock. See
+  // useDailyEncouragement.ts on the client for the full reasoning.
+  localDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+});
+
 export const dailyEncouragementResponseSchema = z.object({
   dashboardMessage: z.string().min(1).max(400),
   profileMessage: z.string().min(1).max(600),
@@ -188,4 +196,5 @@ export type AnalysisResponse = z.infer<typeof analysisResponseSchema>;
 export type CoverLetterRequest = z.infer<typeof coverLetterRequestSchema>;
 export type SuggestProfileCopyRequest = z.infer<typeof suggestProfileCopyRequestSchema>;
 export type SuggestProfileCopyResponse = z.infer<typeof suggestProfileCopyResponseSchema>;
+export type DailyEncouragementRequest = z.infer<typeof dailyEncouragementRequestSchema>;
 export type DailyEncouragementResponse = z.infer<typeof dailyEncouragementResponseSchema>;

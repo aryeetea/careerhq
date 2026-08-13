@@ -1,51 +1,19 @@
-import * as React from "react";
-import { ChevronLeft, ChevronRight, Lock } from "lucide-react";
+import { Lock } from "lucide-react";
 import { computeGardenStages } from "@/lib/garden";
 import { cn, formatDate } from "@/lib/utils";
 import type { Job, Resume } from "@/types/database";
 
-const DESKTOP_CARD_WIDTH = 224;
-
 // Content only, no outer card — the visual centerpiece of the merged
-// Progress section (see ProgressSection.tsx).
+// Progress section (see ProgressSection.tsx). A single vertical list at
+// every screen size — this used to be a horizontal-scrolling carousel on
+// desktop (with its own left/right buttons), which meant seeing every
+// milestone required sliding it. A plain stacked list needs no scroll
+// gesture at all; the page just scrolls vertically like everything else
+// on Profile.
 export function BloomGarden({ jobs, resumes, accountCreatedAt }: { jobs: Job[]; resumes: Resume[]; accountCreatedAt: string }) {
   const stages = computeGardenStages(jobs, resumes, accountCreatedAt);
   const blossomedCount = stages.filter((stage) => stage.unlocked).length;
   const nextStage = stages.find((stage) => stage.isNext) ?? null;
-  const trackRef = React.useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = React.useState(false);
-  const [canScrollRight, setCanScrollRight] = React.useState(false);
-
-  const updateScrollState = React.useCallback(() => {
-    const node = trackRef.current;
-    if (!node) return;
-    const maxScrollLeft = node.scrollWidth - node.clientWidth;
-    setCanScrollLeft(node.scrollLeft > 8);
-    setCanScrollRight(node.scrollLeft < maxScrollLeft - 8);
-  }, []);
-
-  React.useEffect(() => {
-    updateScrollState();
-  }, [updateScrollState, stages.length]);
-
-  React.useEffect(() => {
-    const node = trackRef.current;
-    if (!node) return;
-    const onScroll = () => updateScrollState();
-    node.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", updateScrollState);
-    return () => {
-      node.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", updateScrollState);
-    };
-  }, [updateScrollState]);
-
-  function scrollTrack(direction: "left" | "right") {
-    const node = trackRef.current;
-    if (!node) return;
-    const amount = Math.max(node.clientWidth - 120, DESKTOP_CARD_WIDTH + 24);
-    node.scrollBy({ left: direction === "left" ? -amount : amount, behavior: "smooth" });
-  }
 
   return (
     <div className="pt-1">
@@ -61,129 +29,32 @@ export function BloomGarden({ jobs, resumes, accountCreatedAt }: { jobs: Job[]; 
         </p>
       </div>
 
-      <div className="mt-8 hidden lg:block">
-        <div className="mb-4 flex items-center justify-end gap-2">
-          <TrackButton
-            direction="left"
-            disabled={!canScrollLeft}
-            onClick={() => scrollTrack("left")}
-            label="Scroll Bloom Garden milestones left"
-          />
-          <TrackButton
-            direction="right"
-            disabled={!canScrollRight}
-            onClick={() => scrollTrack("right")}
-            label="Scroll Bloom Garden milestones right"
-          />
-        </div>
-
-        <div className="relative">
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute left-0 right-0 top-[6.6rem] h-[3px] rounded-full bg-border/55"
-          />
-          <div
-            ref={trackRef}
-            tabIndex={0}
-            role="region"
-            aria-label="Bloom Garden milestone track"
-            className="overflow-x-auto pb-3 outline-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
-          >
-            <div className="flex min-w-max gap-6 pr-2">
-              {stages.map((stage, index) => (
-                <GardenStageCard key={stage.key} stage={stage} index={index} orientation="desktop" />
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-8 grid gap-4 lg:hidden">
+      <div className="mt-8 grid gap-4">
         {stages.map((stage, index) => (
-          <GardenStageCard key={stage.key} stage={stage} index={index} orientation="mobile" />
+          <GardenStageCard key={stage.key} stage={stage} index={index} />
         ))}
       </div>
     </div>
   );
 }
 
-function TrackButton({
-  direction,
-  disabled,
-  onClick,
-  label,
-}: {
-  direction: "left" | "right";
-  disabled: boolean;
-  onClick: () => void;
-  label: string;
-}) {
-  const Icon = direction === "left" ? ChevronLeft : ChevronRight;
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      disabled={disabled}
-      onClick={onClick}
-      className={cn(
-        "flex h-10 w-10 items-center justify-center rounded-full border border-border/70 bg-background/80 text-foreground shadow-soft transition-colors",
-        disabled ? "cursor-not-allowed text-muted-foreground/50" : "hover:border-primary/35 hover:text-primary"
-      )}
-    >
-      <Icon className="h-4 w-4" />
-    </button>
-  );
-}
-
-function GardenStageCard({
-  stage,
-  index,
-  orientation,
-}: {
-  stage: ReturnType<typeof computeGardenStages>[number];
-  index: number;
-  orientation: "desktop" | "mobile";
-}) {
+function GardenStageCard({ stage, index }: { stage: ReturnType<typeof computeGardenStages>[number]; index: number }) {
   const state = stage.unlocked ? "complete" : stage.isNext ? "next" : "locked";
 
   return (
-    <div
-      className={cn(
-        "relative",
-        orientation === "desktop" ? "w-56 shrink-0 pt-10" : "pl-16"
-      )}
-    >
-      {orientation === "desktop" ? (
-        <>
-          {index < 6 && (
-            <div
-              aria-hidden="true"
-              className={cn(
-                "absolute left-[calc(100%-0.5rem)] top-[6.55rem] h-[3px] w-8 rounded-full",
-                state === "complete" ? "bg-primary/65" : "bg-border/60"
-              )}
-            />
+    <div className="relative pl-16">
+      {index < 6 && (
+        <div
+          aria-hidden="true"
+          className={cn(
+            "absolute left-[1.7rem] top-[5.8rem] h-[calc(100%+0.9rem)] border-l-[3px] border-dashed",
+            state === "complete" ? "border-primary/55" : "border-border/65"
           )}
-          <div className="absolute left-5 top-0 z-10">
-            <PlantStageIcon stageIndex={index} state={state} />
-          </div>
-        </>
-      ) : (
-        <>
-          {index < 6 && (
-            <div
-              aria-hidden="true"
-              className={cn(
-                "absolute left-[1.7rem] top-[5.8rem] h-[calc(100%+0.9rem)] border-l-[3px] border-dashed",
-                state === "complete" ? "border-primary/55" : "border-border/65"
-              )}
-            />
-          )}
-          <div className="absolute left-0 top-0 z-10">
-            <PlantStageIcon stageIndex={index} state={state} compact />
-          </div>
-        </>
+        />
       )}
+      <div className="absolute left-0 top-0 z-10">
+        <PlantStageIcon stageIndex={index} state={state} />
+      </div>
 
       <article
         className={cn(
@@ -228,15 +99,7 @@ function GardenStageCard({
   );
 }
 
-function PlantStageIcon({
-  stageIndex,
-  state,
-  compact = false,
-}: {
-  stageIndex: number;
-  state: "complete" | "next" | "locked";
-  compact?: boolean;
-}) {
+function PlantStageIcon({ stageIndex, state }: { stageIndex: number; state: "complete" | "next" | "locked" }) {
   const bloom = stageIndex >= 4;
   const leaves = Math.min(stageIndex + 1, 4);
   const active = state !== "locked";
@@ -244,12 +107,11 @@ function PlantStageIcon({
   return (
     <div
       className={cn(
-        "rounded-[28px] border border-white/55 bg-[radial-gradient(circle_at_top,_rgba(219,181,117,0.24),_transparent_58%),linear-gradient(180deg,rgba(255,255,255,0.92),rgba(255,255,255,0.44))] shadow-soft",
-        compact ? "p-1.5" : "p-2.5",
+        "rounded-[28px] border border-white/55 bg-[radial-gradient(circle_at_top,_rgba(219,181,117,0.24),_transparent_58%),linear-gradient(180deg,rgba(255,255,255,0.92),rgba(255,255,255,0.44))] p-1.5 shadow-soft",
         state === "next" && "ring-2 ring-primary/20 motion-reduce:ring-1"
       )}
     >
-      <svg viewBox="0 0 84 84" className={cn(compact ? "h-16 w-16" : "h-20 w-20")} aria-hidden="true">
+      <svg viewBox="0 0 84 84" className="h-16 w-16" aria-hidden="true">
         <defs>
           <linearGradient id={`stem-${stageIndex}`} x1="0%" y1="0%" x2="0%" y2="100%">
             <stop offset="0%" stopColor={active ? "#7ea86d" : "#aeb4ab"} />
