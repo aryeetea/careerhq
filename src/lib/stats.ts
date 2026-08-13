@@ -4,6 +4,21 @@ function toDayKey(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
+// Monday 00:00 local time of the current calendar week — matches Postgres'
+// date_trunc('week', current_date) (ISO week, Monday start), which is what
+// weekly_progress uses server-side for the friends/groups leaderboard. The
+// Dashboard's "this week" goal has to use the same boundary, or a goal that
+// wasn't met by Sunday night silently keeps "counting" into the new week
+// instead of resetting — nothing here would ever look like the week ended.
+function startOfWeek(d: Date): Date {
+  const start = new Date(d);
+  const day = start.getDay(); // 0 = Sunday .. 6 = Saturday
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+  start.setDate(start.getDate() + diffToMonday);
+  start.setHours(0, 0, 0, 0);
+  return start;
+}
+
 export interface DashboardStats {
   jobsSaved: number;
   applicationsSubmitted: number;
@@ -24,8 +39,7 @@ export interface DashboardStats {
 
 export function computeDashboardStats(jobs: Job[]): DashboardStats {
   const now = new Date();
-  const weekAgo = new Date(now);
-  weekAgo.setDate(now.getDate() - 7);
+  const weekStart = startOfWeek(now);
   const monthAgo = new Date(now);
   monthAgo.setMonth(now.getMonth() - 1);
 
@@ -44,7 +58,7 @@ export function computeDashboardStats(jobs: Job[]): DashboardStats {
     (j) => j.status === "applied" && j.date_applied && now.getTime() - new Date(j.date_applied).getTime() >= 14 * 86400000
   ).length;
 
-  const applicationsThisWeek = applied.filter((j) => new Date(j.date_applied!) >= weekAgo).length;
+  const applicationsThisWeek = applied.filter((j) => new Date(j.date_applied!) >= weekStart).length;
   const applicationsThisMonth = applied.filter((j) => new Date(j.date_applied!) >= monthAgo).length;
 
   const responded = applied.filter((j) => ["interview", "final_interview", "offer", "rejected"].includes(j.status)).length;
