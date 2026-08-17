@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { jobFormSchema, type JobFormValues } from "@/lib/validation";
@@ -254,7 +254,14 @@ export function AddJobDialog({ open, onOpenChange, resumes }: AddJobDialogProps)
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="jobDescription">Job description</Label>
-              <Textarea id="jobDescription" rows={5} placeholder="Paste the full job description here…" {...register("jobDescription")} />
+              <AutoResizeTextarea
+                id="jobDescription"
+                minRows={5}
+                maxHeight={480}
+                placeholder="Paste the full job description here…"
+                value={watch("jobDescription") ?? ""}
+                onChange={(e) => setValue("jobDescription", e.target.value, { shouldDirty: true })}
+              />
             </div>
           </div>
 
@@ -413,15 +420,33 @@ export function AddJobDialog({ open, onOpenChange, resumes }: AddJobDialogProps)
               <AccordionContent className="grid gap-3">
                 <div className="grid gap-1.5">
                   <Label htmlFor="strengths">Strengths</Label>
-                  <Textarea id="strengths" rows={2} {...register("strengths")} />
+                  <AutoResizeTextarea
+                    id="strengths"
+                    minRows={2}
+                    maxHeight={320}
+                    value={watch("strengths") ?? ""}
+                    onChange={(e) => setValue("strengths", e.target.value, { shouldDirty: true })}
+                  />
                 </div>
                 <div className="grid gap-1.5">
                   <Label htmlFor="missingQualifications">Missing qualifications</Label>
-                  <Textarea id="missingQualifications" rows={2} {...register("missingQualifications")} />
+                  <AutoResizeTextarea
+                    id="missingQualifications"
+                    minRows={2}
+                    maxHeight={320}
+                    value={watch("missingQualifications") ?? ""}
+                    onChange={(e) => setValue("missingQualifications", e.target.value, { shouldDirty: true })}
+                  />
                 </div>
                 <div className="grid gap-1.5">
                   <Label htmlFor="notes">Personal notes</Label>
-                  <Textarea id="notes" rows={2} {...register("notes")} />
+                  <AutoResizeTextarea
+                    id="notes"
+                    minRows={2}
+                    maxHeight={320}
+                    value={watch("notes") ?? ""}
+                    onChange={(e) => setValue("notes", e.target.value, { shouldDirty: true })}
+                  />
                 </div>
               </AccordionContent>
             </AccordionItem>

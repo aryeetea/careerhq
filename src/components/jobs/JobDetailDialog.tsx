@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
@@ -376,7 +377,13 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
               </div>
               <div className="grid gap-1.5">
                 <Label htmlFor="d-jobDescription">Job description</Label>
-                <Textarea id="d-jobDescription" rows={6} {...register("jobDescription")} />
+                <AutoResizeTextarea
+                  id="d-jobDescription"
+                  minRows={6}
+                  maxHeight={480}
+                  value={watch("jobDescription") ?? ""}
+                  onChange={(e) => setValue("jobDescription", e.target.value, { shouldDirty: true })}
+                />
               </div>
             </TabsContent>
 
@@ -446,15 +453,33 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
               </div>
               <div className="grid gap-1.5">
                 <Label htmlFor="d-strengths">Strengths</Label>
-                <Textarea id="d-strengths" rows={3} {...register("strengths")} />
+                <AutoResizeTextarea
+                  id="d-strengths"
+                  minRows={3}
+                  maxHeight={320}
+                  value={watch("strengths") ?? ""}
+                  onChange={(e) => setValue("strengths", e.target.value, { shouldDirty: true })}
+                />
               </div>
               <div className="grid gap-1.5">
                 <Label htmlFor="d-missingQualifications">Missing qualifications</Label>
-                <Textarea id="d-missingQualifications" rows={3} {...register("missingQualifications")} />
+                <AutoResizeTextarea
+                  id="d-missingQualifications"
+                  minRows={3}
+                  maxHeight={320}
+                  value={watch("missingQualifications") ?? ""}
+                  onChange={(e) => setValue("missingQualifications", e.target.value, { shouldDirty: true })}
+                />
               </div>
               <div className="grid gap-1.5">
                 <Label htmlFor="d-notes">Personal notes</Label>
-                <Textarea id="d-notes" rows={3} {...register("notes")} />
+                <AutoResizeTextarea
+                  id="d-notes"
+                  minRows={3}
+                  maxHeight={320}
+                  value={watch("notes") ?? ""}
+                  onChange={(e) => setValue("notes", e.target.value, { shouldDirty: true })}
+                />
               </div>
             </TabsContent>
 
