@@ -164,66 +164,20 @@ export default function Dashboard() {
         ) : (
           <>
             <div data-tour="dashboard-overview" className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <StatCard
-                icon={Bookmark}
-                label="Jobs saved"
-                value={stats.jobsSaved}
-                accent="bg-slate-400/15 text-slate-500"
-                to="/app/applications"
-                state={{ initialStatus: "saved" }}
-              />
-              <StatCard
-                icon={Send}
-                label="Applications sent"
-                value={stats.applicationsSubmitted}
-                accent="bg-primary/15 text-primary"
-                to="/app/applications"
-              />
-              <StatCard
-                icon={Users}
-                label="Interviews"
-                value={stats.interviews}
-                accent="bg-lavender/20 text-lavender-foreground"
-                to="/app/applications"
-              />
-              <StatCard
-                icon={Trophy}
-                label="Offers"
-                value={stats.offers}
-                accent="bg-success/15 text-success"
-                to="/app/applications"
-                state={{ initialStatus: "offer" }}
-              />
-              <StatCard
-                icon={XCircle}
-                label="Rejections"
-                value={stats.rejections}
-                accent="bg-destructive/15 text-destructive"
-                to="/app/applications"
-                state={{ initialStatus: "rejected" }}
-              />
-              <StatCard
-                icon={CalendarCheck2}
-                label="Follow-ups due"
-                value={followUpsDue}
-                accent="bg-gold/15 text-gold"
-                onClick={() => document.getElementById("upcoming-follow-ups")?.scrollIntoView({ behavior: "smooth", block: "start" })}
-              />
+              <StatCard icon={Bookmark} label="Jobs saved" value={stats.jobsSaved} accent="bg-slate-400/15 text-slate-500" to="/app/dashboard/jobs-saved" />
+              <StatCard icon={Send} label="Applications sent" value={stats.applicationsSubmitted} accent="bg-primary/15 text-primary" to="/app/dashboard/applications-sent" />
+              <StatCard icon={Users} label="Interviews" value={stats.interviews} accent="bg-lavender/20 text-lavender-foreground" to="/app/dashboard/interviews" />
+              <StatCard icon={Trophy} label="Offers" value={stats.offers} accent="bg-success/15 text-success" to="/app/dashboard/offers" />
+              <StatCard icon={XCircle} label="Rejections" value={stats.rejections} accent="bg-destructive/15 text-destructive" to="/app/dashboard/rejections" />
+              <StatCard icon={CalendarCheck2} label="Follow-ups due" value={followUpsDue} accent="bg-gold/15 text-gold" to="/app/dashboard/follow-ups-due" />
               <StatCard
                 icon={TrendingUp}
                 label="Response rate"
                 value={hasUsefulResponseRate ? `${stats.responseRate}%` : "—"}
                 accent="bg-sky/15 text-sky"
-                to="/app/applications"
+                to="/app/dashboard/response-rate"
               />
-              <StatCard
-                icon={CalendarClock}
-                label="No response in 14 days"
-                value={stats.noResponse}
-                accent="bg-zinc-400/15 text-zinc-500"
-                to="/app/applications"
-                state={{ initialStatus: "applied" }}
-              />
+              <StatCard icon={CalendarClock} label="No response in 14 days" value={stats.noResponse} accent="bg-zinc-400/15 text-zinc-500" to="/app/dashboard/no-response" />
             </div>
 
             <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -243,14 +197,12 @@ export default function Dashboard() {
             </div>
 
             <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-              <div id="upcoming-follow-ups" className="scroll-mt-6">
-                <UpcomingList
-                  title="Upcoming follow-ups"
-                  rows={upcomingFollowUps}
-                  emptyMessage="Nothing on the horizon right now. Enjoy the quiet."
-                  icon={<CalendarClock className="h-4 w-4 text-gold" />}
-                />
-              </div>
+              <UpcomingList
+                title="Upcoming follow-ups"
+                rows={upcomingFollowUps}
+                emptyMessage="Nothing on the horizon right now. Enjoy the quiet."
+                icon={<CalendarClock className="h-4 w-4 text-gold" />}
+              />
               <UpcomingList
                 title="Upcoming interviews"
                 rows={upcomingInterviews}

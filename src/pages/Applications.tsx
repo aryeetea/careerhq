@@ -1,5 +1,4 @@
 import * as React from "react";
-import { useLocation } from "react-router-dom";
 import { DndContext, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { Plus, KanbanSquare } from "lucide-react";
 import { TopBar } from "@/components/layout/TopBar";
@@ -37,14 +36,6 @@ function defaultView(): ApplicationsView {
   return window.matchMedia?.("(max-width: 1023px)").matches ? "list" : "board";
 }
 
-// A dashboard stat card (e.g. "Offers") links here with this in router
-// state so the board opens already scoped to what was clicked, instead of
-// landing on the full unfiltered list and making the user re-select the
-// same status by hand.
-interface ApplicationsNavState {
-  initialStatus?: JobStatus;
-}
-
 export default function Applications() {
   const { data: jobs = [], isLoading, isError, refetch } = useJobs();
   const { data: resumes = [] } = useResumes();
@@ -54,13 +45,9 @@ export default function Applications() {
   const moveJob = useMoveJob();
   const { push } = useToast();
   const { celebrate } = useCelebration();
-  const location = useLocation();
 
   const [view, setView] = React.useState<ApplicationsView>(defaultView);
-  const [filters, setFilters] = React.useState<JobFilters>(() => {
-    const initialStatus = (location.state as ApplicationsNavState | null)?.initialStatus;
-    return initialStatus ? { ...DEFAULT_FILTERS, status: initialStatus } : DEFAULT_FILTERS;
-  });
+  const [filters, setFilters] = React.useState<JobFilters>(DEFAULT_FILTERS);
   const [addOpen, setAddOpen] = React.useState(false);
   // Holds only the id, not the job object — the object is derived fresh
   // from `jobs` below on every render. Keeping the whole object in state

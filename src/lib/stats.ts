@@ -98,3 +98,95 @@ export function getUpcomingInterviews(jobs: Job[], limit = 5): Job[] {
     .sort((a, b) => new Date(b.interview_date!).getTime() - new Date(a.interview_date!).getTime())
     .slice(0, limit);
 }
+
+export type DashboardStatKind =
+  | "jobs-saved"
+  | "applications-sent"
+  | "interviews"
+  | "offers"
+  | "rejections"
+  | "follow-ups-due"
+  | "response-rate"
+  | "no-response";
+
+export const DASHBOARD_STAT_META: Record<DashboardStatKind, { title: string; description: string; emptyMessage: string }> = {
+  "jobs-saved": {
+    title: "Jobs saved",
+    description: "Roles you've saved but haven't applied to yet.",
+    emptyMessage: "Nothing saved right now — roles you bookmark to apply to later show up here.",
+  },
+  "applications-sent": {
+    title: "Applications sent",
+    description: "Every role you've applied to, most recent first.",
+    emptyMessage: "Nothing applied to yet.",
+  },
+  interviews: {
+    title: "Interviews",
+    description: "Roles currently at an interview or final-interview stage.",
+    emptyMessage: "No interviews in progress right now.",
+  },
+  offers: {
+    title: "Offers",
+    description: "Roles that have made you an offer.",
+    emptyMessage: "No offers yet — they'll show up here the moment one comes in.",
+  },
+  rejections: {
+    title: "Rejections",
+    description: "Roles that passed. Each one is evidence you applied, not evidence of anything about you.",
+    emptyMessage: "No rejections logged.",
+  },
+  "follow-ups-due": {
+    title: "Follow-ups due",
+    description: "Roles with a follow-up date today or earlier.",
+    emptyMessage: "Nothing due right now. Enjoy the quiet.",
+  },
+  "response-rate": {
+    title: "Response rate",
+    description: "Applications that heard back — an interview, an offer, or a rejection.",
+    emptyMessage: "No responses yet.",
+  },
+  "no-response": {
+    title: "No response in 14 days",
+    description: "Still sitting at \"Applied\" two weeks or more after you sent it — a factual signal, not a verdict.",
+    emptyMessage: "Nothing's gone quiet for 14+ days.",
+  },
+};
+
+// Backs the dedicated detail page each Dashboard stat card links to.
+// Deliberately mirrors the predicates in computeDashboardStats above
+// (rather than that function returning arrays it then .length's) so the
+// number on the card and the list behind it can never drift apart — see
+// the last7Days/applicationsThisWeek mismatch this app already hit once.
+export function getJobsForStatKind(jobs: Job[], kind: DashboardStatKind): Job[] {
+  const now = new Date();
+  switch (kind) {
+    case "jobs-saved":
+      return jobs.filter((j) => j.status === "saved");
+    case "applications-sent":
+      return jobs
+        .filter((j) => j.date_applied)
+        .sort((a, b) => new Date(b.date_applied!).getTime() - new Date(a.date_applied!).getTime());
+    case "interviews":
+      return jobs.filter((j) => j.status === "interview" || j.status === "final_interview");
+    case "offers":
+      return jobs.filter((j) => j.status === "offer");
+    case "rejections":
+      return jobs.filter((j) => j.status === "rejected");
+    case "follow-ups-due": {
+      const today = toDayKey(now);
+      return jobs
+        .filter((j) => j.follow_up_date && j.follow_up_date.slice(0, 10) <= today)
+        .sort((a, b) => a.follow_up_date!.localeCompare(b.follow_up_date!));
+    }
+    case "response-rate":
+      return jobs
+        .filter((j) => j.date_applied && ["interview", "final_interview", "offer", "rejected"].includes(j.status))
+        .sort((a, b) => new Date(b.date_applied!).getTime() - new Date(a.date_applied!).getTime());
+    case "no-response":
+      return jobs.filter(
+        (j) => j.status === "applied" && j.date_applied && now.getTime() - new Date(j.date_applied).getTime() >= 14 * 86400000
+      );
+    default:
+      return [];
+  }
+}

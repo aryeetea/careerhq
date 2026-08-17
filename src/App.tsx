@@ -32,6 +32,7 @@ import LegacyFriendLink from "@/pages/LegacyFriendLink";
 // See src/lib/lazyWithRetry.ts.
 const Onboarding = lazyWithRetry(() => import("@/pages/Onboarding"));
 const Dashboard = lazyWithRetry(() => import("@/pages/Dashboard"));
+const DashboardStatDetail = lazyWithRetry(() => import("@/pages/DashboardStatDetail"));
 const Applications = lazyWithRetry(() => import("@/pages/Applications"));
 const ProfilePage = lazyWithRetry(() => import("@/pages/Profile"));
 const PeopleProfile = lazyWithRetry(() => import("@/pages/PeopleProfile"));
@@ -93,6 +94,7 @@ export default function App() {
                       <Route element={<RequireOnboarding />}>
                         <Route path="/app" element={<AppShell />}>
                           <Route index element={<Dashboard />} />
+                          <Route path="dashboard/:kind" element={<DashboardStatDetail />} />
                           <Route path="applications" element={<Applications />} />
                           <Route path="profile" element={<ProfilePage />} />
                           <Route path="people/:userId" element={<PeopleProfile />} />
