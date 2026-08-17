@@ -71,16 +71,16 @@ async function createMessages(openai: ReturnType<typeof getOpenAIClient>, contex
   return dailyEncouragementResponseSchema.parse(parsedText);
 }
 
-// Monday 00:00 UTC of the current week — mirrors src/lib/stats.ts'
-// startOfWeek (ISO week, Monday start), which is itself matched to
-// Postgres' date_trunc('week', current_date) used by sync_weekly_progress.
-// Keeping this in step means "this week" in the AI's message always agrees
-// with what the Dashboard shows, rather than the two silently drifting.
-function startOfWeekUtc(d: Date): Date {
-  const start = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
-  const day = start.getUTCDay();
-  const diffToMonday = day === 0 ? -6 : 1 - day;
-  start.setUTCDate(start.getUTCDate() + diffToMonday);
+// Trailing 7 days, not a Monday-Sunday calendar week — mirrors
+// src/lib/stats.ts' applicationsThisWeek. A calendar-week version of both
+// was tried; it made "this week" numbers jump the instant a new week
+// began (yesterday's applications suddenly not counting), which read as
+// broken rather than correct. Keeping this in step with stats.ts means
+// "this week" in the AI's message always agrees with what the Dashboard
+// shows, rather than the two silently drifting.
+function sevenDaysAgo(d: Date): Date {
+  const start = new Date(d);
+  start.setUTCDate(start.getUTCDate() - 7);
   return start;
 }
 
@@ -127,7 +127,7 @@ Deno.serve(async (request) => {
     // client retry loop still reaching OpenAI every time.
     await enforceRateLimit(adminClient, user.id, "daily_encouragement", 24 * 60 * 60 * 1000, 5);
 
-    const weekStart = startOfWeekUtc(new Date()).toISOString();
+    const weekStart = sevenDaysAgo(new Date()).toISOString();
 
     const [{ data: profile }, applicationsThisWeekRes, totalAppliedRes, totalInterviewsRes, totalOffersRes, recentHistoryRes, streakRes] =
       await Promise.all([

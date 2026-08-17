@@ -4,21 +4,6 @@ function toDayKey(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-// Monday 00:00 local time of the current calendar week — matches Postgres'
-// date_trunc('week', current_date) (ISO week, Monday start), which is what
-// weekly_progress uses server-side for the friends/groups leaderboard. The
-// Dashboard's "this week" goal has to use the same boundary, or a goal that
-// wasn't met by Sunday night silently keeps "counting" into the new week
-// instead of resetting — nothing here would ever look like the week ended.
-function startOfWeek(d: Date): Date {
-  const start = new Date(d);
-  const day = start.getDay(); // 0 = Sunday .. 6 = Saturday
-  const diffToMonday = day === 0 ? -6 : 1 - day;
-  start.setDate(start.getDate() + diffToMonday);
-  start.setHours(0, 0, 0, 0);
-  return start;
-}
-
 export interface DashboardStats {
   jobsSaved: number;
   applicationsSubmitted: number;
@@ -30,19 +15,25 @@ export interface DashboardStats {
    * rather than a judgmental "Ghosted" label — nothing is ever auto-marked
    * ghosted. */
   noResponse: number;
+  /** Trailing 7 calendar days (today inclusive), not a Monday-Sunday
+   * calendar week. A calendar-week version of this was tried — it made the
+   * goal card "properly reset" on Monday, but in practice that meant
+   * applications from two days ago could vanish from "this week" the
+   * instant a new week began, which read as broken rather than correct.
+   * A rolling window never has that jump: yesterday's applications still
+   * count today, they just age out one day at a time. last7Days below uses
+   * the same window so the two "this week" widgets always agree. */
   applicationsThisWeek: number;
   applicationsThisMonth: number;
   responseRate: number;
   currentStreak: number;
-  /** Monday-Sunday of the current calendar week, same boundary as
-   * applicationsThisWeek — not a trailing 7-day window. Days later in the
-   * week that haven't happened yet are just 0. */
-  thisWeekDays: { date: string; count: number }[];
+  last7Days: { date: string; count: number }[];
 }
 
 export function computeDashboardStats(jobs: Job[]): DashboardStats {
   const now = new Date();
-  const weekStart = startOfWeek(now);
+  const weekAgo = new Date(now);
+  weekAgo.setDate(now.getDate() - 7);
   const monthAgo = new Date(now);
   monthAgo.setMonth(now.getMonth() - 1);
 
@@ -61,7 +52,7 @@ export function computeDashboardStats(jobs: Job[]): DashboardStats {
     (j) => j.status === "applied" && j.date_applied && now.getTime() - new Date(j.date_applied).getTime() >= 14 * 86400000
   ).length;
 
-  const applicationsThisWeek = applied.filter((j) => new Date(j.date_applied!) >= weekStart).length;
+  const applicationsThisWeek = applied.filter((j) => new Date(j.date_applied!) >= weekAgo).length;
   const applicationsThisMonth = applied.filter((j) => new Date(j.date_applied!) >= monthAgo).length;
 
   const responded = applied.filter((j) => ["interview", "final_interview", "offer", "rejected"].includes(j.status)).length;
@@ -76,22 +67,12 @@ export function computeDashboardStats(jobs: Job[]): DashboardStats {
     cursor.setDate(cursor.getDate() - 1);
   }
 
-  // Monday through Sunday of the SAME calendar week applicationsThisWeek
-  // uses above — not a trailing 7-calendar-day window. Those used to be the
-  // same thing by construction, but once applicationsThisWeek switched to a
-  // real calendar week (so the goal card actually resets on Monday), a
-  // rolling window here started disagreeing with it: on the first day of a
-  // new week, this would still show bars from last Thu/Fri/Sat while the
-  // goal card had already reset to counting only today — two cards both
-  // labeled "this week" telling visibly different stories. Days later in
-  // the current week that haven't happened yet just render as 0, same as
-  // any day with no applications.
-  const thisWeekDays: { date: string; count: number }[] = [];
-  for (let i = 0; i <= 6; i++) {
-    const d = new Date(weekStart);
-    d.setDate(weekStart.getDate() + i);
+  const last7Days: { date: string; count: number }[] = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(now.getDate() - i);
     const key = toDayKey(d);
-    thisWeekDays.push({ date: key, count: appliedDays.has(key) ? applied.filter((j) => toDayKey(new Date(j.date_applied!)) === key).length : 0 });
+    last7Days.push({ date: key, count: appliedDays.has(key) ? applied.filter((j) => toDayKey(new Date(j.date_applied!)) === key).length : 0 });
   }
 
   return {
@@ -105,7 +86,7 @@ export function computeDashboardStats(jobs: Job[]): DashboardStats {
     applicationsThisMonth,
     responseRate,
     currentStreak,
-    thisWeekDays,
+    last7Days,
   };
 }
 
