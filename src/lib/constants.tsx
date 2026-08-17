@@ -19,14 +19,14 @@ import type {
 
 export const UNSET_SELECT_VALUE = "__unset__";
 
-// "applying", "ghosted", and "closed" stay in this map (and in the
-// JobStatus type) purely so any legacy row still renders a label instead
-// of crashing — none of the three is selectable anywhere in the app
+// "applying", "ghosted", "closed", and "archived" stay in this map (and in
+// the JobStatus type) purely so any legacy row still renders a label
+// instead of crashing — none of the four is selectable anywhere in the app
 // anymore. New applications go straight from Saved to Applied (date_applied
 // is the meaningful signal, not a separate in-progress status); "ghosted"
 // was a guess dressed up as a fact, and Dashboard now shows a factual "no
-// response in 14 days" count instead; "closed" was redundant with
-// "Archived," which already means "no longer actively tracking this."
+// response in 14 days" count instead; "closed" and "archived" were both
+// redundant with "Rejected" as a catch-all for "no longer active."
 export const STATUS_META: Record<JobStatus, { label: string; dot: string; badge: string }> = {
   saved: { label: "Saved", dot: "bg-slate-400", badge: "bg-slate-400/15 text-slate-500" },
   applying: { label: "Applying", dot: "bg-sky", badge: "bg-sky/15 text-sky" },
@@ -42,10 +42,7 @@ export const STATUS_META: Record<JobStatus, { label: string; dot: string; badge:
   archived: { label: "Archived", dot: "bg-neutral-300", badge: "bg-neutral-300/15 text-neutral-400" },
 };
 
-// The columns shown on the Kanban board by default. "archived" is a real
-// status (selectable everywhere else) but is hidden from the board by
-// default to avoid eight near-empty columns — users can re-enable it from
-// the column-visibility menu.
+// The columns shown on the Kanban board by default.
 export const DEFAULT_BOARD_COLUMNS: EditableJobStatus[] = [
   "saved",
   "applied",
@@ -55,8 +52,8 @@ export const DEFAULT_BOARD_COLUMNS: EditableJobStatus[] = [
 ];
 
 // The selectable status set everywhere in the app (board columns, status
-// pickers, filters). Deliberately excludes "applying", "ghosted", and
-// "closed" — see the note on STATUS_META above.
+// pickers, filters). Deliberately excludes "applying", "ghosted", "closed",
+// and "archived" — see the note on STATUS_META above.
 export const ALL_BOARD_COLUMNS: EditableJobStatus[] = [
   "saved",
   "applied",
@@ -66,7 +63,6 @@ export const ALL_BOARD_COLUMNS: EditableJobStatus[] = [
   "final_interview",
   "offer",
   "rejected",
-  "archived",
 ];
 
 export const JOB_STATUSES: { value: EditableJobStatus; label: string }[] = ALL_BOARD_COLUMNS.map((s) => ({
@@ -76,7 +72,7 @@ export const JOB_STATUSES: { value: EditableJobStatus; label: string }[] = ALL_B
 
 export function normalizeEditableJobStatus(status: JobStatus): EditableJobStatus {
   if (status === "applying") return "saved";
-  if (status === "ghosted" || status === "closed") return "archived";
+  if (status === "ghosted" || status === "closed" || status === "archived") return "rejected";
   return status;
 }
 

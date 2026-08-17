@@ -15,15 +15,15 @@ export const EDITABLE_JOB_STATUSES = [
   "final_interview",
   "offer",
   "rejected",
-  "archived",
 ] as const;
 
 export type EditableJobStatus = (typeof EDITABLE_JOB_STATUSES)[number];
 
 // "closed" retired alongside "applying"/"ghosted" — see STATUS_META in
-// constants.tsx for why. "Archived" already covers the same "no longer
-// actively tracking this" meaning, so the two were redundant.
-export type LegacyJobStatus = "applying" | "ghosted" | "closed";
+// constants.tsx for why. "archived" retired the same way after it — an
+// extra bucket for "no longer active" wasn't pulling its weight next to
+// "Rejected," which already means that.
+export type LegacyJobStatus = "applying" | "ghosted" | "closed" | "archived";
 
 export type JobStatus = EditableJobStatus | LegacyJobStatus;
 
