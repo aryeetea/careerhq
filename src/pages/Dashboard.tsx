@@ -189,7 +189,7 @@ export default function Dashboard() {
                 <CardContent className="p-5">
                   <p className="text-sm font-semibold">Applications this week</p>
                   <div className="mt-4">
-                    <MiniBarChart data={stats.last7Days} />
+                    <MiniBarChart data={stats.thisWeekDays} />
                   </div>
                 </CardContent>
               </Card>

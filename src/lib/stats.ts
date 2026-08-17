@@ -34,7 +34,10 @@ export interface DashboardStats {
   applicationsThisMonth: number;
   responseRate: number;
   currentStreak: number;
-  last7Days: { date: string; count: number }[];
+  /** Monday-Sunday of the current calendar week, same boundary as
+   * applicationsThisWeek — not a trailing 7-day window. Days later in the
+   * week that haven't happened yet are just 0. */
+  thisWeekDays: { date: string; count: number }[];
 }
 
 export function computeDashboardStats(jobs: Job[]): DashboardStats {
@@ -73,12 +76,22 @@ export function computeDashboardStats(jobs: Job[]): DashboardStats {
     cursor.setDate(cursor.getDate() - 1);
   }
 
-  const last7Days: { date: string; count: number }[] = [];
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(now);
-    d.setDate(now.getDate() - i);
+  // Monday through Sunday of the SAME calendar week applicationsThisWeek
+  // uses above — not a trailing 7-calendar-day window. Those used to be the
+  // same thing by construction, but once applicationsThisWeek switched to a
+  // real calendar week (so the goal card actually resets on Monday), a
+  // rolling window here started disagreeing with it: on the first day of a
+  // new week, this would still show bars from last Thu/Fri/Sat while the
+  // goal card had already reset to counting only today — two cards both
+  // labeled "this week" telling visibly different stories. Days later in
+  // the current week that haven't happened yet just render as 0, same as
+  // any day with no applications.
+  const thisWeekDays: { date: string; count: number }[] = [];
+  for (let i = 0; i <= 6; i++) {
+    const d = new Date(weekStart);
+    d.setDate(weekStart.getDate() + i);
     const key = toDayKey(d);
-    last7Days.push({ date: key, count: appliedDays.has(key) ? applied.filter((j) => toDayKey(new Date(j.date_applied!)) === key).length : 0 });
+    thisWeekDays.push({ date: key, count: appliedDays.has(key) ? applied.filter((j) => toDayKey(new Date(j.date_applied!)) === key).length : 0 });
   }
 
   return {
@@ -92,7 +105,7 @@ export function computeDashboardStats(jobs: Job[]): DashboardStats {
     applicationsThisMonth,
     responseRate,
     currentStreak,
-    last7Days,
+    thisWeekDays,
   };
 }
 
