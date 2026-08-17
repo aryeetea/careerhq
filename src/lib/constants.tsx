@@ -148,7 +148,7 @@ export const DEAL_BREAKER_STATUS_META: Record<
   "confirmed" | "possible" | "insufficient_information",
   { label: string; className: string }
 > = {
-  confirmed: { label: "Confirmed", className: "bg-muted text-muted-foreground" },
+  confirmed: { label: "Confirmed", className: "bg-success/15 text-success" },
   possible: { label: "Possible", className: "bg-gold/15 text-gold" },
   insufficient_information: { label: "Needs confirmation", className: "bg-destructive/15 text-destructive" },
 };
