@@ -74,10 +74,15 @@ export const logisticsConsiderationSchema = z.object({
 // SCAM RED FLAGS in careerCoach.ts for the full rubric and AnalysisSummary
 // for how this renders. "high"/"medium" risk is meant to prompt caution,
 // never phrased as a certainty the AI can't back up from the text alone.
+// webCheck reflects a real web search run server-side after the model call
+// (see enrichCompanyLegitimacyWithWebCheck in the edge function's shared
+// utils.ts) — "not_checked" when the company name was unknown or the
+// search API wasn't reachable, never a reason the whole analysis fails.
 export const companyLegitimacySchema = z.object({
   riskLevel: z.enum(["none", "low", "medium", "high"]),
   redFlags: z.array(z.string()),
   note: z.string(),
+  webCheck: z.enum(["confirmed_presence", "no_presence_found", "not_checked"]),
 });
 
 export const aiJobExtractionSchema = z.object({

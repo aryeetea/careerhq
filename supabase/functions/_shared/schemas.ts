@@ -81,11 +81,16 @@ export const logisticsConsiderationSchema = z.object({
 
 // Pattern-matching on the posting text for common job-scam indicators —
 // not a verification the company actually exists. See SCAM RED FLAGS in
-// careerCoach.ts.
+// careerCoach.ts. webCheck is NOT something the model produces — the model
+// only ever returns riskLevel/redFlags/note; webCheck defaults to
+// "not_checked" here purely so parsing the model's raw output succeeds,
+// then enrichCompanyLegitimacyWithWebCheck (utils.ts) overwrites it with
+// the real result of an actual web search after the model call returns.
 export const companyLegitimacySchema = z.object({
   riskLevel: z.enum(["none", "low", "medium", "high"]),
   redFlags: z.array(z.string()),
   note: z.string(),
+  webCheck: z.enum(["confirmed_presence", "no_presence_found", "not_checked"]).optional().default("not_checked"),
 });
 
 export const resumeRankingSchema = z.object({

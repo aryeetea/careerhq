@@ -3,6 +3,7 @@ import { analyzeJobRequestSchema } from "../_shared/schemas.ts";
 import {
   analyzeJobAndResumes,
   enforceRateLimit,
+  enrichCompanyLegitimacyWithWebCheck,
   errorResponse,
   extractResumeText,
   fetchJobSource,
@@ -48,7 +49,7 @@ Deno.serve(async (request) => {
     const candidatePreferences = await getCandidatePreferences(adminClient, user.id);
     const candidateCareerDirection = await getCandidateCareerDirection(adminClient, user.id);
 
-    const analysis = await analyzeJobAndResumes(
+    const rawAnalysis = await analyzeJobAndResumes(
       openai,
       jobSource,
       readyResumes,
@@ -56,6 +57,11 @@ Deno.serve(async (request) => {
       candidatePreferences,
       candidateCareerDirection,
     );
+    // A real web search on top of the model's text-only read of the
+    // posting (see SCAM RED FLAGS in careerCoach.ts) — never throws, so a
+    // search-API hiccup degrades to the text-only result instead of
+    // failing the whole analysis.
+    const analysis = await enrichCompanyLegitimacyWithWebCheck(rawAnalysis);
 
     if (savedJob) {
       const recommendedResumeId = analysis.recommendedResumeId;

@@ -96,6 +96,10 @@ export interface JobAiCompanyLegitimacy {
   riskLevel: "none" | "low" | "medium" | "high";
   redFlags: string[];
   note: string;
+  // "not_checked" on analyses run before the real web-search check existed,
+  // or when the search itself failed/wasn't configured — never treated as
+  // a red flag on its own.
+  webCheck: "confirmed_presence" | "no_presence_found" | "not_checked";
 }
 
 export interface JobAiJobExtraction {

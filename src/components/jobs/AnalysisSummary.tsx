@@ -1,5 +1,5 @@
 import * as React from "react";
-import { AlertCircle, ChevronsUpDown, ShieldAlert, Sparkles, Target } from "lucide-react";
+import { AlertCircle, ChevronsUpDown, Search, ShieldAlert, Sparkles, Target } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -263,6 +263,19 @@ export function AnalysisSummary({
                 </ul>
               )}
               <p className="mt-2.5 text-sm leading-6 text-foreground/80">{legitimacy.note}</p>
+              {/* Transparency on what actually backs this: a live web
+                  search for the company, or just a read of the posting
+                  text. "not_checked" (no company name to search, or the
+                  search API wasn't reachable) says nothing here rather
+                  than implying a check that didn't happen. */}
+              {legitimacy.webCheck && legitimacy.webCheck !== "not_checked" && (
+                <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Search className="h-3 w-3 shrink-0" />
+                  {legitimacy.webCheck === "confirmed_presence"
+                    ? "Includes a live web search — found an independent listing for this company."
+                    : "Includes a live web search — no independent listing turned up for this company."}
+                </p>
+              )}
             </CardContent>
           </Card>
         );

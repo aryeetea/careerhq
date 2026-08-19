@@ -145,6 +145,206 @@ export function getOpenAIClient() {
   return { apiKey };
 }
 
+interface TavilySearchResult {
+  title: string;
+  url: string;
+  content: string;
+}
+
+// Best-effort real-world check backing companyLegitimacy.webCheck (see
+// SCAM RED FLAGS in careerCoach.ts for the text-pattern side of this).
+// Deliberately returns null rather than throwing on any failure — missing
+// key, network error, non-200 response, unexpected body — this is an
+// enhancement layered on top of an analysis that's already useful without
+// it, and must never be the reason a job analysis fails.
+async function searchCompanyWeb(companyName: string): Promise<TavilySearchResult[] | null> {
+  const apiKey = Deno.env.get("TAVILY_API_KEY");
+  if (!apiKey) return null;
+  try {
+    const response = await fetch("https://api.tavily.com/search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        api_key: apiKey,
+        // Deliberately hiring/job-scam-focused, not a generic "company
+        // reviews" search — see evaluateCompanyPresence below for why:
+        // broad review queries surface ordinary product/billing complaints
+        // (every company with any online presence has some), which is a
+        // completely different concern from "is this JOB POSTING a scam."
+        query: `"${companyName}" hiring scam OR "job scam" OR "fake job posting" OR careers reviews`,
+        search_depth: "basic",
+        max_results: 5,
+      }),
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (!response.ok) {
+      console.error("Tavily search failed", response.status, await response.text().catch(() => ""));
+      return null;
+    }
+    const data = await response.json();
+    if (!Array.isArray(data?.results)) return null;
+    return data.results.map((r: Record<string, unknown>) => ({
+      title: typeof r.title === "string" ? r.title : "",
+      url: typeof r.url === "string" ? r.url : "",
+      content: typeof r.content === "string" ? r.content : "",
+    }));
+  } catch (error) {
+    console.error("Tavily search error", error);
+    return null;
+  }
+}
+
+function safeHostname(url: string): string {
+  try {
+    return new URL(url).hostname.toLowerCase().replace(/^www\./, "");
+  } catch {
+    return "";
+  }
+}
+
+// Trusted third-party listings that count as a real, independent presence
+// even when the company doesn't have (or the search didn't surface) its
+// own website.
+const TRUSTED_PRESENCE_DOMAINS = ["linkedin.com/company", "glassdoor.com", "indeed.com/cmp", "crunchbase.com/organization", "bbb.org"];
+
+// A listing hosted on a real job board is itself evidence of a genuine
+// posted job, not a scam signal — even when the listing's own title
+// happens to contain a scam-adjacent word (verified directly: a real
+// company's own "Fraud & Scams Policy Analyst" job posting, hosted here,
+// otherwise false-flagged purely for its job title).
+const JOB_BOARD_DOMAINS = [
+  "greenhouse.io",
+  "lever.co",
+  "myworkdayjobs.com",
+  "ashbyhq.com",
+  "generalcatalyst.com",
+  "wellfound.com",
+  "ziprecruiter.com",
+  "smartrecruiters.com",
+  "jobvite.com",
+  "icims.com",
+];
+
+// Deliberately code, not a second AI call: matching a normalized company
+// name against result hostnames and a short scam-keyword check is
+// something regex/string-matching does reliably and cheaply — an LLM call
+// here would add cost and a second chance to hallucinate over the same
+// handful of search snippets.
+//
+// Verified directly against real searches, twice:
+// 1. A generic "reviews scam complaints" query surfaced Trustpilot/
+//    consumer-complaint results for a well-known, entirely legitimate
+//    company — ordinary product/billing complaints, which practically
+//    every company with any online footprint accumulates. Narrowed the
+//    query to hiring/job-scam language specifically, and require the
+//    same snippet to also mention hiring/job context, not just "scam."
+// 2. Even the narrowed query still produced two false positives against
+//    the same real company: a LinkedIn post warning people to watch out
+//    for *impersonators* of it (it's the victim, not the perpetrator),
+//    and one of its own real job postings for a "Fraud & Scams" policy
+//    role, flagged purely for having "scam" in the job title. Neither
+//    keyword-matching nor this heuristic can reliably tell an accusation
+//    from a company's own unrelated content or a warning about someone
+//    impersonating it — so two backstops: skip the company's own
+//    materials entirely (its official site or a trusted listing is
+//    evidence FOR it, never against it), and require at least two
+//    independent hits before treating it as a real pattern rather than
+//    one ambiguous snippet.
+const SCAM_KEYWORDS = ["scam", "fraud", "fake job", "not legit", "job scam"];
+const HIRING_CONTEXT_KEYWORDS = ["job", "hiring", "position", "interview", "recruiter", "applicant", "candidate", "employment"];
+const MIN_SCAM_MENTIONS_TO_FLAG = 2;
+
+function evaluateCompanyPresence(
+  companyName: string,
+  results: TavilySearchResult[],
+): { presenceConfirmed: boolean; scamMentions: string[] } {
+  const normalizedCompany = companyName.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const companyKeyword = companyName.toLowerCase().slice(0, 8);
+  let presenceConfirmed = false;
+  const candidateMentions: string[] = [];
+
+  for (const result of results) {
+    const hostname = safeHostname(result.url).replace(/[^a-z0-9.]/g, "");
+    const isCompanysOwnMaterial =
+      (normalizedCompany.length >= 4 && hostname.includes(normalizedCompany.slice(0, Math.min(normalizedCompany.length, 12)))) ||
+      TRUSTED_PRESENCE_DOMAINS.some((domain) => result.url.toLowerCase().includes(domain)) ||
+      JOB_BOARD_DOMAINS.some((domain) => hostname.includes(domain));
+    if (isCompanysOwnMaterial) {
+      presenceConfirmed = true;
+      continue; // never a scam signal — this is the company's own footprint, not a report about it
+    }
+
+    const text = `${result.title} ${result.content}`.toLowerCase();
+    const mentionsScamLanguage = SCAM_KEYWORDS.some((term) => text.includes(term));
+    const mentionsHiringContext = HIRING_CONTEXT_KEYWORDS.some((term) => text.includes(term));
+    if (mentionsScamLanguage && mentionsHiringContext && companyKeyword && text.includes(companyKeyword)) {
+      candidateMentions.push(`A search result ("${result.title || result.url}") describes hiring/job-scam reports associated with this company name.`);
+    }
+  }
+
+  // One ambiguous snippet isn't a pattern; two independent ones are much
+  // harder to explain away as coincidence or unrelated content.
+  const scamMentions = candidateMentions.length >= MIN_SCAM_MENTIONS_TO_FLAG ? candidateMentions.slice(0, 2) : [];
+  return { presenceConfirmed, scamMentions };
+}
+
+const RISK_LEVEL_ORDER = ["none", "low", "medium", "high"] as const;
+function atLeastRiskLevel(current: AnalysisResponse["jobExtraction"]["companyLegitimacy"]["riskLevel"], floor: (typeof RISK_LEVEL_ORDER)[number]) {
+  return RISK_LEVEL_ORDER[Math.max(RISK_LEVEL_ORDER.indexOf(current), RISK_LEVEL_ORDER.indexOf(floor))];
+}
+
+// Runs after analyzeJobAndResumes — the model can't search the web itself,
+// so this layers a real lookup on top of its text-pattern read of the
+// posting (see SCAM RED FLAGS in careerCoach.ts). Never throws: a missing
+// company name, a missing/misconfigured API key, or any search failure
+// just leaves the analysis exactly as the model produced it (webCheck
+// stays "not_checked") rather than failing or blocking the whole request.
+export async function enrichCompanyLegitimacyWithWebCheck(analysis: AnalysisResponse): Promise<AnalysisResponse> {
+  const companyName = analysis.jobExtraction.company?.trim();
+  const base = analysis.jobExtraction.companyLegitimacy;
+  if (!companyName) {
+    return { ...analysis, jobExtraction: { ...analysis.jobExtraction, companyLegitimacy: { ...base, webCheck: "not_checked" } } };
+  }
+
+  const results = await searchCompanyWeb(companyName);
+  if (!results) {
+    return { ...analysis, jobExtraction: { ...analysis.jobExtraction, companyLegitimacy: { ...base, webCheck: "not_checked" } } };
+  }
+
+  const { presenceConfirmed, scamMentions } = evaluateCompanyPresence(companyName, results);
+  const webCheck = presenceConfirmed ? "confirmed_presence" : "no_presence_found";
+
+  const extraFlags: string[] = [...scamMentions];
+  if (!presenceConfirmed) {
+    extraFlags.push(
+      "A web search did not surface an independent company website, LinkedIn page, or other professional listing for this company name.",
+    );
+  }
+
+  if (extraFlags.length === 0) {
+    return { ...analysis, jobExtraction: { ...analysis.jobExtraction, companyLegitimacy: { ...base, webCheck } } };
+  }
+
+  const riskLevel = atLeastRiskLevel(base.riskLevel, scamMentions.length > 0 ? "high" : "low");
+  const webNote =
+    scamMentions.length > 0
+      ? "A web search surfaced results describing this company or posting as a scam — verify carefully before sharing any personal information."
+      : "A web search didn't turn up an independent website or professional listing for this company — that alone isn't proof of a scam, but it's worth double-checking before you share any personal information.";
+
+  return {
+    ...analysis,
+    jobExtraction: {
+      ...analysis.jobExtraction,
+      companyLegitimacy: {
+        riskLevel,
+        redFlags: [...base.redFlags, ...extraFlags],
+        note: base.riskLevel === "none" ? webNote : `${base.note} ${webNote}`,
+        webCheck,
+      },
+    },
+  };
+}
+
 export interface CandidateEvidenceContext {
   hasResumeEvidence: boolean;
   hasProfileEvidence: boolean;
