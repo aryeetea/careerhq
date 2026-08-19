@@ -1,5 +1,5 @@
 import * as React from "react";
-import { AlertCircle, ChevronsUpDown, Sparkles, Target } from "lucide-react";
+import { AlertCircle, ChevronsUpDown, ShieldAlert, Sparkles, Target } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import {
   ANALYSIS_SOURCE_META,
   ANALYSIS_VERDICT_META,
   APPLICATION_PRIORITY_META,
+  COMPANY_LEGITIMACY_META,
   CONFIDENCE_META,
   DEAL_BREAKER_STATUS_META,
   GAP_SEVERITY_META,
@@ -233,6 +234,39 @@ export function AnalysisSummary({
           </p>
         </CardContent>
       </Card>
+
+      {/* Scam-pattern check on the posting text itself — not a verification
+          the company exists. Shown prominently, above fit details, when
+          there's actually something to flag; a clean posting doesn't get a
+          reassurance card here. Optional: absent on analyses saved before
+          this field existed. */}
+      {(() => {
+        const legitimacy = analysis.jobExtraction.companyLegitimacy;
+        if (!legitimacy || legitimacy.riskLevel === "none") return null;
+        const risk = COMPANY_LEGITIMACY_META[legitimacy.riskLevel];
+        return (
+          <Card className={cn("border-2 bg-card/60", legitimacy.riskLevel === "high" ? "border-destructive/40" : "border-gold/40")}>
+            <CardContent className="p-4">
+              <p className="flex items-center gap-1.5 text-sm font-semibold">
+                <ShieldAlert className="h-4 w-4 shrink-0 text-destructive" /> Posting red flags
+              </p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <Badge className={cn("border-0", risk.className)}>{risk.label}</Badge>
+              </div>
+              {legitimacy.redFlags.length > 0 && (
+                <ul className="mt-2.5 grid gap-1.5 text-sm">
+                  {legitimacy.redFlags.map((flag) => (
+                    <li key={flag} className="rounded-lg bg-secondary/50 px-2.5 py-2">
+                      {flag}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p className="mt-2.5 text-sm leading-6 text-foreground/80">{legitimacy.note}</p>
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {analysis.jobExtraction.dealBreakers.length > 0 && (
         <Card className="border-border/60 bg-card/60">

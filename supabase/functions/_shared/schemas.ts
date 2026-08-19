@@ -79,6 +79,15 @@ export const logisticsConsiderationSchema = z.object({
   preferenceMatch: z.enum(["aligned", "conflict", "unspecified"]),
 });
 
+// Pattern-matching on the posting text for common job-scam indicators —
+// not a verification the company actually exists. See SCAM RED FLAGS in
+// careerCoach.ts.
+export const companyLegitimacySchema = z.object({
+  riskLevel: z.enum(["none", "low", "medium", "high"]),
+  redFlags: z.array(z.string()),
+  note: z.string(),
+});
+
 export const resumeRankingSchema = z.object({
   resumeId: z.string().uuid(),
   resumeName: z.string(),
@@ -111,6 +120,7 @@ export const jobExtractionSchema = z.object({
   certifications: z.array(z.string()),
   dealBreakers: z.array(dealBreakerSchema),
   logisticsConsiderations: z.array(logisticsConsiderationSchema),
+  companyLegitimacy: companyLegitimacySchema,
   applicationDeadline: z.string().nullable(),
   rawJobText: z.string(),
 });

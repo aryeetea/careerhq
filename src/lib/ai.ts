@@ -67,6 +67,19 @@ export const logisticsConsiderationSchema = z.object({
   preferenceMatch: z.enum(["aligned", "conflict", "unspecified"]),
 });
 
+// Pattern-matching on the posting text itself for common job-scam
+// indicators (upfront payment requests, implausible pay for the role,
+// personal-account contact instead of a company domain, pressure tactics,
+// …) — not a verification that the company actually exists. See
+// SCAM RED FLAGS in careerCoach.ts for the full rubric and AnalysisSummary
+// for how this renders. "high"/"medium" risk is meant to prompt caution,
+// never phrased as a certainty the AI can't back up from the text alone.
+export const companyLegitimacySchema = z.object({
+  riskLevel: z.enum(["none", "low", "medium", "high"]),
+  redFlags: z.array(z.string()),
+  note: z.string(),
+});
+
 export const aiJobExtractionSchema = z.object({
   company: z.string().nullable(),
   jobTitle: z.string().nullable(),
@@ -84,6 +97,7 @@ export const aiJobExtractionSchema = z.object({
   certifications: z.array(z.string()),
   dealBreakers: z.array(dealBreakerSchema),
   logisticsConsiderations: z.array(logisticsConsiderationSchema),
+  companyLegitimacy: companyLegitimacySchema,
   applicationDeadline: z.string().nullable(),
   rawJobText: z.string(),
 });

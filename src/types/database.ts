@@ -89,6 +89,15 @@ export interface JobAiLogisticsConsideration {
   preferenceMatch: "aligned" | "conflict" | "unspecified";
 }
 
+// Pattern-matching on the posting text for common job-scam indicators —
+// not a verification the company actually exists. See SCAM RED FLAGS in
+// careerCoach.ts.
+export interface JobAiCompanyLegitimacy {
+  riskLevel: "none" | "low" | "medium" | "high";
+  redFlags: string[];
+  note: string;
+}
+
 export interface JobAiJobExtraction {
   company: string | null;
   jobTitle: string | null;
@@ -110,6 +119,9 @@ export interface JobAiJobExtraction {
   // a TS-only cast over that data, so always read with `?? []` rather than
   // trusting the type at runtime for old rows.
   logisticsConsiderations: JobAiLogisticsConsideration[];
+  // Same caveat as logisticsConsiderations above — absent on analyses run
+  // before this field existed. Read with `?? { riskLevel: "none", ... }`.
+  companyLegitimacy: JobAiCompanyLegitimacy;
   applicationDeadline: string | null;
   rawJobText: string;
 }

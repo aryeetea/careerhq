@@ -149,6 +149,16 @@ export const DEAL_BREAKER_STATUS_META: Record<
   insufficient_information: { label: "Needs confirmation", className: "bg-destructive/15 text-destructive" },
 };
 
+// See SCAM RED FLAGS in careerCoach.ts. "none" is the common case and is
+// deliberately never rendered as its own badge in AnalysisSummary — this
+// entry exists only so the type is total.
+export const COMPANY_LEGITIMACY_META: Record<"none" | "low" | "medium" | "high", { label: string; className: string }> = {
+  none: { label: "No red flags found", className: "bg-success/15 text-success" },
+  low: { label: "Minor red flag", className: "bg-gold/15 text-gold" },
+  medium: { label: "Worth a closer look", className: "bg-peach/20 text-peach-foreground" },
+  high: { label: "Serious red flags", className: "bg-destructive/15 text-destructive" },
+};
+
 // How a logistics/lifestyle factor (relocation, travel, work arrangement…)
 // compares to the candidate's saved settings preferences. "unspecified" is
 // the common case — the candidate hasn't said either way — and is

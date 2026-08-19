@@ -677,6 +677,17 @@ const logisticsConsiderationJsonSchema = {
   },
 } as const;
 
+const companyLegitimacyJsonSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["riskLevel", "redFlags", "note"],
+  properties: {
+    riskLevel: { type: "string", enum: ["none", "low", "medium", "high"] },
+    redFlags: { type: "array", items: { type: "string" } },
+    note: { type: "string" },
+  },
+} as const;
+
 const jobExtractionJsonSchema = {
   type: "object",
   additionalProperties: false,
@@ -697,6 +708,7 @@ const jobExtractionJsonSchema = {
     "certifications",
     "dealBreakers",
     "logisticsConsiderations",
+    "companyLegitimacy",
     "applicationDeadline",
     "rawJobText",
   ],
@@ -717,6 +729,7 @@ const jobExtractionJsonSchema = {
     certifications: { type: "array", items: { type: "string" } },
     dealBreakers: { type: "array", items: dealBreakerJsonSchema },
     logisticsConsiderations: { type: "array", items: logisticsConsiderationJsonSchema },
+    companyLegitimacy: companyLegitimacyJsonSchema,
     applicationDeadline: { type: ["string", "null"] },
     rawJobText: { type: "string" },
   },
