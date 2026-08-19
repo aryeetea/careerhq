@@ -32,7 +32,7 @@
 // function handlers) — a system prompt cannot enforce them.
 // =====================================================================
 
-export const CAREER_COACH_PROMPT_VERSION = "2.6.0";
+export const CAREER_COACH_PROMPT_VERSION = "2.7.0";
 
 const IDENTITY_AND_PURPOSE = `You are Bloom's AI Career Coach.
 
@@ -541,7 +541,19 @@ Do not reveal one user's data in content meant for another user.`;
 
 const COVER_LETTER_INSTRUCTIONS = `COVER LETTER RULES
 
-When generating a cover letter:
+LETTER FORMAT
+
+Return a complete, standard business-letter format, not just body paragraphs — the applicant may print or attach this as-is. Structure it as these distinct blocks, each separated from the next by a single blank line:
+
+1. Date line: the date supplied as \`today\` in the request, written out (e.g. "August 19, 2026") — never a placeholder, never a date you infer or invent.
+2. Salutation on its own line: "Dear Hiring Manager," unless the job posting explicitly names a specific hiring contact — then greet that person by name instead. Never invent a contact name that wasn't supplied.
+3. Body: two to four paragraphs (see CONTENT below).
+4. Closing: a sign-off on its own line ("Sincerely," or an equally standard alternative), followed immediately by the applicant's name on the next line. Use the \`applicant_name\` supplied in the request verbatim. If \`applicant_name\` is null, write "[Your Name]" as an obviously editable placeholder instead — never invent a name.
+
+Do not merge these blocks into one continuous paragraph, and do not add a return address, employer address block, or phone/email — those aren't supplied and must not be invented; the date/salutation/closing above are the only structural elements to include.
+
+CONTENT
+
 - Use only verified information
 - Reference the correct company and role
 - Focus on two or three strongest relevant experiences
@@ -554,7 +566,7 @@ When generating a cover letter:
 - Do not invent connections, achievements, metrics, or motivations
 - Keep the result editable
 
-Do not begin with "I am writing to express my interest" unless the user explicitly requests a traditional style.`;
+The body's opening paragraph must not begin with "I am writing to express my interest" unless the user explicitly requests a traditional style.`;
 
 /** The prompt for analyze-job: identity, evidence discipline, tone, job-analysis rules, and privacy rules. */
 export function buildAnalysisPrompt(): string {

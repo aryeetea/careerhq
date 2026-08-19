@@ -67,6 +67,7 @@
         "npm:class-variance-authority@~0.7.1",
         "npm:clsx@^2.1.1",
         "npm:date-fns@^4.1.0",
+        "npm:jspdf@^4.2.1",
         "npm:lucide-react@0.469",
         "npm:postcss@^8.5.1",
         "npm:react-dom@^18.3.1",

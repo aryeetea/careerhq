@@ -677,11 +677,16 @@ export async function getUserResumes(adminClient: any, userId: string): Promise<
 }
 
 // Best-effort only: a missing/unreadable profile should never block cover
-// letter generation, so this returns null on any error instead of throwing.
-export async function getProfileCareerGoal(adminClient: any, userId: string): Promise<string | null> {
-  const { data, error } = await adminClient.from("profiles").select("career_goal").eq("id", userId).single();
-  if (error || !data) return null;
-  return (data.career_goal as string | null) ?? null;
+// letter generation, so this returns nulls on any error instead of
+// throwing. displayName feeds the letter's sign-off (see LETTER FORMAT in
+// careerCoach.ts) — null when unset, never guessed or fabricated.
+export async function getApplicantProfileBasics(adminClient: any, userId: string): Promise<{ careerGoal: string | null; displayName: string | null }> {
+  const { data, error } = await adminClient.from("profiles").select("career_goal,display_name").eq("id", userId).single();
+  if (error || !data) return { careerGoal: null, displayName: null };
+  return {
+    careerGoal: (data.career_goal as string | null) ?? null,
+    displayName: (data.display_name as string | null)?.trim() || null,
+  };
 }
 
 // Best-effort, same as getProfileCareerGoal — a missing settings row (or a
@@ -1220,8 +1225,18 @@ export async function generateCoverLetterText(
     analysis: unknown;
     rawJobText: string;
     careerGoal: string | null;
+    // The applicant's own name for the sign-off — see LETTER FORMAT in
+    // careerCoach.ts. Null when the profile has no display name set; the
+    // prompt is instructed to fall back to an editable placeholder rather
+    // than invent one.
+    applicantName: string | null;
   },
 ) {
+  // Computed here, not left to the model, so the date line is always
+  // today's actual date rather than something the model could get wrong
+  // or omit — see LETTER FORMAT in careerCoach.ts.
+  const today = new Intl.DateTimeFormat("en-US", { dateStyle: "long" }).format(new Date());
+
   const response = await createOpenAIResponse(client, {
     model: COVER_LETTER_MODEL,
     reasoning: { effort: "low" },
@@ -1260,6 +1275,8 @@ export async function generateCoverLetterText(
                 analysis: params.analysis,
                 raw_job_text: params.rawJobText.slice(0, 18000),
                 applicant_career_goal: params.careerGoal,
+                applicant_name: params.applicantName,
+                today,
               },
               null,
               2,
