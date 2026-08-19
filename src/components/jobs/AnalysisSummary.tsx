@@ -1,5 +1,5 @@
 import * as React from "react";
-import { AlertCircle, ChevronsUpDown, Search, ShieldAlert, Sparkles, Target } from "lucide-react";
+import { AlertCircle, ChevronsUpDown, Search, ShieldAlert, ShieldCheck, Sparkles, Target } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -236,19 +236,25 @@ export function AnalysisSummary({
       </Card>
 
       {/* Scam-pattern check on the posting text itself — not a verification
-          the company exists. Shown prominently, above fit details, when
-          there's actually something to flag; a clean posting doesn't get a
-          reassurance card here. Optional: absent on analyses saved before
-          this field existed. */}
+          the company exists. Always shown so a clean posting reads as
+          "checked, nothing found" rather than silently omitted (which could
+          be mistaken for "not checked"). Optional: absent on analyses saved
+          before this field existed. */}
       {(() => {
         const legitimacy = analysis.jobExtraction.companyLegitimacy;
-        if (!legitimacy || legitimacy.riskLevel === "none") return null;
+        if (!legitimacy) return null;
+        const isClean = legitimacy.riskLevel === "none";
         const risk = COMPANY_LEGITIMACY_META[legitimacy.riskLevel];
         return (
-          <Card className={cn("border-2 bg-card/60", legitimacy.riskLevel === "high" ? "border-destructive/40" : "border-gold/40")}>
+          <Card className={cn("border-2 bg-card/60", isClean ? "border-success/30" : legitimacy.riskLevel === "high" ? "border-destructive/40" : "border-gold/40")}>
             <CardContent className="p-4">
               <p className="flex items-center gap-1.5 text-sm font-semibold">
-                <ShieldAlert className="h-4 w-4 shrink-0 text-destructive" /> Posting red flags
+                {isClean ? (
+                  <ShieldCheck className="h-4 w-4 shrink-0 text-success" />
+                ) : (
+                  <ShieldAlert className="h-4 w-4 shrink-0 text-destructive" />
+                )}
+                {isClean ? "Company check" : "Posting red flags"}
               </p>
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <Badge className={cn("border-0", risk.className)}>{risk.label}</Badge>

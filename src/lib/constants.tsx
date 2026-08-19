@@ -149,9 +149,9 @@ export const DEAL_BREAKER_STATUS_META: Record<
   insufficient_information: { label: "Needs confirmation", className: "bg-destructive/15 text-destructive" },
 };
 
-// See SCAM RED FLAGS in careerCoach.ts. "none" is the common case and is
-// deliberately never rendered as its own badge in AnalysisSummary — this
-// entry exists only so the type is total.
+// See SCAM RED FLAGS in careerCoach.ts. "none" is the common case; it's
+// rendered in AnalysisSummary as a green "checked, nothing found" state
+// rather than omitted, so a clean posting isn't mistaken for "not checked."
 export const COMPANY_LEGITIMACY_META: Record<"none" | "low" | "medium" | "high", { label: string; className: string }> = {
   none: { label: "No red flags found", className: "bg-success/15 text-success" },
   low: { label: "Minor red flag", className: "bg-gold/15 text-gold" },
