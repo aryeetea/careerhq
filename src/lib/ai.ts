@@ -86,7 +86,14 @@ export const companyLegitimacySchema = z.object({
   // The independent listing (LinkedIn, company site, job board, ...) found
   // during the web check — real information about the company, not just a
   // risk verdict. Null when nothing was found or nothing was checked.
-  source: z.object({ title: z.string(), url: z.string(), snippet: z.string() }).nullable(),
+  // Optional/defaulted (unlike webCheck above): older deployed edge
+  // function responses, and analyses stored before this field existed,
+  // won't include it at all — that must parse cleanly, not throw.
+  source: z
+    .object({ title: z.string(), url: z.string(), snippet: z.string() })
+    .nullable()
+    .optional()
+    .transform((s) => s ?? null),
 });
 
 export const aiJobExtractionSchema = z.object({
