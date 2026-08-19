@@ -255,15 +255,20 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
     }
   }
 
-  function handleDownloadCoverLetter() {
+  async function handleDownloadCoverLetter() {
     if (!job) return;
-    const blob = new Blob([coverLetter], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${job.company} - ${job.title} - cover letter.txt`.replace(/[/\\?%*:|"<>]/g, "-");
-    a.click();
-    URL.revokeObjectURL(url);
+    const fileName = `${job.company} - ${job.title} - cover letter.pdf`.replace(/[/\\?%*:|"<>]/g, "-");
+    try {
+      // Dynamically imported: jsPDF pulls in its (unused, here) html2canvas
+      // plugin at ~200KB, which would otherwise bloat this dialog's main
+      // chunk for every user regardless of whether they ever click
+      // Download. Loading it only on click keeps that cost off everyone
+      // else's page weight.
+      const { downloadCoverLetterPdf } = await import("@/lib/coverLetterPdf");
+      downloadCoverLetterPdf(coverLetter, fileName);
+    } catch {
+      push("Couldn't create the PDF — try again in a moment.", "error");
+    }
   }
 
   return (
@@ -635,8 +640,15 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
                       <Button type="button" variant="ghost" size="sm" onClick={handleCopyCoverLetter} className="h-7 gap-1 px-2 text-xs">
                         <Copy className="h-3 w-3" /> Copy
                       </Button>
-                      <Button type="button" variant="ghost" size="sm" onClick={handleDownloadCoverLetter} className="h-7 gap-1 px-2 text-xs">
-                        <Download className="h-3 w-3" /> Download
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleDownloadCoverLetter}
+                        className="h-7 gap-1 px-2 text-xs"
+                        title="Download as PDF"
+                      >
+                        <Download className="h-3 w-3" /> Download PDF
                       </Button>
                     </div>
                   </div>
