@@ -83,6 +83,10 @@ export const companyLegitimacySchema = z.object({
   redFlags: z.array(z.string()),
   note: z.string(),
   webCheck: z.enum(["confirmed_presence", "no_presence_found", "not_checked"]),
+  // The independent listing (LinkedIn, company site, job board, ...) found
+  // during the web check — real information about the company, not just a
+  // risk verdict. Null when nothing was found or nothing was checked.
+  source: z.object({ title: z.string(), url: z.string(), snippet: z.string() }).nullable(),
 });
 
 export const aiJobExtractionSchema = z.object({

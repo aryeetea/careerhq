@@ -275,12 +275,38 @@ export function AnalysisSummary({
                   search API wasn't reachable) says nothing here rather
                   than implying a check that didn't happen. */}
               {legitimacy.webCheck && legitimacy.webCheck !== "not_checked" && (
-                <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <Search className="h-3 w-3 shrink-0" />
-                  {legitimacy.webCheck === "confirmed_presence"
-                    ? "Includes a live web search — found an independent listing for this company."
-                    : "Includes a live web search — no independent listing turned up for this company."}
-                </p>
+                <div className="mt-2.5 border-t border-border/40 pt-2.5">
+                  <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Search className="h-3 w-3 shrink-0" />
+                    {legitimacy.webCheck === "confirmed_presence"
+                      ? "Includes a live web search — found an independent listing for this company."
+                      : "Includes a live web search — no independent listing turned up for this company."}
+                  </p>
+                  {/* The actual listing that backs "confirmed_presence" —
+                      real information about the company (where it was
+                      found, and the full text of what that source says),
+                      not just the risk verdict above. Absent on analyses
+                      saved before this field existed, or when nothing was
+                      found. The link goes to the source page itself, kept
+                      separate from the text so the full snippet stays
+                      readable rather than crammed inside a link block. */}
+                  {legitimacy.source && (
+                    <div className="mt-1.5 rounded-lg bg-secondary/50 px-2.5 py-2 text-xs">
+                      <p className="font-medium text-foreground/85">{legitimacy.source.title}</p>
+                      {legitimacy.source.snippet && (
+                        <p className="mt-1 whitespace-pre-wrap leading-5 text-muted-foreground">{legitimacy.source.snippet}</p>
+                      )}
+                      <a
+                        href={legitimacy.source.url}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        className="mt-1.5 inline-block font-medium text-primary underline-offset-2 hover:underline"
+                      >
+                        View source ↗
+                      </a>
+                    </div>
+                  )}
+                </div>
               )}
             </CardContent>
           </Card>

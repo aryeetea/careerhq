@@ -257,20 +257,29 @@ const MIN_SCAM_MENTIONS_TO_FLAG = 2;
 function evaluateCompanyPresence(
   companyName: string,
   results: TavilySearchResult[],
-): { presenceConfirmed: boolean; scamMentions: string[] } {
+): { presenceConfirmed: boolean; scamMentions: string[]; source: TavilySearchResult | null } {
   const normalizedCompany = companyName.toLowerCase().replace(/[^a-z0-9]/g, "");
   const companyKeyword = companyName.toLowerCase().slice(0, 8);
   let presenceConfirmed = false;
+  // The confirming result stands in as "information about the company" in
+  // the UI — a link the user can actually open, not just a yes/no verdict.
+  // Tracked separately from job-board mirrors: the company's own site or a
+  // trusted listing (LinkedIn, Glassdoor, ...) is always the more useful
+  // thing to show, so it wins even if a job-board result was seen first.
+  let ownSiteOrTrustedSource: TavilySearchResult | null = null;
+  let jobBoardSource: TavilySearchResult | null = null;
   const candidateMentions: string[] = [];
 
   for (const result of results) {
     const hostname = safeHostname(result.url).replace(/[^a-z0-9.]/g, "");
-    const isCompanysOwnMaterial =
+    const isOwnSiteOrTrustedListing =
       (normalizedCompany.length >= 4 && hostname.includes(normalizedCompany.slice(0, Math.min(normalizedCompany.length, 12)))) ||
-      TRUSTED_PRESENCE_DOMAINS.some((domain) => result.url.toLowerCase().includes(domain)) ||
-      JOB_BOARD_DOMAINS.some((domain) => hostname.includes(domain));
-    if (isCompanysOwnMaterial) {
+      TRUSTED_PRESENCE_DOMAINS.some((domain) => result.url.toLowerCase().includes(domain));
+    const isJobBoardListing = JOB_BOARD_DOMAINS.some((domain) => hostname.includes(domain));
+    if (isOwnSiteOrTrustedListing || isJobBoardListing) {
       presenceConfirmed = true;
+      if (isOwnSiteOrTrustedListing) ownSiteOrTrustedSource ??= result;
+      else jobBoardSource ??= result;
       continue; // never a scam signal — this is the company's own footprint, not a report about it
     }
 
@@ -285,7 +294,7 @@ function evaluateCompanyPresence(
   // One ambiguous snippet isn't a pattern; two independent ones are much
   // harder to explain away as coincidence or unrelated content.
   const scamMentions = candidateMentions.length >= MIN_SCAM_MENTIONS_TO_FLAG ? candidateMentions.slice(0, 2) : [];
-  return { presenceConfirmed, scamMentions };
+  return { presenceConfirmed, scamMentions, source: ownSiteOrTrustedSource ?? jobBoardSource };
 }
 
 const RISK_LEVEL_ORDER = ["none", "low", "medium", "high"] as const;
@@ -311,8 +320,13 @@ export async function enrichCompanyLegitimacyWithWebCheck(analysis: AnalysisResp
     return { ...analysis, jobExtraction: { ...analysis.jobExtraction, companyLegitimacy: { ...base, webCheck: "not_checked" } } };
   }
 
-  const { presenceConfirmed, scamMentions } = evaluateCompanyPresence(companyName, results);
+  const { presenceConfirmed, scamMentions, source } = evaluateCompanyPresence(companyName, results);
   const webCheck = presenceConfirmed ? "confirmed_presence" : "no_presence_found";
+  // Full Tavily snippet, untruncated — this is the actual evidence behind
+  // "confirmed_presence" and the user should be able to read all of it in
+  // AnalysisSummary, with the link there for anyone who wants the source
+  // page itself rather than a fragment of it.
+  const displaySource = source ? { title: source.title || safeHostname(source.url) || source.url, url: source.url, snippet: source.content } : null;
 
   const extraFlags: string[] = [...scamMentions];
   if (!presenceConfirmed) {
@@ -322,7 +336,7 @@ export async function enrichCompanyLegitimacyWithWebCheck(analysis: AnalysisResp
   }
 
   if (extraFlags.length === 0) {
-    return { ...analysis, jobExtraction: { ...analysis.jobExtraction, companyLegitimacy: { ...base, webCheck } } };
+    return { ...analysis, jobExtraction: { ...analysis.jobExtraction, companyLegitimacy: { ...base, webCheck, source: displaySource } } };
   }
 
   const riskLevel = atLeastRiskLevel(base.riskLevel, scamMentions.length > 0 ? "high" : "low");
@@ -340,6 +354,7 @@ export async function enrichCompanyLegitimacyWithWebCheck(analysis: AnalysisResp
         redFlags: [...base.redFlags, ...extraFlags],
         note: base.riskLevel === "none" ? webNote : `${base.note} ${webNote}`,
         webCheck,
+        source: displaySource,
       },
     },
   };

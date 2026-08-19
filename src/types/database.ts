@@ -100,6 +100,11 @@ export interface JobAiCompanyLegitimacy {
   // or when the search itself failed/wasn't configured — never treated as
   // a red flag on its own.
   webCheck: "confirmed_presence" | "no_presence_found" | "not_checked";
+  // The independent listing the web check found (LinkedIn, company site,
+  // job board, ...) — actual information about the company, not just a
+  // risk verdict. Null when nothing was found, nothing was checked, or on
+  // analyses saved before this field existed (read with `?? null`).
+  source: { title: string; url: string; snippet: string } | null;
 }
 
 export interface JobAiJobExtraction {
