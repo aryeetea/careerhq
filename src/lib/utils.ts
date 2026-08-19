@@ -1,20 +1,30 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { parseISO } from "date-fns";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+// parseISO, not `new Date(iso)`: the native Date constructor parses a
+// bare "YYYY-MM-DD" (no time/offset) as UTC midnight, so formatting it in
+// any timezone behind UTC — most of the US — rendered the day before what
+// was actually stored (a follow_up_date or deadline of "2026-08-20" showed
+// as "Aug 19"). parseISO treats a date-only string as local time instead,
+// which is what date-only columns (follow_up_date, deadline) mean — there
+// was never a UTC instant to convert from in the first place. Full
+// timestamps (with an embedded offset, e.g. date_applied) parse
+// identically either way, so this is safe for both.
 export function formatDate(iso: string | null | undefined): string {
   if (!iso) return "—";
-  const d = new Date(iso);
+  const d = parseISO(iso);
   if (Number.isNaN(d.getTime())) return "—";
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
 export function formatDateTime(iso: string | null | undefined): string {
   if (!iso) return "—";
-  const d = new Date(iso);
+  const d = parseISO(iso);
   if (Number.isNaN(d.getTime())) return "—";
   return d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
