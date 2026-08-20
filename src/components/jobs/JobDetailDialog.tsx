@@ -204,6 +204,11 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
         push("Status updated.", "success");
       }
       if (newStatus === "offer" && !wasOffer) celebrate("An offer! Take a moment — this is worth celebrating. 🎉");
+      // Status is the one field that saves on pick rather than on a Save
+      // button, so picking it is the whole interaction — close the dialog
+      // the way a successful full-form save already does, instead of
+      // leaving people to notice they still need to hit the X.
+      onOpenChange(false);
     } catch (err) {
       setValue("status", previousStatus, { shouldDirty: false });
       push(err instanceof Error ? err.message : "Couldn't update the status.", "error");
