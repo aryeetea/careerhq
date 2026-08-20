@@ -156,34 +156,24 @@ interface TavilySearchResult {
   content: string;
 }
 
-// Best-effort real-world check backing companyLegitimacy.webCheck (see
-// SCAM RED FLAGS in careerCoach.ts for the text-pattern side of this).
+// Shared Tavily call behind both real-world checks below (company
+// presence/scam-pattern, and job-posting location consistency).
 // Deliberately returns null rather than throwing on any failure — missing
-// key, network error, non-200 response, unexpected body — this is an
-// enhancement layered on top of an analysis that's already useful without
-// it, and must never be the reason a job analysis fails.
-async function searchCompanyWeb(companyName: string): Promise<TavilySearchResult[] | null> {
+// key, network error, non-200 response, unexpected body — both checks are
+// enhancements layered on top of an analysis that's already useful
+// without them, and neither may ever be the reason a job analysis fails.
+async function tavilySearch(query: string, action: string): Promise<TavilySearchResult[] | null> {
   const apiKey = Deno.env.get("TAVILY_API_KEY");
   if (!apiKey) return null;
   try {
     const response = await fetch("https://api.tavily.com/search", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        api_key: apiKey,
-        // Deliberately hiring/job-scam-focused, not a generic "company
-        // reviews" search — see evaluateCompanyPresence below for why:
-        // broad review queries surface ordinary product/billing complaints
-        // (every company with any online presence has some), which is a
-        // completely different concern from "is this JOB POSTING a scam."
-        query: `"${companyName}" hiring scam OR "job scam" OR "fake job posting" OR careers reviews`,
-        search_depth: "basic",
-        max_results: 5,
-      }),
+      body: JSON.stringify({ api_key: apiKey, query, search_depth: "basic", max_results: 5 }),
       signal: AbortSignal.timeout(15_000),
     });
     if (!response.ok) {
-      console.error("Tavily search failed", response.status, await response.text().catch(() => ""));
+      console.error(`Tavily search failed (${action})`, response.status, await response.text().catch(() => ""));
       return null;
     }
     const data = await response.json();
@@ -194,9 +184,28 @@ async function searchCompanyWeb(companyName: string): Promise<TavilySearchResult
       content: typeof r.content === "string" ? r.content : "",
     }));
   } catch (error) {
-    console.error("Tavily search error", error);
+    console.error(`Tavily search error (${action})`, error);
     return null;
   }
+}
+
+// Backs companyLegitimacy.webCheck (see SCAM RED FLAGS in careerCoach.ts
+// for the text-pattern side of this).
+function searchCompanyWeb(companyName: string): Promise<TavilySearchResult[] | null> {
+  // Deliberately hiring/job-scam-focused, not a generic "company reviews"
+  // search — see evaluateCompanyPresence below for why: broad review
+  // queries surface ordinary product/billing complaints (every company
+  // with any online presence has some), which is a completely different
+  // concern from "is this JOB POSTING a scam."
+  return tavilySearch(`"${companyName}" hiring scam OR "job scam" OR "fake job posting" OR careers reviews`, "company_presence");
+}
+
+// Backs companyLegitimacy.locationConfidence — see LOCATION VERIFICATION
+// below. Exact title + company (rather than company alone) is the point:
+// the goal is finding this SAME listing mirrored elsewhere, not general
+// company chatter.
+function searchJobPostingWeb(jobTitle: string, companyName: string): Promise<TavilySearchResult[] | null> {
+  return tavilySearch(`"${jobTitle}" "${companyName}"`, "location_consistency");
 }
 
 function safeHostname(url: string): string {
@@ -307,62 +316,222 @@ function atLeastRiskLevel(current: AnalysisResponse["jobExtraction"]["companyLeg
   return RISK_LEVEL_ORDER[Math.max(RISK_LEVEL_ORDER.indexOf(current), RISK_LEVEL_ORDER.indexOf(floor))];
 }
 
-// Runs after analyzeJobAndResumes — the model can't search the web itself,
-// so this layers a real lookup on top of its text-pattern read of the
-// posting (see SCAM RED FLAGS in careerCoach.ts). Never throws: a missing
-// company name, a missing/misconfigured API key, or any search failure
-// just leaves the analysis exactly as the model produced it (webCheck
-// stays "not_checked") rather than failing or blocking the whole request.
-export async function enrichCompanyLegitimacyWithWebCheck(analysis: AnalysisResponse): Promise<AnalysisResponse> {
-  const companyName = analysis.jobExtraction.company?.trim();
-  const base = analysis.jobExtraction.companyLegitimacy;
-  if (!companyName) {
-    return { ...analysis, jobExtraction: { ...analysis.jobExtraction, companyLegitimacy: { ...base, webCheck: "not_checked" } } };
+// LOCATION VERIFICATION — a separate concern from scam-pattern red flags
+// above: a posting can be a completely genuine listing and still be
+// mislabeled or defaulted to the wrong country on the job board that
+// surfaced it (e.g. an India-based, rupee-denominated role showing a US
+// city because of a platform default). Skills-match scoring stays
+// accurate either way — this only checks whether the candidate could
+// actually take the role as displayed. Deliberately code, not a second AI
+// call, same philosophy as evaluateCompanyPresence above: cheap, regex
+// pattern-matching over a handful of search snippets, not a geocoder or a
+// full duplicate-listing diff. Never claim or imply a mismatch when the
+// claimed location can't be confidently classified — a false "mismatch"
+// here caps the verdict, so it must never fire on a guess.
+const CURRENCY_REGION_SIGNALS: { region: string; pattern: RegExp }[] = [
+  { region: "India", pattern: /₹|\bINR\b|\brupees?\b|\blakh(?:s)?\b/i },
+  { region: "United Kingdom", pattern: /£|\bGBP\b/i },
+  { region: "European Union", pattern: /€|\bEUR\b/i },
+  { region: "Philippines", pattern: /₱|\bPHP\b/i },
+  { region: "Pakistan", pattern: /\bPKR\b/i },
+];
+
+function detectRegionSignal(text: string): string | null {
+  for (const { region, pattern } of CURRENCY_REGION_SIGNALS) {
+    if (pattern.test(text)) return region;
   }
+  return null;
+}
 
-  const results = await searchCompanyWeb(companyName);
-  if (!results) {
-    return { ...analysis, jobExtraction: { ...analysis.jobExtraction, companyLegitimacy: { ...base, webCheck: "not_checked" } } };
+// A rough claimed-location -> expected-region read, only confident enough
+// to say "this is plausibly India" or "this is plausibly the US" — not a
+// full geocoder. Unclassifiable/ambiguous locations (including "Remote"
+// with no country, or an empty location) return null, and the caller must
+// never flag a mismatch without a claimed region to compare against.
+function claimedRegionFromLocation(location: string | null): string | null {
+  if (!location) return null;
+  if (/\bIndia\b/i.test(location)) return "India";
+  if (/\bUnited Kingdom\b|\bU\.?K\.?\b/i.test(location)) return "United Kingdom";
+  if (/\b(?:United States|USA|U\.S\.)\b/i.test(location) || /,\s*[A-Z]{2}\b/.test(location)) return "United States";
+  return null;
+}
+
+function evaluateLocationConsistency(
+  claimedLocation: string | null,
+  results: TavilySearchResult[],
+): { mismatchDetected: boolean; mismatchNote: string | null } {
+  const claimedRegion = claimedRegionFromLocation(claimedLocation);
+  if (!claimedRegion) return { mismatchDetected: false, mismatchNote: null };
+
+  for (const result of results) {
+    const foundRegion = detectRegionSignal(`${result.title} ${result.content}`);
+    if (foundRegion && foundRegion !== claimedRegion) {
+      return {
+        mismatchDetected: true,
+        mismatchNote: `A search for this exact job title and company found the same posting text associated with ${foundRegion} pay/location, while this listing displays ${claimedRegion} — the displayed location could not be confirmed.`,
+      };
+    }
   }
+  return { mismatchDetected: false, mismatchNote: null };
+}
 
-  const { presenceConfirmed, scamMentions, source } = evaluateCompanyPresence(companyName, results);
-  const webCheck = presenceConfirmed ? "confirmed_presence" : "no_presence_found";
-  // Full Tavily snippet, untruncated — this is the actual evidence behind
-  // "confirmed_presence" and the user should be able to read all of it in
-  // AnalysisSummary, with the link there for anyone who wants the source
-  // page itself rather than a fragment of it.
-  const displaySource = source ? { title: source.title || safeHostname(source.url) || source.url, url: source.url, snippet: source.content } : null;
+// A confirmed location/currency mismatch, or a "high" scam-risk read,
+// pulls fitScore itself down — not just the verdict tier. This is the fix
+// for a real observed bug: a posting scored 8.2/10 "Worth Applying" purely
+// on skills match while the identical listing text existed elsewhere with
+// a different country and currency; the legitimacy layer only ever
+// touched a verdict label a user could skim past, never the number.
+//
+// Both triggers only resolve from a real search the model can't run
+// itself (see LOCATION VERIFICATION above and SCAM RED FLAGS in
+// careerCoach.ts), so — like the verdict cap this replaces — this is a
+// direct code-level override, not a normalizeAndValidateAnalysis-style
+// throw-and-repair rule: locationConfidence/the final riskLevel simply
+// aren't known yet when the model produces its own fitScore/
+// legitimacyConfidence guess.
+//
+// Deliberately narrow, per the same reasoning documented in LOCATION
+// VERIFICATION: only "mismatch_detected" location and "high" risk apply a
+// penalty. Sparse reviews, an unfamiliar/new/small company, or "medium"/
+// "low" risk must NEVER trigger this — those aren't identified problems,
+// just an absence of information, and penalizing them would make Bloom
+// unhelpfully conservative on completely ordinary postings.
+const LOCATION_MISMATCH_PENALTY = 2.5;
+const HIGH_RISK_PENALTY = 2.0;
+const MAX_LEGITIMACY_PENALTY = 3.5; // combined ceiling even when both trigger
 
-  const extraFlags: string[] = [...scamMentions];
-  if (!presenceConfirmed) {
-    extraFlags.push(
-      "A web search did not surface an independent company website, LinkedIn page, or other professional listing for this company name.",
-    );
+function applyLegitimacyAdjustments(analysis: AnalysisResponse): AnalysisResponse {
+  const { riskLevel, locationConfidence } = analysis.jobExtraction.companyLegitimacy;
+  const locationMismatch = locationConfidence === "mismatch_detected";
+  const highRisk = riskLevel === "high";
+  if (!locationMismatch && !highRisk) return analysis;
+
+  const penalty = Math.min(MAX_LEGITIMACY_PENALTY, (locationMismatch ? LOCATION_MISMATCH_PENALTY : 0) + (highRisk ? HIGH_RISK_PENALTY : 0));
+
+  const { fitScore } = analysis.analysis.candidateFit;
+  const newFitScore = fitScore === null ? null : Math.max(0, Math.round((fitScore - penalty) * 10) / 10);
+
+  // legitimacyConfidence only ever moves DOWN here, never up — a model
+  // that already flagged something lower for its own separate reasons
+  // keeps that lower read rather than being overridden toward this floor.
+  const legitimacyCeiling = locationMismatch ? 2 : 3;
+  const existingLegitimacy = analysis.analysis.scoringDimensions.legitimacyConfidence;
+  const newLegitimacyConfidence = existingLegitimacy === null ? legitimacyCeiling : Math.min(existingLegitimacy, legitimacyCeiling);
+
+  // Point 4 of the request this implements: never let a strong
+  // qualification match silently outweigh a real legitimacy/location
+  // concern in the text a user actually reads.
+  const reasons: string[] = [];
+  if (locationMismatch) {
+    reasons.push("the posting's displayed location could not be confirmed — the same listing appears elsewhere tied to a different country and pay range");
   }
-
-  if (extraFlags.length === 0) {
-    return { ...analysis, jobExtraction: { ...analysis.jobExtraction, companyLegitimacy: { ...base, webCheck, source: displaySource } } };
+  if (highRisk) {
+    reasons.push("a web search surfaced signals suggesting this posting may not be a legitimate opportunity as displayed");
   }
-
-  const riskLevel = atLeastRiskLevel(base.riskLevel, scamMentions.length > 0 ? "high" : "low");
-  const webNote =
-    scamMentions.length > 0
-      ? "A web search surfaced results describing this company or posting as a scam — verify carefully before sharing any personal information."
-      : "A web search didn't turn up an independent website or professional listing for this company — that alone isn't proof of a scam, but it's worth double-checking before you share any personal information.";
+  const reasonNote = `This score was reduced because ${reasons.join(" and ")}.`;
+  const explanation = analysis.analysis.candidateFit.explanation ? `${analysis.analysis.candidateFit.explanation} ${reasonNote}` : reasonNote;
 
   return {
     ...analysis,
-    jobExtraction: {
-      ...analysis.jobExtraction,
-      companyLegitimacy: {
-        riskLevel,
-        redFlags: [...base.redFlags, ...extraFlags],
-        note: base.riskLevel === "none" ? webNote : `${base.note} ${webNote}`,
-        webCheck,
-        source: displaySource,
-      },
+    analysis: {
+      ...analysis.analysis,
+      candidateFit: { ...analysis.analysis.candidateFit, fitScore: newFitScore, explanation },
+      scoringDimensions: { ...analysis.analysis.scoringDimensions, legitimacyConfidence: newLegitimacyConfidence },
+      // Ceiling, not a forced fixed value: never allow better than
+      // "consider" here, but a verdict already at or below that (e.g.
+      // stretch_opportunity from a genuine skills gap) is left as-is
+      // rather than being pulled back up to "consider".
+      verdict: POSITIVE_VERDICTS.has(analysis.analysis.verdict) ? "consider" : analysis.analysis.verdict,
+      recommendationPriority: analysis.analysis.recommendationPriority === "high" ? "normal" : analysis.analysis.recommendationPriority,
+      applicationRecommendation: analysis.analysis.applicationRecommendation === "apply_now" ? "consider" : analysis.analysis.applicationRecommendation,
+      shouldApply:
+        "Your skills line up well with this posting, but a legitimacy or location concern pulled the score down — verify the role's real location, terms, and legitimacy directly on the employer's own site before applying.",
+      nextStep:
+        "Confirm this role's actual location, terms, and legitimacy on the employer's own careers page before applying — this listing raised a concern that couldn't be fully resolved.",
     },
   };
+}
+
+// Runs after analyzeJobAndResumes — the model can't search the web itself,
+// so this layers two real lookups on top of its text-pattern read of the
+// posting: company presence/scam-pattern (see SCAM RED FLAGS in
+// careerCoach.ts) and, separately, whether this exact job posting is
+// mirrored elsewhere under a different location/currency (see LOCATION
+// VERIFICATION above). Never throws: a missing company name/job title, a
+// missing/misconfigured API key, or any search failure just leaves that
+// part of the analysis exactly as the model produced it (webCheck/
+// locationConfidence stay "not_checked") rather than failing or blocking
+// the whole request.
+export async function enrichCompanyLegitimacyWithWebCheck(analysis: AnalysisResponse): Promise<AnalysisResponse> {
+  const companyName = analysis.jobExtraction.company?.trim();
+  const jobTitle = analysis.jobExtraction.jobTitle?.trim();
+  const base = analysis.jobExtraction.companyLegitimacy;
+
+  let webCheck: AnalysisResponse["jobExtraction"]["companyLegitimacy"]["webCheck"] = "not_checked";
+  let source: AnalysisResponse["jobExtraction"]["companyLegitimacy"]["source"] = null;
+  let riskLevel = base.riskLevel;
+  let redFlags = base.redFlags;
+  let note = base.note;
+
+  if (companyName) {
+    const presenceResults = await searchCompanyWeb(companyName);
+    if (presenceResults) {
+      const { presenceConfirmed, scamMentions, source: presenceSource } = evaluateCompanyPresence(companyName, presenceResults);
+      webCheck = presenceConfirmed ? "confirmed_presence" : "no_presence_found";
+      // Full Tavily snippet, untruncated — this is the actual evidence
+      // behind "confirmed_presence" and the user should be able to read
+      // all of it in AnalysisSummary, with the link there for anyone who
+      // wants the source page itself rather than a fragment of it.
+      source = presenceSource
+        ? { title: presenceSource.title || safeHostname(presenceSource.url) || presenceSource.url, url: presenceSource.url, snippet: presenceSource.content }
+        : null;
+
+      const extraFlags: string[] = [...scamMentions];
+      if (!presenceConfirmed) {
+        extraFlags.push(
+          "A web search did not surface an independent company website, LinkedIn page, or other professional listing for this company name.",
+        );
+      }
+
+      if (extraFlags.length > 0) {
+        riskLevel = atLeastRiskLevel(base.riskLevel, scamMentions.length > 0 ? "high" : "low");
+        redFlags = [...base.redFlags, ...extraFlags];
+        const webNote =
+          scamMentions.length > 0
+            ? "A web search surfaced results describing this company or posting as a scam — verify carefully before sharing any personal information."
+            : "A web search didn't turn up an independent website or professional listing for this company — that alone isn't proof of a scam, but it's worth double-checking before you share any personal information.";
+        note = base.riskLevel === "none" ? webNote : `${base.note} ${webNote}`;
+      }
+    }
+  }
+
+  let locationConfidence: AnalysisResponse["jobExtraction"]["companyLegitimacy"]["locationConfidence"] = "not_checked";
+  if (companyName && jobTitle) {
+    const postingResults = await searchJobPostingWeb(jobTitle, companyName);
+    if (postingResults) {
+      const { mismatchDetected, mismatchNote } = evaluateLocationConsistency(analysis.jobExtraction.location, postingResults);
+      locationConfidence = mismatchDetected ? "mismatch_detected" : "confirmed";
+      if (mismatchDetected && mismatchNote) {
+        redFlags = [...redFlags, mismatchNote];
+        note = note ? `${note} ${mismatchNote}` : mismatchNote;
+      }
+    }
+  }
+
+  const updated: AnalysisResponse = {
+    ...analysis,
+    jobExtraction: {
+      ...analysis.jobExtraction,
+      companyLegitimacy: { riskLevel, redFlags, note, webCheck, source, locationConfidence },
+    },
+  };
+
+  // Reads the final riskLevel/locationConfidence off `updated` itself, so
+  // this also fires correctly when the real web checks above never ran
+  // (e.g. no TAVILY_API_KEY) but the model's OWN text-pattern read already
+  // landed on riskLevel "high" — that case shouldn't wait on a search that
+  // isn't configured.
+  return applyLegitimacyAdjustments(updated);
 }
 
 export interface CandidateEvidenceContext {
@@ -431,6 +600,7 @@ export function normalizeAndValidateAnalysis(response: AnalysisResponse, context
       careerDirectionFit: null,
       experienceSeniorityFit: null,
       locationWorkArrangementFit: null,
+      legitimacyConfidence: null,
     };
     normalized.analysis.careerDirectionNote = "Career direction fit isn't assessed yet — upload or select a resume first.";
     normalized.analysis.gapSeverity = "none";
@@ -963,13 +1133,24 @@ const jobExtractionJsonSchema = {
 const scoringDimensionsJsonSchema = {
   type: "object",
   additionalProperties: false,
-  required: ["qualificationFit", "transferableSkillsFit", "careerDirectionFit", "experienceSeniorityFit", "locationWorkArrangementFit"],
+  required: [
+    "qualificationFit",
+    "transferableSkillsFit",
+    "careerDirectionFit",
+    "experienceSeniorityFit",
+    "locationWorkArrangementFit",
+    "legitimacyConfidence",
+  ],
   properties: {
     qualificationFit: { type: ["number", "null"], minimum: 0, maximum: 10 },
     transferableSkillsFit: { type: ["number", "null"], minimum: 0, maximum: 10 },
     careerDirectionFit: { type: ["number", "null"], minimum: 0, maximum: 10 },
     experienceSeniorityFit: { type: ["number", "null"], minimum: 0, maximum: 10 },
     locationWorkArrangementFit: { type: ["number", "null"], minimum: 0, maximum: 10 },
+    // The model's own text-only estimate — see the comment on
+    // scoringDimensionsSchema in schemas.ts for why this can still be
+    // overridden downward after the fact.
+    legitimacyConfidence: { type: ["number", "null"], minimum: 0, maximum: 10 },
   },
 } as const;
 

@@ -43,16 +43,30 @@ const gapSeverityEnum = z.enum(["none", "minor", "moderate", "major", "hard"]);
 const recommendationPriorityEnum = z.enum(["high", "normal", "backup"]);
 
 // The 0-10 fit score stays the single headline number, but it's now backed
-// by five separate sub-scores so "why" is inspectable rather than one
+// by six separate sub-scores so "why" is inspectable rather than one
 // opaque figure. requirementGaps and hardRequirements aren't scores here —
 // they're covered by candidateFit's gap lists and jobExtraction.dealBreakers
-// respectively, so this only covers the five genuinely numeric dimensions.
+// respectively, so this only covers the six genuinely numeric dimensions.
+//
+// legitimacyConfidence is the odd one out: it's the model's own best-effort,
+// text-only read (see SCORING DIMENSIONS / FIT SCORE METHODOLOGY in
+// careerCoach.ts) of whether this posting is real at the location/terms
+// displayed — separate from whether the CANDIDATE is qualified. It can be
+// overridden DOWNWARD after this response comes back, once a real search
+// the model can't run itself resolves companyLegitimacy.riskLevel/
+// locationConfidence — see applyLegitimacyAdjustments in utils.ts, which
+// also recomputes fitScore itself when that happens. This is the fix for a
+// real observed bug: a posting scored 8.2/10 "Worth Applying" purely on
+// skills match while the same listing text existed elsewhere with a
+// different country and currency — the legitimacy layer had no way to
+// move the number, only a separate verdict label a user could skim past.
 export const scoringDimensionsSchema = z.object({
   qualificationFit: z.number().min(0).max(10).nullable(),
   transferableSkillsFit: z.number().min(0).max(10).nullable(),
   careerDirectionFit: z.number().min(0).max(10).nullable(),
   experienceSeniorityFit: z.number().min(0).max(10).nullable(),
   locationWorkArrangementFit: z.number().min(0).max(10).nullable(),
+  legitimacyConfidence: z.number().min(0).max(10).nullable(),
 });
 
 // Scoped to genuine hard-eligibility issues only (missing required degree,
@@ -81,11 +95,12 @@ export const logisticsConsiderationSchema = z.object({
 
 // Pattern-matching on the posting text for common job-scam indicators —
 // not a verification the company actually exists. See SCAM RED FLAGS in
-// careerCoach.ts. webCheck and source are NOT something the model produces
-// — the model only ever returns riskLevel/redFlags/note; both default here
-// purely so parsing the model's raw output succeeds, then
-// enrichCompanyLegitimacyWithWebCheck (utils.ts) overwrites them with the
-// real result of an actual web search after the model call returns.
+// careerCoach.ts. webCheck, source, and locationConfidence are NOT
+// something the model produces — the model only ever returns
+// riskLevel/redFlags/note; all three default here purely so parsing the
+// model's raw output succeeds, then enrichCompanyLegitimacyWithWebCheck
+// (utils.ts) overwrites them with the real result of actual web searches
+// after the model call returns.
 export const companyLegitimacySchema = z.object({
   riskLevel: z.enum(["none", "low", "medium", "high"]),
   redFlags: z.array(z.string()),
@@ -100,6 +115,14 @@ export const companyLegitimacySchema = z.object({
     .nullable()
     .optional()
     .default(null),
+  // Separate from riskLevel/webCheck: whether a search for this exact job
+  // title + company turned up the same listing text tied to a different
+  // country/region/currency than what's displayed (see LOCATION
+  // VERIFICATION in enrichCompanyLegitimacyWithWebCheck, utils.ts).
+  // "mismatch_detected" caps the verdict in code — see
+  // capVerdictForLocationMismatch — regardless of skills-fit score, since
+  // it's an eligibility/trust concern, not a fit judgment.
+  locationConfidence: z.enum(["confirmed", "mismatch_detected", "not_checked"]).optional().default("not_checked"),
 });
 
 export const resumeRankingSchema = z.object({

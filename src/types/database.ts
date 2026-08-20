@@ -105,6 +105,14 @@ export interface JobAiCompanyLegitimacy {
   // risk verdict. Null when nothing was found, nothing was checked, or on
   // analyses saved before this field existed (read with `?? null`).
   source: { title: string; url: string; snippet: string } | null;
+  // Whether a search for this exact job title + company found the same
+  // listing tied to a different country/region/currency than displayed
+  // — see LOCATION VERIFICATION in the edge function's shared utils.ts.
+  // "mismatch_detected" caps the verdict server-side (never above
+  // "consider"), regardless of skills-fit score. "not_checked" on
+  // analyses run before this field existed, when the job title/company
+  // was unknown, or when the search itself failed.
+  locationConfidence: "confirmed" | "mismatch_detected" | "not_checked";
 }
 
 export interface JobAiJobExtraction {
@@ -144,6 +152,13 @@ export interface JobAiScoringDimensions {
   careerDirectionFit: number | null;
   experienceSeniorityFit: number | null;
   locationWorkArrangementFit: number | null;
+  // How confident Bloom is that this posting is real at the location/terms
+  // displayed — separate from whether the candidate is qualified. Feeds
+  // directly into fitScore (see the comment on scoringDimensionsSchema in
+  // src/lib/ai.ts and applyLegitimacyAdjustments in the edge function's
+  // utils.ts) rather than only affecting the verdict label. Null on
+  // analyses saved before this field existed.
+  legitimacyConfidence: number | null;
 }
 
 // How seriously the most significant missing qualification should weigh on

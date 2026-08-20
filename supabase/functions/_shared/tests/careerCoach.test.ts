@@ -45,6 +45,14 @@ function validAnalysisResponse(): AnalysisResponse {
       certifications: [],
       dealBreakers: [{ label: "Must be authorized to work in the US", status: "possible" }],
       logisticsConsiderations: [{ label: "Hybrid schedule", detail: "3 days on-site per week", preferenceMatch: "unspecified" }],
+      companyLegitimacy: {
+        riskLevel: "none",
+        redFlags: [],
+        note: "No indicators of a fraudulent posting were found in the listing.",
+        webCheck: "not_checked",
+        source: null,
+        locationConfidence: "not_checked",
+      },
       applicationDeadline: null,
       rawJobText: "Job description text here",
     },
@@ -66,6 +74,7 @@ function validAnalysisResponse(): AnalysisResponse {
         careerDirectionFit: 8,
         experienceSeniorityFit: 7,
         locationWorkArrangementFit: 8,
+        legitimacyConfidence: 9,
       },
       careerDirectionNote: "This role sits squarely in the candidate's stated target direction of full-stack engineering.",
       gapSeverity: "moderate",
@@ -132,9 +141,26 @@ Deno.test("buildAnalysisPrompt separates hard requirements from logistics/lifest
 
 Deno.test("buildAnalysisPrompt includes the explicit weighted rubric categories", () => {
   const prompt = buildAnalysisPrompt();
-  for (const phrase of ["Required skills — 30%", "Relevant experience and responsibilities — 25%", "Career progression"]) {
+  for (const phrase of ["Required skills — 25%", "Relevant experience and responsibilities — 20%", "Career progression"]) {
     assertEquals(prompt.includes(phrase), true, `Missing phrase: "${phrase}"`);
   }
+});
+
+Deno.test("buildAnalysisPrompt includes legitimacyConfidence in the weighted rubric and ties it to fitScore", () => {
+  const prompt = buildAnalysisPrompt();
+  assertEquals(prompt.includes("Posting legitimacy / location confidence"), true);
+  assertEquals(prompt.includes("legitimacyConfidence: how confident you are"), true);
+  // The core fix this implements: legitimacy must move fitScore itself,
+  // not just sit in companyLegitimacy/the verdict label.
+  assertEquals(
+    prompt.includes("do not let it move only the verdict or companyLegitimacy note while fitScore stays purely skills-based"),
+    true,
+  );
+});
+
+Deno.test("buildAnalysisPrompt tells the model not to penalize sparse/unfamiliar-company signals for legitimacyConfidence", () => {
+  const prompt = buildAnalysisPrompt();
+  assertEquals(prompt.includes("never lower it merely because reviews are sparse"), true);
 });
 
 Deno.test("buildAnalysisPrompt includes privacy rules", () => {
@@ -422,7 +448,7 @@ Deno.test("scenario 1: strong Product Designer match validates as strong_match w
         verdict: "strong_match",
         gapSeverity: "none",
         recommendationPriority: "high",
-        scoringDimensions: { qualificationFit: 9, transferableSkillsFit: 9, careerDirectionFit: 9, experienceSeniorityFit: 8, locationWorkArrangementFit: 9 },
+        scoringDimensions: { qualificationFit: 9, transferableSkillsFit: 9, careerDirectionFit: 9, experienceSeniorityFit: 8, locationWorkArrangementFit: 9, legitimacyConfidence: 9 },
         candidateFit: { ...base.analysis.candidateFit, fitScore: 8.8, criticalGaps: [] },
       },
     },
@@ -441,7 +467,7 @@ Deno.test("scenario 2: strong Project Coordinator match validates as worth_apply
         verdict: "worth_applying",
         gapSeverity: "minor",
         recommendationPriority: "high",
-        scoringDimensions: { qualificationFit: 8, transferableSkillsFit: 8, careerDirectionFit: 7, experienceSeniorityFit: 8, locationWorkArrangementFit: 8 },
+        scoringDimensions: { qualificationFit: 8, transferableSkillsFit: 8, careerDirectionFit: 7, experienceSeniorityFit: 8, locationWorkArrangementFit: 8, legitimacyConfidence: 9 },
         candidateFit: { ...base.analysis.candidateFit, fitScore: 7.8 },
       },
       jobExtraction: { ...base.jobExtraction, dealBreakers: [] },
@@ -461,7 +487,7 @@ Deno.test("scenario 3: entry-level PM with transferable (not title-matched) expe
         verdict: "worth_applying",
         gapSeverity: "minor",
         recommendationPriority: "normal",
-        scoringDimensions: { qualificationFit: 7, transferableSkillsFit: 8, careerDirectionFit: 7, experienceSeniorityFit: 7, locationWorkArrangementFit: 8 },
+        scoringDimensions: { qualificationFit: 7, transferableSkillsFit: 8, careerDirectionFit: 7, experienceSeniorityFit: 7, locationWorkArrangementFit: 8, legitimacyConfidence: 9 },
         candidateFit: {
           ...base.analysis.candidateFit,
           fitScore: 7.2,
@@ -484,7 +510,7 @@ Deno.test('scenario 4/7: specialized PM with a moderate domain gap and lower car
       ...base.analysis,
       gapSeverity: "moderate" as const,
       recommendationPriority: "backup" as const,
-      scoringDimensions: { qualificationFit: 7.5, transferableSkillsFit: 8, careerDirectionFit: 6, experienceSeniorityFit: 7, locationWorkArrangementFit: 8 },
+      scoringDimensions: { qualificationFit: 7.5, transferableSkillsFit: 8, careerDirectionFit: 6, experienceSeniorityFit: 7, locationWorkArrangementFit: 8, legitimacyConfidence: 9 },
       candidateFit: {
         ...base.analysis.candidateFit,
         fitScore: 6.4,
@@ -520,7 +546,7 @@ Deno.test("scenario 5: mid-senior role exceeding the candidate's experience vali
         verdict: "stretch_opportunity",
         gapSeverity: "major",
         recommendationPriority: "backup",
-        scoringDimensions: { qualificationFit: 5, transferableSkillsFit: 6, careerDirectionFit: 7, experienceSeniorityFit: 3, locationWorkArrangementFit: 8 },
+        scoringDimensions: { qualificationFit: 5, transferableSkillsFit: 6, careerDirectionFit: 7, experienceSeniorityFit: 3, locationWorkArrangementFit: 8, legitimacyConfidence: 9 },
         candidateFit: { ...base.analysis.candidateFit, fitScore: 4.2, criticalGaps: ["8+ years leading engineering orgs, candidate has 2"] },
       },
       jobExtraction: { ...base.jobExtraction, dealBreakers: [] },

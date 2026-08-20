@@ -25,14 +25,31 @@ const dealBreakerStatusSchema = z.enum(["confirmed", "possible", "insufficient_i
 const gapSeveritySchema = z.enum(["none", "minor", "moderate", "major", "hard"]);
 const recommendationPrioritySchema = z.enum(["high", "normal", "backup"]);
 
-// Five separate numeric sub-scores behind the single 0-10 fitScore, so
+// Six separate numeric sub-scores behind the single 0-10 fitScore, so
 // "why" is inspectable — see [FIT]/detailed-scoring in AnalysisSummary.
+//
+// legitimacyConfidence is the newest and the odd one out: unlike the other
+// five (pure candidate-fit reads), it's whether Bloom believes this
+// posting is real at the location/terms displayed — see companyLegitimacy.
+// It genuinely moves fitScore now (see FIT SCORE METHODOLOGY /
+// applyLegitimacyAdjustments in the edge function's careerCoach.ts /
+// utils.ts) specifically because a real bug shipped without this: a
+// posting scored 8.2/10 "Worth Applying" purely on skills match while the
+// identical listing existed elsewhere under a different country/currency
+// — the legitimacy layer only ever touched a verdict label, never the
+// number a user actually looks at. Keep this dimension wired into
+// fitScore in any future scoring change, or that gap reopens.
 export const scoringDimensionsSchema = z.object({
   qualificationFit: z.number().min(0).max(10).nullable(),
   transferableSkillsFit: z.number().min(0).max(10).nullable(),
   careerDirectionFit: z.number().min(0).max(10).nullable(),
   experienceSeniorityFit: z.number().min(0).max(10).nullable(),
   locationWorkArrangementFit: z.number().min(0).max(10).nullable(),
+  // Optional/defaulted (unlike the other five, required since day one):
+  // analyses saved before this field existed won't include it at all —
+  // that must parse cleanly, not throw. Same pattern as
+  // companyLegitimacySchema's source/locationConfidence below.
+  legitimacyConfidence: z.number().min(0).max(10).nullable().optional().transform((v) => v ?? null),
 });
 
 export const extractedJobSchema = z.object({
@@ -94,6 +111,12 @@ export const companyLegitimacySchema = z.object({
     .nullable()
     .optional()
     .transform((s) => s ?? null),
+  // Whether a search for this exact job title + company found the same
+  // listing tied to a different country/region/currency than displayed
+  // (see LOCATION VERIFICATION in utils.ts) — "mismatch_detected" caps the
+  // verdict server-side. Optional/defaulted for the same reason as source
+  // above: analyses stored before this field existed must still parse.
+  locationConfidence: z.enum(["confirmed", "mismatch_detected", "not_checked"]).optional().transform((v) => v ?? "not_checked"),
 });
 
 export const aiJobExtractionSchema = z.object({

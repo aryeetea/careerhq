@@ -389,12 +389,20 @@ export function AnalysisSummary({
             </span>
           </AccordionTrigger>
           <AccordionContent className="grid gap-4 pb-4">
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
               <ScoreTile label="Qualification" value={scoring?.qualificationFit ?? null} />
               <ScoreTile label="Transferable" value={scoring?.transferableSkillsFit ?? null} />
               <ScoreTile label="Career direction" value={scoring?.careerDirectionFit ?? null} />
               <ScoreTile label="Experience/seniority" value={scoring?.experienceSeniorityFit ?? null} />
               <ScoreTile label="Location/arrangement" value={scoring?.locationWorkArrangementFit ?? null} />
+              {/* Unlike the other five (pure candidate-fit reads), this is
+                  whether the posting itself is believed real at the
+                  location/terms displayed — see the comment on
+                  scoringDimensionsSchema in src/lib/ai.ts. Shown here so a
+                  legitimacy/location concern that pulled fitScore down is
+                  never invisible — a user can see exactly which number
+                  moved, not just a verdict label. */}
+              <ScoreTile label="Posting legitimacy" value={scoring?.legitimacyConfidence ?? null} />
             </div>
 
             <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
