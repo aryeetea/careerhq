@@ -201,6 +201,18 @@ export const RESUME_SUGGESTION_TYPE_META: Record<
   genuine_gap: "Genuine gap",
 };
 
+// Single source of truth for turning any 0-100 résumé-tailoring score
+// (overall_score or one of the four dimensions on JobAiResumeTailoring)
+// into a label/color — the model never returns qualitative labels itself
+// (see SCORING DIMENSIONS in careerCoach.ts), so gauge/bars/banner all
+// derive theirs from the same bands here.
+export function getResumeScoreBand(score: number): { label: string; badgeVariant: "success" | "default" | "warning" | "destructive" } {
+  if (score >= 85) return { label: "Strong", badgeVariant: "success" };
+  if (score >= 65) return { label: "Good", badgeVariant: "default" };
+  if (score >= 45) return { label: "Needs Work", badgeVariant: "warning" };
+  return { label: "Needs Significant Work", badgeVariant: "destructive" };
+}
+
 export const WORK_ARRANGEMENT_META: Record<WorkArrangement, string> = {
   remote: "Remote",
   hybrid: "Hybrid",

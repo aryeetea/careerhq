@@ -207,14 +207,25 @@ export const tailorResumeRequestSchema = z.object({
 });
 export type TailorResumeRequest = z.infer<typeof tailorResumeRequestSchema>;
 
+export const resumeScoreDimensionSchema = z.object({
+  score: z.number().int().min(0).max(100),
+  description: z.string(),
+});
+
 export const tailorResumeResponseSchema = z.object({
   resume_id: z.string().uuid().nullable(),
   resume_name: z.string().nullable(),
-  ats_score: z.number().int().min(0).max(100),
-  matched_keywords: z.array(z.string()),
+  overall_score: z.number().int().min(0).max(100),
+  job_match: resumeScoreDimensionSchema,
+  ats_readability: resumeScoreDimensionSchema,
+  evidence_strength: resumeScoreDimensionSchema,
+  truthfulness: resumeScoreDimensionSchema,
+  covered_keywords: z.array(z.string()),
+  weak_keywords: z.array(z.string()),
   missing_keywords: z.array(z.string()),
   tailored_resume: z.string(),
   summary_of_changes: z.array(z.string()),
+  suggested_fixes: z.array(resumeSuggestionSchema),
 });
 export type TailorResumeResponse = z.infer<typeof tailorResumeResponseSchema>;
 

@@ -1295,18 +1295,50 @@ export async function generateCoverLetterText(
   return coverLetterResponseSchema.parse(JSON.parse(extractResponseText(response)));
 }
 
+const resumeScoreDimensionJsonSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["score", "description"],
+  properties: {
+    score: { type: "integer", minimum: 0, maximum: 100 },
+    description: { type: "string" },
+  },
+} as const;
+
 const tailorResumeSchema = {
   type: "object",
   additionalProperties: false,
-  required: ["resume_id", "resume_name", "ats_score", "matched_keywords", "missing_keywords", "tailored_resume", "summary_of_changes"],
+  required: [
+    "resume_id",
+    "resume_name",
+    "overall_score",
+    "job_match",
+    "ats_readability",
+    "evidence_strength",
+    "truthfulness",
+    "covered_keywords",
+    "weak_keywords",
+    "missing_keywords",
+    "tailored_resume",
+    "summary_of_changes",
+    "suggested_fixes",
+  ],
   properties: {
     resume_id: { type: ["string", "null"] },
     resume_name: { type: ["string", "null"] },
-    ats_score: { type: "integer", minimum: 0, maximum: 100 },
-    matched_keywords: { type: "array", items: { type: "string" } },
+    overall_score: { type: "integer", minimum: 0, maximum: 100 },
+    job_match: resumeScoreDimensionJsonSchema,
+    ats_readability: resumeScoreDimensionJsonSchema,
+    evidence_strength: resumeScoreDimensionJsonSchema,
+    truthfulness: resumeScoreDimensionJsonSchema,
+    covered_keywords: { type: "array", items: { type: "string" } },
+    weak_keywords: { type: "array", items: { type: "string" } },
     missing_keywords: { type: "array", items: { type: "string" } },
     tailored_resume: { type: "string" },
     summary_of_changes: { type: "array", items: { type: "string" } },
+    // Reuses the same per-item schema analyzeJobAndResumes uses for
+    // resumeSuggestions — same four labels, same shape.
+    suggested_fixes: { type: "array", items: resumeSuggestionJsonSchema },
   },
 } as const;
 

@@ -197,17 +197,36 @@ export const tailorResumeRequestSchema = z.object({
   selectedResumeId: z.string().uuid().nullable().optional(),
 });
 
+// A 0-100 score paired with a short, specific, non-generic explanation of
+// that number — used identically for all four scoring dimensions below.
+export const resumeScoreDimensionSchema = z.object({
+  score: z.number().int().min(0).max(100),
+  description: z.string(),
+});
+
 export const tailorResumeResponseSchema = z.object({
   resume_id: z.string().uuid().nullable(),
   resume_name: z.string().nullable(),
-  // 0-100 (not the 0-10 fitScore elsewhere) — this is specifically an ATS
-  // keyword-coverage score for the existing resume against this job's
-  // posting, not a holistic candidate-fit judgment.
-  ats_score: z.number().int().min(0).max(100),
-  matched_keywords: z.array(z.string()),
+  // 0-100 (not the 0-10 fitScore elsewhere) — a weighted blend of the four
+  // dimensions below, not a holistic candidate-fit judgment like analyze-job's
+  // fitScore. Qualitative labels (Strong/Good/…) are derived client-side from
+  // this number, never returned by the model — see getResumeScoreBand.
+  overall_score: z.number().int().min(0).max(100),
+  job_match: resumeScoreDimensionSchema,
+  ats_readability: resumeScoreDimensionSchema,
+  evidence_strength: resumeScoreDimensionSchema,
+  truthfulness: resumeScoreDimensionSchema,
+  // Three tiers, not a binary matched/missing — covered (fully evidenced),
+  // weak (partially/adjacently evidenced, not strong), missing (no evidence
+  // at all). Entries can be short keywords or fuller requirement phrases.
+  covered_keywords: z.array(z.string()),
+  weak_keywords: z.array(z.string()),
   missing_keywords: z.array(z.string()),
   tailored_resume: z.string().min(1),
   summary_of_changes: z.array(z.string()),
+  // Same shape/rules as resumeSuggestionSchema above, applied here to this
+  // specific posting's gaps rather than analyze-job's general suggestions.
+  suggested_fixes: z.array(resumeSuggestionSchema),
 });
 
 export const suggestProfileCopyRequestSchema = z.object({

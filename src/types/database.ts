@@ -209,18 +209,35 @@ export interface JobAiAnalysis {
   promptVersion: string;
 }
 
+// A 0-100 score paired with a short, specific explanation of that number —
+// same shape for all four dimensions on JobAiResumeTailoring.
+export interface JobAiResumeScoreDimension {
+  score: number;
+  description: string;
+}
+
 export interface JobAiResumeTailoring {
   resume_id: string | null;
   resume_name: string | null;
-  // 0-100 ATS keyword-coverage score — a different scale/purpose from
-  // JobAiAnalysisResult's 0-10 fitScore (see analyze-job); this measures
-  // how well the existing résumé covers this posting's keywords, not
-  // overall candidate fit.
-  ats_score: number;
-  matched_keywords: string[];
+  // 0-100 — a weighted blend of the four dimensions below. A different
+  // scale/purpose from JobAiAnalysisResult's 0-10 fitScore (see
+  // analyze-job); qualitative labels (Strong/Good/…) are derived
+  // client-side from this number — see getResumeScoreBand.
+  overall_score: number;
+  job_match: JobAiResumeScoreDimension;
+  ats_readability: JobAiResumeScoreDimension;
+  evidence_strength: JobAiResumeScoreDimension;
+  truthfulness: JobAiResumeScoreDimension;
+  // Three tiers, not a binary matched/missing — see getResumeScoreBand's
+  // sibling constants in constants.tsx for how these render.
+  covered_keywords: string[];
+  weak_keywords: string[];
   missing_keywords: string[];
   tailored_resume: string;
   summary_of_changes: string[];
+  // Same shape as JobAiResumeSuggestion above, applied to this posting's
+  // specific gaps rather than analyze-job's general suggestions.
+  suggested_fixes: JobAiResumeSuggestion[];
 }
 
 export interface Profile {

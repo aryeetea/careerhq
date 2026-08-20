@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AlertTriangle, Check, Copy, Download, ExternalLink, FileText, ScanSearch, Sparkles, Trash2 } from "lucide-react";
+import { AlertTriangle, Check, Copy, Download, ExternalLink, FileText, Pencil, ScanSearch, Sparkles, Trash2, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -18,10 +18,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { AnalysisSummary } from "@/components/jobs/AnalysisSummary";
 import { StatusBadge } from "@/components/jobs/StatusBadge";
 import { FollowUpCheckmark } from "@/components/jobs/FollowUpCheckmark";
+import { ResumeScoreGauge } from "@/components/jobs/ResumeScoreGauge";
+import { TailoredResumePreview } from "@/components/jobs/TailoredResumePreview";
 import type { Job, JobAiResumeTailoring, Resume } from "@/types/database";
 import { jobFormSchema, type JobFormValues } from "@/lib/validation";
 import { useDeleteJob, useJobStatusHistory, useSaveCoverLetter, useSaveResumeTailoring, useUpdateJob } from "@/hooks/queries/useJobs";
@@ -29,7 +33,16 @@ import { useSettings } from "@/hooks/queries/useProfile";
 import { useAnalyzeJob, useGenerateCoverLetter, useTailorResume } from "@/hooks/queries/useJobAi";
 import { useToast } from "@/components/shared/toast";
 import { useCelebration } from "@/components/ambient/Celebration";
-import { JOB_STATUSES, STATUS_META, UNSET_SELECT_VALUE, VERDICT_META, VERDICT_OPTIONS, normalizeEditableJobStatus } from "@/lib/constants";
+import {
+  getResumeScoreBand,
+  JOB_STATUSES,
+  RESUME_SUGGESTION_TYPE_META,
+  STATUS_META,
+  UNSET_SELECT_VALUE,
+  VERDICT_META,
+  VERDICT_OPTIONS,
+  normalizeEditableJobStatus,
+} from "@/lib/constants";
 import { dateInputToISO, deriveVerdictSource, formatDate, formatDateTime, toDateInputValue } from "@/lib/utils";
 import type { JobAnalysisPayload } from "@/lib/ai";
 import { ANALYSIS_PROGRESS_STEPS, COVER_LETTER_PROGRESS_STEPS, TAILOR_RESUME_PROGRESS_STEPS, useProgressHint } from "@/hooks/useProgressHint";
@@ -89,6 +102,10 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
   const [coverLetter, setCoverLetter] = React.useState(job?.ai_cover_letter ?? "");
   const [tailoring, setTailoring] = React.useState<JobAiResumeTailoring | null>(job?.ai_resume_tailoring ?? null);
   const [tailoredResumeText, setTailoredResumeText] = React.useState(job?.ai_resume_tailoring?.tailored_resume ?? "");
+  // Read-only rendered preview by default; the pencil icon switches to the
+  // plain-text editor. Editing always happens on the underlying plain
+  // text — see TailoredResumePreview's header note.
+  const [editingTailoredResume, setEditingTailoredResume] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState("overview");
   const coverLetterDirty = coverLetter !== (job?.ai_cover_letter ?? "");
   const tailoredResumeDirty = tailoredResumeText !== (job?.ai_resume_tailoring?.tailored_resume ?? "");
@@ -121,6 +138,7 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
     setCoverLetter(job?.ai_cover_letter ?? "");
     setTailoring(job?.ai_resume_tailoring ?? null);
     setTailoredResumeText(job?.ai_resume_tailoring?.tailored_resume ?? "");
+    setEditingTailoredResume(false);
     setActiveTab("overview");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [job?.id]);
@@ -338,6 +356,7 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
       await saveResumeTailoring.mutateAsync({ id: job.id, tailoring: response, resumeId: response.resume_id });
       setTailoring(response);
       setTailoredResumeText(response.tailored_resume);
+      setEditingTailoredResume(false);
       if (response.resume_id) {
         setValue("resumeId", response.resume_id, { shouldDirty: false });
       }
@@ -807,7 +826,7 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
                   </p>
                   <p className="mt-1 text-sm text-muted-foreground" aria-live="polite">
                     {tailoringResumeHint ??
-                      "Scores your selected resume against this posting's keywords, then rewrites it to match — without inventing experience."}
+                      "Scores your selected resume against this posting's keywords, then rewrites it to a one-page version in your resume's own format — without inventing experience."}
                   </p>
                 </div>
                 <Button type="button" size="sm" onClick={handleTailorResume} disabled={tailorResume.isPending}>
@@ -824,48 +843,147 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
                 </div>
               ) : (
                 <>
-                  <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border/60 bg-card/50 px-3 py-3">
-                    <div
-                      className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-2 text-lg font-semibold ${
-                        tailoring.ats_score >= 80
-                          ? "border-success/40 text-success"
-                          : tailoring.ats_score >= 50
-                            ? "border-warning/40 text-warning"
-                            : "border-destructive/40 text-destructive"
-                      }`}
-                    >
-                      {tailoring.ats_score}
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold">ATS keyword match</p>
-                      <p className="text-xs text-muted-foreground">
-                        How well your résumé's existing content covers this posting's keywords, out of 100.
-                        {job.ai_resume_tailoring_updated_at && ` Last updated ${formatDateTime(job.ai_resume_tailoring_updated_at)}.`}
-                      </p>
-                    </div>
+                  {(() => {
+                    // Explicit class maps, not `text-${variant}` string
+                    // interpolation — Tailwind's build-time scanner only
+                    // picks up class names that appear as literal strings
+                    // in source, so a dynamically-built class name would
+                    // silently produce no styling at all.
+                    const overallBand = getResumeScoreBand(tailoring.overall_score);
+                    const bannerCopy: Record<typeof overallBand.badgeVariant, string> = {
+                      success: "Strong match — ready to send.",
+                      default: "Good match — a few tweaks would strengthen it.",
+                      warning: "Needs some work before sending.",
+                      destructive: "Needs meaningful work before sending.",
+                    };
+                    const bannerClass: Record<typeof overallBand.badgeVariant, string> = {
+                      success: "border-success/30 bg-success/10 text-success",
+                      default: "border-primary/30 bg-primary/10 text-primary",
+                      warning: "border-warning/30 bg-warning/10 text-warning",
+                      destructive: "border-destructive/30 bg-destructive/10 text-destructive",
+                    };
+                    const labelClass: Record<typeof overallBand.badgeVariant, string> = {
+                      success: "text-success",
+                      default: "text-primary",
+                      warning: "text-warning",
+                      destructive: "text-destructive",
+                    };
+                    return (
+                      <>
+                        <div className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-medium ${bannerClass[overallBand.badgeVariant]}`}>
+                          {overallBand.badgeVariant === "success" ? <Check className="h-4 w-4 shrink-0" /> : <AlertTriangle className="h-4 w-4 shrink-0" />}
+                          {bannerCopy[overallBand.badgeVariant]}
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-4 rounded-xl border border-border/60 bg-card/50 px-4 py-4">
+                          <ResumeScoreGauge score={tailoring.overall_score} />
+                          <div>
+                            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Overall</p>
+                            <p className={`text-lg font-semibold ${labelClass[overallBand.badgeVariant]}`}>{overallBand.label}</p>
+                            <p className="mt-0.5 text-xs text-muted-foreground">
+                              Weighted read across all dimensions.
+                              {watch("resumeId") && resumes.find((r) => r.id === watch("resumeId")) && ` Tailored from ${resumes.find((r) => r.id === watch("resumeId"))?.name}.`}
+                              {job.ai_resume_tailoring_updated_at && ` Last updated ${formatDateTime(job.ai_resume_tailoring_updated_at)}.`}
+                            </p>
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
+
+                  <div className="grid gap-3">
+                    {(
+                      [
+                        ["Job Match", tailoring.job_match],
+                        ["ATS Readability", tailoring.ats_readability],
+                        ["Evidence Strength", tailoring.evidence_strength],
+                        ["Truthfulness", tailoring.truthfulness],
+                      ] as const
+                    ).map(([label, dimension]) => {
+                      const band = getResumeScoreBand(dimension.score);
+                      return (
+                        <div key={label}>
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-sm font-medium">{label}</p>
+                            <div className="flex items-center gap-1.5 text-sm">
+                              <Badge variant={band.badgeVariant}>{band.label}</Badge>
+                              <span className="text-muted-foreground">{dimension.score}/100</span>
+                            </div>
+                          </div>
+                          <Progress value={dimension.score} className="mt-1.5" />
+                          <p className="mt-1 text-xs text-muted-foreground">{dimension.description}</p>
+                        </div>
+                      );
+                    })}
                   </div>
 
-                  {tailoring.matched_keywords.length > 0 && (
-                    <div>
-                      <p className="text-sm font-semibold">Matched keywords</p>
-                      <div className="mt-1.5 flex flex-wrap gap-1.5">
-                        {tailoring.matched_keywords.map((keyword) => (
-                          <Badge key={keyword} variant="success">{keyword}</Badge>
-                        ))}
+                  <div className="grid gap-4">
+                    {tailoring.missing_keywords.length > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Missing</p>
+                        <ul className="mt-1.5 grid gap-1.5">
+                          {tailoring.missing_keywords.map((item) => (
+                            <li key={item} className="flex items-start gap-1.5 text-sm">
+                              <X className="mt-0.5 h-3.5 w-3.5 shrink-0 text-destructive" />
+                              <span>
+                                {item} <span className="text-xs text-destructive">(missing)</span>
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
                       </div>
-                    </div>
-                  )}
+                    )}
+                    {tailoring.weak_keywords.length > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Weak</p>
+                        <ul className="mt-1.5 grid gap-1.5">
+                          {tailoring.weak_keywords.map((item) => (
+                            <li key={item} className="flex items-start gap-1.5 text-sm">
+                              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />
+                              <span>
+                                {item} <span className="text-xs text-warning">(weak)</span>
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {tailoring.covered_keywords.length > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Covered</p>
+                        <ul className="mt-1.5 grid gap-1.5">
+                          {tailoring.covered_keywords.map((item) => (
+                            <li key={item} className="flex items-start gap-1.5 text-sm">
+                              <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-success" />
+                              <span>
+                                {item} <span className="text-xs text-success">(covered)</span>
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
 
-                  {tailoring.missing_keywords.length > 0 && (
-                    <div>
-                      <p className="text-sm font-semibold">Missing keywords</p>
-                      <p className="text-xs text-muted-foreground">Genuine gaps — the rewrite below doesn't paper over these.</p>
-                      <div className="mt-1.5 flex flex-wrap gap-1.5">
-                        {tailoring.missing_keywords.map((keyword) => (
-                          <Badge key={keyword} variant="warning">{keyword}</Badge>
-                        ))}
-                      </div>
-                    </div>
+                  {tailoring.suggested_fixes.length > 0 && (
+                    <Accordion type="single" collapsible>
+                      <AccordionItem value="suggested-fixes" className="rounded-xl border border-border/60 bg-card/50 px-3">
+                        <AccordionTrigger className="text-sm">
+                          Suggested fixes ({tailoring.suggested_fixes.length})
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <div className="grid gap-2.5 pb-1">
+                            {tailoring.suggested_fixes.map((fix, index) => (
+                              <div key={`${fix.type}-${index}`} className="rounded-xl border border-border/60 bg-background px-3 py-3">
+                                <Badge variant="outline">{RESUME_SUGGESTION_TYPE_META[fix.type]}</Badge>
+                                <p className="mt-2 text-sm text-foreground/90">{fix.suggestion}</p>
+                                <p className="mt-1 text-sm text-muted-foreground">{fix.reason}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    </Accordion>
                   )}
 
                   {tailoring.summary_of_changes.length > 0 && (
@@ -882,13 +1000,19 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
                     </div>
                   )}
 
-                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-                    <span>
-                      {watch("resumeId") && resumes.find((r) => r.id === watch("resumeId"))
-                        ? `Tailored from ${resumes.find((r) => r.id === watch("resumeId"))?.name}`
-                        : "Resume not set"}
-                    </span>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm font-semibold">Tailored résumé</p>
                     <div className="flex gap-1.5">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setEditingTailoredResume((v) => !v)}
+                        className="h-7 gap-1 px-2 text-xs"
+                        title={editingTailoredResume ? "Preview" : "Edit"}
+                      >
+                        <Pencil className="h-3 w-3" /> {editingTailoredResume ? "Preview" : "Edit"}
+                      </Button>
                       <Button type="button" variant="ghost" size="sm" onClick={handleCopyTailoredResume} className="h-7 gap-1 px-2 text-xs">
                         <Copy className="h-3 w-3" /> Copy
                       </Button>
@@ -904,12 +1028,16 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
                       </Button>
                     </div>
                   </div>
-                  <Textarea
-                    id="d-aiTailoredResume"
-                    value={tailoredResumeText}
-                    onChange={(e) => setTailoredResumeText(e.target.value)}
-                    rows={18}
-                  />
+                  {editingTailoredResume ? (
+                    <Textarea
+                      id="d-aiTailoredResume"
+                      value={tailoredResumeText}
+                      onChange={(e) => setTailoredResumeText(e.target.value)}
+                      rows={18}
+                    />
+                  ) : (
+                    <TailoredResumePreview text={tailoredResumeText} />
+                  )}
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-xs text-muted-foreground">Review this carefully before submitting it anywhere.</p>
                     <Button
