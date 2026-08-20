@@ -121,9 +121,12 @@ export default function Applications() {
         subtitle="Every role you're tracking, organized by stage"
         action={
           <>
-            <div className="hidden sm:block">
-              <ColumnVisibilityMenu visibleColumns={visibleSet} onToggle={handleToggleColumn} />
-            </div>
+            {/* Icon-only on mobile (see ColumnVisibilityMenu), matching the
+                Add job button's own responsive treatment right next to it —
+                previously hidden below sm entirely, which left no way to
+                un-hide a status column (e.g. after a status change lands a
+                job in one) on mobile at all. */}
+            <ColumnVisibilityMenu visibleColumns={visibleSet} onToggle={handleToggleColumn} />
             <Button onClick={() => setAddOpen(true)} size="sm" className="gap-1.5">
               <Plus className="h-4 w-4" /> <span className="hidden sm:inline">Add job</span>
             </Button>

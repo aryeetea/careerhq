@@ -24,6 +24,7 @@ import { FollowUpCheckmark } from "@/components/jobs/FollowUpCheckmark";
 import type { Job, Resume } from "@/types/database";
 import { jobFormSchema, type JobFormValues } from "@/lib/validation";
 import { useDeleteJob, useJobStatusHistory, useSaveCoverLetter, useUpdateJob } from "@/hooks/queries/useJobs";
+import { useSettings } from "@/hooks/queries/useProfile";
 import { useAnalyzeJob, useGenerateCoverLetter } from "@/hooks/queries/useJobAi";
 import { useToast } from "@/components/shared/toast";
 import { useCelebration } from "@/components/ambient/Celebration";
@@ -77,6 +78,7 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
   const generateCoverLetter = useGenerateCoverLetter();
   const saveCoverLetter = useSaveCoverLetter();
   const { data: history = [] } = useJobStatusHistory(job?.id ?? null);
+  const { data: settings } = useSettings();
   const { push } = useToast();
   const { celebrate } = useCelebration();
   const [confirmOpen, setConfirmOpen] = React.useState(false);
@@ -171,6 +173,40 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
       onOpenChange(false);
     } catch (err) {
       push(err instanceof Error ? err.message : "Couldn't save your changes.", "error");
+    }
+  }
+
+  // Status saves immediately on selection rather than waiting for the
+  // form's own "Save changes" button — every other field in this dialog is
+  // still staged-then-saved, but a status change is a discrete action
+  // (like moving a card on a board) that people expect to take effect the
+  // moment they pick it, not after a second, easy-to-miss click. Mirrors
+  // the special-cased toasts/celebration onSubmit already does for a
+  // status change, since a full-form save can also carry a status change.
+  async function handleStatusChange(newStatus: JobFormValues["status"]) {
+    if (!job) return;
+    const previousStatus = watch("status");
+    const wasOffer = job.status === "offer";
+    // Optimistic, and shouldDirty: false so this alone doesn't enable the
+    // Save button for the rest of the (unrelated, still-unsaved) form —
+    // same pattern already used for resumeId after a cover letter save.
+    setValue("status", newStatus, { shouldDirty: false });
+    try {
+      const updated = await updateJob.mutateAsync({ id: job.id, patch: { status: newStatus } });
+      if (newStatus === "applied" && !job.date_applied && updated.follow_up_date) {
+        push(`Application recorded. We'll remind you to follow up on ${formatDate(updated.follow_up_date)}.`, "success");
+      } else if (settings?.hidden_statuses.includes(newStatus)) {
+        // The status genuinely saved — but that board/list column is
+        // hidden by default, so the job is about to disappear from view
+        // with nothing else on screen explaining why. See Columns toggle.
+        push(`Status updated to ${STATUS_META[newStatus].label} — that column is hidden on your board. Unhide it from Columns to see this job there.`, "info");
+      } else {
+        push("Status updated.", "success");
+      }
+      if (newStatus === "offer" && !wasOffer) celebrate("An offer! Take a moment — this is worth celebrating. 🎉");
+    } catch (err) {
+      setValue("status", previousStatus, { shouldDirty: false });
+      push(err instanceof Error ? err.message : "Couldn't update the status.", "error");
     }
   }
 
@@ -349,7 +385,11 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <div className="grid gap-1.5">
                   <Label>Status</Label>
-                  <Select value={watch("status")} onValueChange={(v) => setValue("status", v as JobFormValues["status"], { shouldDirty: true })}>
+                  <Select
+                    value={watch("status")}
+                    onValueChange={(v) => handleStatusChange(v as JobFormValues["status"])}
+                    disabled={updateJob.isPending}
+                  >
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {JOB_STATUSES.map((s) => (
@@ -357,6 +397,7 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
                       ))}
                     </SelectContent>
                   </Select>
+                  <p className="text-xs text-muted-foreground">Saves immediately.</p>
                 </div>
                 <div className="grid gap-1.5">
                   <Label>Employment type</Label>

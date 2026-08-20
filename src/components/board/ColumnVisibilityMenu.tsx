@@ -16,7 +16,7 @@ export function ColumnVisibilityMenu({
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size="sm" className="gap-1.5">
           <SlidersHorizontal className="h-3.5 w-3.5" />
-          Columns
+          <span className="hidden sm:inline">Columns</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
