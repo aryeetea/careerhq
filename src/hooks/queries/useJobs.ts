@@ -4,7 +4,7 @@ import { queryKeys } from "@/lib/queryClient";
 import { useRealtimeTable } from "@/hooks/useRealtimeTable";
 import * as jobsService from "@/services/jobs";
 import { logActivity } from "@/services/activity";
-import type { Job, JobStatus, JobStatusHistoryEntry, NewJob } from "@/types/database";
+import type { Job, JobAiResumeTailoring, JobStatus, JobStatusHistoryEntry, NewJob } from "@/types/database";
 
 // Logs a Recent Activity entry the first time a job crosses into one of
 // these milestone statuses. Shared by useCreateJob (manual entry can start
@@ -187,6 +187,20 @@ export function useSaveCoverLetter() {
   return useMutation({
     mutationFn: ({ id, coverLetter, resumeId }: { id: string; coverLetter: string; resumeId: string | null }) =>
       jobsService.saveCoverLetter(id, coverLetter, resumeId),
+    onSuccess: (updated) => {
+      qc.setQueryData<Job[]>(key, (prev) => prev?.map((j) => (j.id === updated.id ? updated : j)));
+    },
+  });
+}
+
+export function useSaveResumeTailoring() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  const key = queryKeys.jobs(user?.id ?? "");
+
+  return useMutation({
+    mutationFn: ({ id, tailoring, resumeId }: { id: string; tailoring: JobAiResumeTailoring; resumeId: string | null }) =>
+      jobsService.saveResumeTailoring(id, tailoring, resumeId),
     onSuccess: (updated) => {
       qc.setQueryData<Job[]>(key, (prev) => prev?.map((j) => (j.id === updated.id ? updated : j)));
     },

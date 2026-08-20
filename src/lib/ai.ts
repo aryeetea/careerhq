@@ -201,6 +201,23 @@ export const generateCoverLetterResponseSchema = z.object({
 });
 export type GenerateCoverLetterResponse = z.infer<typeof generateCoverLetterResponseSchema>;
 
+export const tailorResumeRequestSchema = z.object({
+  jobId: z.string().uuid(),
+  selectedResumeId: z.string().uuid().nullable().optional(),
+});
+export type TailorResumeRequest = z.infer<typeof tailorResumeRequestSchema>;
+
+export const tailorResumeResponseSchema = z.object({
+  resume_id: z.string().uuid().nullable(),
+  resume_name: z.string().nullable(),
+  ats_score: z.number().int().min(0).max(100),
+  matched_keywords: z.array(z.string()),
+  missing_keywords: z.array(z.string()),
+  tailored_resume: z.string(),
+  summary_of_changes: z.array(z.string()),
+});
+export type TailorResumeResponse = z.infer<typeof tailorResumeResponseSchema>;
+
 export const suggestProfileCopyRequestSchema = z.object({
   field: z.enum(["bio", "career_status"]),
 });

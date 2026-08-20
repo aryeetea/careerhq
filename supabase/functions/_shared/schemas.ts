@@ -192,6 +192,24 @@ export const coverLetterResponseSchema = z.object({
   resume_name: z.string().nullable(),
 });
 
+export const tailorResumeRequestSchema = z.object({
+  jobId: z.string().uuid(),
+  selectedResumeId: z.string().uuid().nullable().optional(),
+});
+
+export const tailorResumeResponseSchema = z.object({
+  resume_id: z.string().uuid().nullable(),
+  resume_name: z.string().nullable(),
+  // 0-100 (not the 0-10 fitScore elsewhere) — this is specifically an ATS
+  // keyword-coverage score for the existing resume against this job's
+  // posting, not a holistic candidate-fit judgment.
+  ats_score: z.number().int().min(0).max(100),
+  matched_keywords: z.array(z.string()),
+  missing_keywords: z.array(z.string()),
+  tailored_resume: z.string().min(1),
+  summary_of_changes: z.array(z.string()),
+});
+
 export const suggestProfileCopyRequestSchema = z.object({
   field: z.enum(["bio", "career_status"]),
 });
@@ -218,6 +236,7 @@ export const dailyEncouragementResponseSchema = z.object({
 export type AnalyzeJobRequest = z.infer<typeof analyzeJobRequestSchema>;
 export type AnalysisResponse = z.infer<typeof analysisResponseSchema>;
 export type CoverLetterRequest = z.infer<typeof coverLetterRequestSchema>;
+export type TailorResumeRequest = z.infer<typeof tailorResumeRequestSchema>;
 export type SuggestProfileCopyRequest = z.infer<typeof suggestProfileCopyRequestSchema>;
 export type SuggestProfileCopyResponse = z.infer<typeof suggestProfileCopyResponseSchema>;
 export type DailyEncouragementRequest = z.infer<typeof dailyEncouragementRequestSchema>;

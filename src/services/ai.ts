@@ -8,6 +8,8 @@ import {
   jobAnalysisPayloadSchema,
   suggestProfileCopyRequestSchema,
   suggestProfileCopyResponseSchema,
+  tailorResumeRequestSchema,
+  tailorResumeResponseSchema,
   type AnalyzeJobRequest,
   type DailyEncouragementResponse,
   type GenerateCoverLetterRequest,
@@ -15,6 +17,8 @@ import {
   type JobAnalysisPayload,
   type SuggestProfileCopyRequest,
   type SuggestProfileCopyResponse,
+  type TailorResumeRequest,
+  type TailorResumeResponse,
 } from "@/lib/ai";
 
 export async function analyzeJob(request: AnalyzeJobRequest): Promise<{ analysis: JobAnalysisPayload; selected_resume_id: string | null }> {
@@ -30,6 +34,12 @@ export async function generateCoverLetter(request: GenerateCoverLetterRequest): 
   const payload = generateCoverLetterRequestSchema.parse(request);
   const data = await invokeEdgeFunction<unknown>("generate-cover-letter", payload);
   return generateCoverLetterResponseSchema.parse(data);
+}
+
+export async function tailorResume(request: TailorResumeRequest): Promise<TailorResumeResponse> {
+  const payload = tailorResumeRequestSchema.parse(request);
+  const data = await invokeEdgeFunction<unknown>("tailor-resume", payload);
+  return tailorResumeResponseSchema.parse(data);
 }
 
 export async function suggestProfileCopy(request: SuggestProfileCopyRequest): Promise<SuggestProfileCopyResponse> {

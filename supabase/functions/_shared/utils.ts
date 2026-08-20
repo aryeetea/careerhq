@@ -1,16 +1,21 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { ZodError } from "npm:zod";
-import { analysisResponseSchema, coverLetterResponseSchema, type AnalysisResponse } from "./schemas.ts";
-import { buildAnalysisPrompt, buildCoverLetterPrompt, CAREER_COACH_PROMPT_VERSION } from "./prompts/careerCoach.ts";
+import { analysisResponseSchema, coverLetterResponseSchema, tailorResumeResponseSchema, type AnalysisResponse } from "./schemas.ts";
+import { buildAnalysisPrompt, buildCoverLetterPrompt, buildTailorResumePrompt, CAREER_COACH_PROMPT_VERSION } from "./prompts/careerCoach.ts";
 
 const ANALYSIS_MODEL = "gpt-5.6-terra";
 const EXTRACTION_MODEL = "gpt-5.6-luna";
 const COVER_LETTER_MODEL = "gpt-5.6-terra";
+// Rewriting a full résumé against a job's keyword set is a comparably
+// heavy reasoning task to analyze-job, not the lighter single-letter
+// draft cover-letter generation is — same model/timeout as ANALYSIS_MODEL.
+const TAILOR_RESUME_MODEL = "gpt-5.6-terra";
 const MAX_RESUMES_PER_REQUEST = 10;
 
 const ANALYSIS_TIMEOUT_MS = 120_000;
 const EXTRACTION_TIMEOUT_MS = 45_000;
 const COVER_LETTER_TIMEOUT_MS = 60_000;
+const TAILOR_RESUME_TIMEOUT_MS = 120_000;
 // Maximum 5xx retries; 4xx and auth errors are never retried.
 const MAX_RETRIES = 2;
 const RETRY_DELAY_MS = [1_000, 2_000];
@@ -1288,6 +1293,76 @@ export async function generateCoverLetterText(
   }, { timeoutMs: COVER_LETTER_TIMEOUT_MS, action: "generate_cover_letter" });
 
   return coverLetterResponseSchema.parse(JSON.parse(extractResponseText(response)));
+}
+
+const tailorResumeSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["resume_id", "resume_name", "ats_score", "matched_keywords", "missing_keywords", "tailored_resume", "summary_of_changes"],
+  properties: {
+    resume_id: { type: ["string", "null"] },
+    resume_name: { type: ["string", "null"] },
+    ats_score: { type: "integer", minimum: 0, maximum: 100 },
+    matched_keywords: { type: "array", items: { type: "string" } },
+    missing_keywords: { type: "array", items: { type: "string" } },
+    tailored_resume: { type: "string" },
+    summary_of_changes: { type: "array", items: { type: "string" } },
+  },
+} as const;
+
+export async function generateTailoredResumeText(
+  client: ReturnType<typeof getOpenAIClient>,
+  params: {
+    job: JobRow;
+    selectedResume: { id: string; name: string; extractedText: string };
+    rawJobText: string;
+  },
+) {
+  const response = await createOpenAIResponse(client, {
+    model: TAILOR_RESUME_MODEL,
+    reasoning: { effort: "medium" },
+    text: {
+      format: {
+        type: "json_schema",
+        name: "bloom_tailored_resume",
+        strict: true,
+        schema: tailorResumeSchema,
+      },
+    },
+    input: [
+      {
+        role: "developer",
+        content: [{ type: "input_text", text: buildTailorResumePrompt() }],
+      },
+      {
+        role: "user",
+        content: [
+          {
+            type: "input_text",
+            text: JSON.stringify(
+              {
+                job: {
+                  company: params.job.company,
+                  title: params.job.title,
+                  location: params.job.location,
+                },
+                selected_resume: {
+                  resume_id: params.selectedResume.id,
+                  resume_name: params.selectedResume.name,
+                  extracted_text: params.selectedResume.extractedText.slice(0, 12000),
+                },
+                raw_job_text: params.rawJobText.slice(0, 18000),
+              },
+              null,
+              2,
+            ),
+          },
+        ],
+      },
+    ],
+  }, { timeoutMs: TAILOR_RESUME_TIMEOUT_MS, action: "tailor_resume" });
+
+  return tailorResumeResponseSchema.parse(JSON.parse(extractResponseText(response)));
 }
 
 export function errorResponse(error: unknown) {

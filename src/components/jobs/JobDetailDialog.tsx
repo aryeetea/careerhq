@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AlertTriangle, Check, Copy, Download, ExternalLink, FileText, Sparkles, Trash2 } from "lucide-react";
+import { AlertTriangle, Check, Copy, Download, ExternalLink, FileText, ScanSearch, Sparkles, Trash2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -17,21 +17,22 @@ import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { AnalysisSummary } from "@/components/jobs/AnalysisSummary";
 import { StatusBadge } from "@/components/jobs/StatusBadge";
 import { FollowUpCheckmark } from "@/components/jobs/FollowUpCheckmark";
-import type { Job, Resume } from "@/types/database";
+import type { Job, JobAiResumeTailoring, Resume } from "@/types/database";
 import { jobFormSchema, type JobFormValues } from "@/lib/validation";
-import { useDeleteJob, useJobStatusHistory, useSaveCoverLetter, useUpdateJob } from "@/hooks/queries/useJobs";
+import { useDeleteJob, useJobStatusHistory, useSaveCoverLetter, useSaveResumeTailoring, useUpdateJob } from "@/hooks/queries/useJobs";
 import { useSettings } from "@/hooks/queries/useProfile";
-import { useAnalyzeJob, useGenerateCoverLetter } from "@/hooks/queries/useJobAi";
+import { useAnalyzeJob, useGenerateCoverLetter, useTailorResume } from "@/hooks/queries/useJobAi";
 import { useToast } from "@/components/shared/toast";
 import { useCelebration } from "@/components/ambient/Celebration";
 import { JOB_STATUSES, STATUS_META, UNSET_SELECT_VALUE, VERDICT_META, VERDICT_OPTIONS, normalizeEditableJobStatus } from "@/lib/constants";
 import { dateInputToISO, deriveVerdictSource, formatDate, formatDateTime, toDateInputValue } from "@/lib/utils";
 import type { JobAnalysisPayload } from "@/lib/ai";
-import { ANALYSIS_PROGRESS_STEPS, COVER_LETTER_PROGRESS_STEPS, useProgressHint } from "@/hooks/useProgressHint";
+import { ANALYSIS_PROGRESS_STEPS, COVER_LETTER_PROGRESS_STEPS, TAILOR_RESUME_PROGRESS_STEPS, useProgressHint } from "@/hooks/useProgressHint";
 
 interface JobDetailDialogProps {
   job: Job | null;
@@ -77,6 +78,8 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
   const analyzeJob = useAnalyzeJob();
   const generateCoverLetter = useGenerateCoverLetter();
   const saveCoverLetter = useSaveCoverLetter();
+  const tailorResume = useTailorResume();
+  const saveResumeTailoring = useSaveResumeTailoring();
   const { data: history = [] } = useJobStatusHistory(job?.id ?? null);
   const { data: settings } = useSettings();
   const { push } = useToast();
@@ -84,10 +87,14 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
   const [confirmOpen, setConfirmOpen] = React.useState(false);
   const [analysisState, setAnalysisState] = React.useState<JobAnalysisPayload | null>(job?.ai_analysis ?? null);
   const [coverLetter, setCoverLetter] = React.useState(job?.ai_cover_letter ?? "");
+  const [tailoring, setTailoring] = React.useState<JobAiResumeTailoring | null>(job?.ai_resume_tailoring ?? null);
+  const [tailoredResumeText, setTailoredResumeText] = React.useState(job?.ai_resume_tailoring?.tailored_resume ?? "");
   const [activeTab, setActiveTab] = React.useState("overview");
   const coverLetterDirty = coverLetter !== (job?.ai_cover_letter ?? "");
+  const tailoredResumeDirty = tailoredResumeText !== (job?.ai_resume_tailoring?.tailored_resume ?? "");
   const analyzingHint = useProgressHint(analyzeJob.isPending, ANALYSIS_PROGRESS_STEPS);
   const generatingCoverLetterHint = useProgressHint(generateCoverLetter.isPending, COVER_LETTER_PROGRESS_STEPS);
+  const tailoringResumeHint = useProgressHint(tailorResume.isPending, TAILOR_RESUME_PROGRESS_STEPS);
 
   const {
     register,
@@ -112,6 +119,8 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
   React.useEffect(() => {
     setAnalysisState(job?.ai_analysis ?? null);
     setCoverLetter(job?.ai_cover_letter ?? "");
+    setTailoring(job?.ai_resume_tailoring ?? null);
+    setTailoredResumeText(job?.ai_resume_tailoring?.tailored_resume ?? "");
     setActiveTab("overview");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [job?.id]);
@@ -312,6 +321,71 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
     }
   }
 
+  async function handleTailorResume() {
+    if (!job) return;
+    if (!watch("resumeId")) {
+      push("Choose the resume you want to tailor on the Evaluation tab first.", "error");
+      focusResumeSelection();
+      return;
+    }
+    try {
+      const response = await tailorResume.mutateAsync({
+        jobId: job.id,
+        selectedResumeId: watch("resumeId") || null,
+      });
+      // Persist the moment it's ready — same immediate-save pattern as the
+      // cover letter, not gated on the form's separate "Save changes".
+      await saveResumeTailoring.mutateAsync({ id: job.id, tailoring: response, resumeId: response.resume_id });
+      setTailoring(response);
+      setTailoredResumeText(response.tailored_resume);
+      if (response.resume_id) {
+        setValue("resumeId", response.resume_id, { shouldDirty: false });
+      }
+      setActiveTab("tailor-resume");
+      push("Your tailored resume is ready.", "success");
+    } catch (err) {
+      // Deliberately does not touch `tailoring`/`tailoredResumeText` — a
+      // failed regeneration never clears or overwrites an existing draft.
+      push(err instanceof Error ? err.message : "Couldn't tailor your resume yet.", "error");
+    }
+  }
+
+  async function handleSaveTailoredResumeEdit() {
+    if (!job || !tailoring) return;
+    try {
+      const updated = { ...tailoring, tailored_resume: tailoredResumeText };
+      await saveResumeTailoring.mutateAsync({ id: job.id, tailoring: updated, resumeId: null });
+      setTailoring(updated);
+      push("Tailored resume saved.", "success");
+    } catch (err) {
+      push(err instanceof Error ? err.message : "Couldn't save your edits.", "error");
+    }
+  }
+
+  async function handleCopyTailoredResume() {
+    try {
+      await navigator.clipboard.writeText(tailoredResumeText);
+      push("Copied to your clipboard.", "success");
+    } catch {
+      push("Couldn't copy — try selecting the text instead.", "error");
+    }
+  }
+
+  async function handleDownloadTailoredResume() {
+    if (!job) return;
+    const fileName = `${job.company} - ${job.title} - tailored resume.pdf`.replace(/[/\\?%*:|"<>]/g, "-");
+    try {
+      // Same generic text->PDF helper the cover letter tab uses (see the
+      // dynamic-import note above) — it's a plain paragraph renderer, not
+      // cover-letter-specific, so it renders a résumé's sections/bullets
+      // just as well.
+      const { downloadCoverLetterPdf } = await import("@/lib/coverLetterPdf");
+      downloadCoverLetterPdf(tailoredResumeText, fileName);
+    } catch {
+      push("Couldn't create the PDF — try again in a moment.", "error");
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="lg">
@@ -349,6 +423,10 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
               <TabsTrigger value="cover-letter" className="gap-1.5">
                 Cover Letter
                 {job.ai_cover_letter && <Check className="h-3 w-3 text-success" aria-hidden="true" />}
+              </TabsTrigger>
+              <TabsTrigger value="tailor-resume" className="gap-1.5">
+                Tailor Resume
+                {job.ai_resume_tailoring && <Check className="h-3 w-3 text-success" aria-hidden="true" />}
               </TabsTrigger>
               <TabsTrigger value="history">History</TabsTrigger>
             </TabsList>
@@ -714,6 +792,134 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
                       disabled={!coverLetterDirty || saveCoverLetter.isPending}
                     >
                       {saveCoverLetter.isPending ? "Saving…" : coverLetterDirty ? "Save edits" : "Saved"}
+                    </Button>
+                  </div>
+                </>
+              )}
+            </TabsContent>
+
+            <TabsContent value="tailor-resume" className="grid gap-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border/60 bg-card/50 p-3">
+                <div>
+                  <p className="flex items-center gap-1.5 text-sm font-medium">
+                    <ScanSearch className="h-4 w-4 text-primary" />
+                    Tailor resume
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground" aria-live="polite">
+                    {tailoringResumeHint ??
+                      "Scores your selected resume against this posting's keywords, then rewrites it to match — without inventing experience."}
+                  </p>
+                </div>
+                <Button type="button" size="sm" onClick={handleTailorResume} disabled={tailorResume.isPending}>
+                  {tailorResume.isPending ? "Tailoring…" : tailoring ? "Regenerate" : "Tailor resume"}
+                </Button>
+              </div>
+
+              {!tailoring ? (
+                <div className="rounded-xl border border-dashed border-border/70 px-4 py-10 text-center">
+                  <p className="text-sm font-medium">No tailored resume yet</p>
+                  <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
+                    Choose the resume you want to tailor on the Evaluation tab, then generate one — it takes up to a minute.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border/60 bg-card/50 px-3 py-3">
+                    <div
+                      className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-2 text-lg font-semibold ${
+                        tailoring.ats_score >= 80
+                          ? "border-success/40 text-success"
+                          : tailoring.ats_score >= 50
+                            ? "border-warning/40 text-warning"
+                            : "border-destructive/40 text-destructive"
+                      }`}
+                    >
+                      {tailoring.ats_score}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold">ATS keyword match</p>
+                      <p className="text-xs text-muted-foreground">
+                        How well your résumé's existing content covers this posting's keywords, out of 100.
+                        {job.ai_resume_tailoring_updated_at && ` Last updated ${formatDateTime(job.ai_resume_tailoring_updated_at)}.`}
+                      </p>
+                    </div>
+                  </div>
+
+                  {tailoring.matched_keywords.length > 0 && (
+                    <div>
+                      <p className="text-sm font-semibold">Matched keywords</p>
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        {tailoring.matched_keywords.map((keyword) => (
+                          <Badge key={keyword} variant="success">{keyword}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {tailoring.missing_keywords.length > 0 && (
+                    <div>
+                      <p className="text-sm font-semibold">Missing keywords</p>
+                      <p className="text-xs text-muted-foreground">Genuine gaps — the rewrite below doesn't paper over these.</p>
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        {tailoring.missing_keywords.map((keyword) => (
+                          <Badge key={keyword} variant="warning">{keyword}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {tailoring.summary_of_changes.length > 0 && (
+                    <div>
+                      <p className="text-sm font-semibold">What changed</p>
+                      <ul className="mt-1.5 grid gap-1 text-sm text-muted-foreground">
+                        {tailoring.summary_of_changes.map((change, index) => (
+                          <li key={index} className="flex gap-1.5">
+                            <span aria-hidden="true">•</span>
+                            <span>{change}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                    <span>
+                      {watch("resumeId") && resumes.find((r) => r.id === watch("resumeId"))
+                        ? `Tailored from ${resumes.find((r) => r.id === watch("resumeId"))?.name}`
+                        : "Resume not set"}
+                    </span>
+                    <div className="flex gap-1.5">
+                      <Button type="button" variant="ghost" size="sm" onClick={handleCopyTailoredResume} className="h-7 gap-1 px-2 text-xs">
+                        <Copy className="h-3 w-3" /> Copy
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleDownloadTailoredResume}
+                        className="h-7 gap-1 px-2 text-xs"
+                        title="Download as PDF"
+                      >
+                        <Download className="h-3 w-3" /> Download PDF
+                      </Button>
+                    </div>
+                  </div>
+                  <Textarea
+                    id="d-aiTailoredResume"
+                    value={tailoredResumeText}
+                    onChange={(e) => setTailoredResumeText(e.target.value)}
+                    rows={18}
+                  />
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs text-muted-foreground">Review this carefully before submitting it anywhere.</p>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={handleSaveTailoredResumeEdit}
+                      disabled={!tailoredResumeDirty || saveResumeTailoring.isPending}
+                    >
+                      {saveResumeTailoring.isPending ? "Saving…" : tailoredResumeDirty ? "Save edits" : "Saved"}
                     </Button>
                   </div>
                 </>

@@ -46,3 +46,14 @@ export const COVER_LETTER_PROGRESS_STEPS: ProgressStep[] = [
   { afterMs: 6_000, message: "Tailoring it to this role…" },
   { afterMs: 15_000, message: "Almost done…" },
 ];
+
+// Résumé tailoring is a comparably heavy call to analysis (extracting ATS
+// keywords, scoring coverage, and rewriting the full résumé in one shot)
+// — cadence modeled on ANALYSIS_PROGRESS_STEPS above.
+export const TAILOR_RESUME_PROGRESS_STEPS: ProgressStep[] = [
+  { afterMs: 0, message: "Scanning the job description for keywords…" },
+  { afterMs: 6_000, message: "Checking how your résumé stacks up…" },
+  { afterMs: 16_000, message: "Rewriting your résumé for this posting…" },
+  { afterMs: 30_000, message: "Almost there — thorough rewrites can take up to a minute." },
+  { afterMs: 55_000, message: "Still working — this one's taking a bit longer than usual." },
+];

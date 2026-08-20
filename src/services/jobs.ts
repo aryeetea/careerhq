@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import type { Job, JobStatus, JobStatusHistoryEntry, NewJob } from "@/types/database";
+import type { Job, JobAiResumeTailoring, JobStatus, JobStatusHistoryEntry, NewJob } from "@/types/database";
 
 // Every function here is the ONLY place in the app allowed to talk to
 // `jobs` directly. Components go through the useJobs* query hooks, which
@@ -76,6 +76,17 @@ export async function completeFollowUp(id: string, nextRound: number): Promise<J
 // generation; the caller only invokes this after a successful response.
 export async function saveCoverLetter(id: string, coverLetter: string, resumeId: string | null): Promise<Job> {
   const patch: Partial<Job> = { ai_cover_letter: coverLetter, ai_cover_letter_updated_at: new Date().toISOString() };
+  if (resumeId) patch.resume_id = resumeId;
+  const { data, error } = await supabase.from("jobs").update(patch).eq("id", id).select("*").single();
+  if (error) throw error;
+  return data as Job;
+}
+
+// Same narrow-write shape as saveCoverLetter — persists a generated (or
+// user-edited) tailored résumé immediately so it survives closing the
+// dialog without touching the job's other fields.
+export async function saveResumeTailoring(id: string, tailoring: JobAiResumeTailoring, resumeId: string | null): Promise<Job> {
+  const patch: Partial<Job> = { ai_resume_tailoring: tailoring, ai_resume_tailoring_updated_at: new Date().toISOString() };
   if (resumeId) patch.resume_id = resumeId;
   const { data, error } = await supabase.from("jobs").update(patch).eq("id", id).select("*").single();
   if (error) throw error;

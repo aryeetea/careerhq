@@ -209,6 +209,20 @@ export interface JobAiAnalysis {
   promptVersion: string;
 }
 
+export interface JobAiResumeTailoring {
+  resume_id: string | null;
+  resume_name: string | null;
+  // 0-100 ATS keyword-coverage score — a different scale/purpose from
+  // JobAiAnalysisResult's 0-10 fitScore (see analyze-job); this measures
+  // how well the existing résumé covers this posting's keywords, not
+  // overall candidate fit.
+  ats_score: number;
+  matched_keywords: string[];
+  missing_keywords: string[];
+  tailored_resume: string;
+  summary_of_changes: string[];
+}
+
 export interface Profile {
   id: string;
   username: string;
@@ -306,6 +320,8 @@ export interface Job {
   ai_recommended_resume_id: string | null;
   ai_cover_letter: string | null;
   ai_cover_letter_updated_at: string | null;
+  ai_resume_tailoring: JobAiResumeTailoring | null;
+  ai_resume_tailoring_updated_at: string | null;
   ai_last_analyzed_at: string | null;
   ai_prompt_version: string | null;
   ai_rubric_version: string | null;
