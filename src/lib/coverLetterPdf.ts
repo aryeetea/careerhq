@@ -25,7 +25,9 @@ const LINE_HEIGHT_PT = FONT_SIZE_PT * 1.4;
 // Any remaining character the fallback can't identify becomes a plain
 // space rather than being deleted, for the same reason: a stray extra
 // space is harmless, a vanished character is not.
-function normalizeForPdfFont(text: string): string {
+// Exported so other plain-text-to-PDF exporters (see tailoredResumePdf.ts)
+// can reuse the same font-safety normalization instead of duplicating it.
+export function normalizeForPdfFont(text: string): string {
   return text
     .replace(/[‘’‚‛]/g, "'") // smart single quotes / low-9 quote
     .replace(/[“”„‟]/g, '"') // smart double quotes / low-9 quote

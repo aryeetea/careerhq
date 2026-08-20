@@ -26,7 +26,8 @@ import { StatusBadge } from "@/components/jobs/StatusBadge";
 import { FollowUpCheckmark } from "@/components/jobs/FollowUpCheckmark";
 import { ResumeScoreGauge } from "@/components/jobs/ResumeScoreGauge";
 import { TailoredResumePreview } from "@/components/jobs/TailoredResumePreview";
-import type { Job, JobAiResumeFix, JobAiResumeTailoring, Resume } from "@/types/database";
+import { RESUME_TEMPLATE_IDS, RESUME_TEMPLATE_META, type ResumeTemplateId } from "@/lib/resumeTemplates";
+import type { Job, JobAiResumeClaimCategory, JobAiResumeFix, JobAiResumeTailoring, Resume } from "@/types/database";
 import { jobFormSchema, type JobFormValues } from "@/lib/validation";
 import { useDeleteJob, useJobStatusHistory, useSaveCoverLetter, useSaveResumeTailoring, useUpdateJob } from "@/hooks/queries/useJobs";
 import { useSettings } from "@/hooks/queries/useProfile";
@@ -53,6 +54,12 @@ interface JobDetailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
+
+const STRETCH_LEVEL_META: Record<JobAiResumeFix["stretch_level"], { label: string; badgeVariant: "success" | "warning" | "destructive" }> = {
+  safe: { label: "Safe", badgeVariant: "success" },
+  reasonable_stretch: { label: "Reasonable stretch", badgeVariant: "warning" },
+  aggressive_stretch: { label: "Aggressive stretch", badgeVariant: "destructive" },
+};
 
 const CLAIM_CATEGORY_LABEL: Record<JobAiResumeClaimCategory["category"], string> = {
   summary: "Summary",
@@ -133,6 +140,10 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
   const [checkedFixes, setCheckedFixes] = React.useState<Set<number>>(
     () => new Set(job?.ai_resume_tailoring ? defaultCheckedFixIndexes(job.ai_resume_tailoring.suggested_fixes) : []),
   );
+  // Client-only visual choice for the rendered preview/PDF export — see
+  // resumeTemplates.ts. Persisted onto the saved tailoring blob, but never
+  // sent to or validated against the AI response schema.
+  const [resumeTemplate, setResumeTemplate] = React.useState<ResumeTemplateId>(job?.ai_resume_tailoring?.template ?? "classic");
   const [activeTab, setActiveTab] = React.useState("overview");
   const coverLetterDirty = coverLetter !== (job?.ai_cover_letter ?? "");
   const tailoredResumeDirty = tailoredResumeText !== (job?.ai_resume_tailoring?.tailored_resume ?? "");
@@ -167,6 +178,7 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
     setTailoredResumeText(job?.ai_resume_tailoring?.tailored_resume ?? "");
     setEditingTailoredResume(false);
     setCheckedFixes(new Set(job?.ai_resume_tailoring ? defaultCheckedFixIndexes(job.ai_resume_tailoring.suggested_fixes) : []));
+    setResumeTemplate(job?.ai_resume_tailoring?.template ?? "classic");
     setActiveTab("overview");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [job?.id]);
@@ -381,8 +393,11 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
       });
       // Persist the moment it's ready — same immediate-save pattern as the
       // cover letter, not gated on the form's separate "Save changes".
-      await saveResumeTailoring.mutateAsync({ id: job.id, tailoring: response, resumeId: response.resume_id });
-      setTailoring(response);
+      // Carries the current template choice forward — a regenerate
+      // shouldn't silently revert someone's chosen visual style.
+      const tailoringToSave: JobAiResumeTailoring = { ...response, template: resumeTemplate };
+      await saveResumeTailoring.mutateAsync({ id: job.id, tailoring: tailoringToSave, resumeId: response.resume_id });
+      setTailoring(tailoringToSave);
       setTailoredResumeText(response.tailored_resume);
       setEditingTailoredResume(false);
       setCheckedFixes(defaultCheckedFixIndexes(response.suggested_fixes));
@@ -409,8 +424,9 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
         selectedResumeId: watch("resumeId") || null,
         currentDraftText: tailoredResumeText,
       });
-      await saveResumeTailoring.mutateAsync({ id: job.id, tailoring: response, resumeId: response.resume_id });
-      setTailoring(response);
+      const tailoringToSave: JobAiResumeTailoring = { ...response, template: resumeTemplate };
+      await saveResumeTailoring.mutateAsync({ id: job.id, tailoring: tailoringToSave, resumeId: response.resume_id });
+      setTailoring(tailoringToSave);
       setTailoredResumeText(response.tailored_resume);
       setCheckedFixes(defaultCheckedFixIndexes(response.suggested_fixes));
       push("Scores updated for your edited résumé.", "success");
@@ -469,14 +485,25 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
     if (!job) return;
     const fileName = `${job.company} - ${job.title} - tailored resume.pdf`.replace(/[/\\?%*:|"<>]/g, "-");
     try {
-      // Same generic text->PDF helper the cover letter tab uses (see the
-      // dynamic-import note above) — it's a plain paragraph renderer, not
-      // cover-letter-specific, so it renders a résumé's sections/bullets
-      // just as well.
-      const { downloadCoverLetterPdf } = await import("@/lib/coverLetterPdf");
-      downloadCoverLetterPdf(tailoredResumeText, fileName);
+      // Dynamically imported for the same reason as coverLetterPdf (jsPDF's
+      // html2canvas plugin) — template-aware, matching whatever the
+      // rendered preview is currently showing (see resumeTemplates.ts).
+      const { downloadTailoredResumePdf } = await import("@/lib/tailoredResumePdf");
+      downloadTailoredResumePdf(tailoredResumeText, fileName, resumeTemplate);
     } catch {
       push("Couldn't create the PDF — try again in a moment.", "error");
+    }
+  }
+
+  async function handleChangeTemplate(template: ResumeTemplateId) {
+    setResumeTemplate(template);
+    if (!job || !tailoring) return;
+    try {
+      const updated = { ...tailoring, template };
+      await saveResumeTailoring.mutateAsync({ id: job.id, tailoring: updated, resumeId: null });
+      setTailoring(updated);
+    } catch (err) {
+      push(err instanceof Error ? err.message : "Couldn't save your template choice.", "error");
     }
   }
 
@@ -1011,6 +1038,70 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
                     })}
                   </div>
 
+                  {tailoring.claim_audit.length > 0 && (
+                    <div className="rounded-xl border border-border/60 bg-card/50 px-4 py-4">
+                      <p className="text-sm font-semibold">Risks</p>
+                      <p className="text-xs text-muted-foreground">Claims that need evidence, and anything the record contradicts.</p>
+                      <p className="mt-2 text-sm">
+                        <span className="font-medium">{tailoring.missing_keywords.length}</span> requirement
+                        {tailoring.missing_keywords.length === 1 ? "" : "s"} unaddressed
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {tailoring.claim_audit.map((group) => {
+                          const supportedCount = group.claims.filter((c) => c.status === "supported").length;
+                          const hasContradiction = group.claims.some((c) => c.status === "contradicted");
+                          const hasNeedsEvidence = group.claims.some((c) => c.status === "needs_evidence");
+                          const Icon = hasContradiction ? X : hasNeedsEvidence ? AlertTriangle : Check;
+                          const colorClass = hasContradiction ? "text-destructive" : hasNeedsEvidence ? "text-warning" : "text-success";
+                          return (
+                            <span
+                              key={group.category}
+                              className={`inline-flex items-center gap-1 rounded-full border border-border/60 bg-background px-2.5 py-1 text-xs ${colorClass}`}
+                            >
+                              <Icon className="h-3 w-3" />
+                              {CLAIM_CATEGORY_LABEL[group.category]} · {supportedCount} supported
+                            </span>
+                          );
+                        })}
+                      </div>
+                      <Accordion type="single" collapsible className="mt-2">
+                        <AccordionItem value="claim-audit" className="border-b-0">
+                          <AccordionTrigger className="text-xs font-medium">Across the document</AccordionTrigger>
+                          <AccordionContent>
+                            <div className="grid gap-3 pb-1">
+                              {tailoring.claim_audit.map((group) => (
+                                <div key={group.category}>
+                                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                                    {CLAIM_CATEGORY_LABEL[group.category]}
+                                  </p>
+                                  <ul className="mt-1 grid gap-1">
+                                    {group.claims.map((claim, index) => (
+                                      <li key={index} className="flex items-start gap-1.5 text-sm">
+                                        {claim.status === "supported" ? (
+                                          <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-muted-foreground" aria-hidden="true" />
+                                        ) : claim.status === "needs_evidence" ? (
+                                          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />
+                                        ) : (
+                                          <X className="mt-0.5 h-3.5 w-3.5 shrink-0 text-destructive" />
+                                        )}
+                                        <span>
+                                          {claim.text}
+                                          {claim.status !== "supported" && (
+                                            <span className="ml-1 text-xs text-muted-foreground">— {claim.note}</span>
+                                          )}
+                                        </span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              ))}
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                      </Accordion>
+                    </div>
+                  )}
+
                   <div className="grid gap-4">
                     {tailoring.missing_keywords.length > 0 && (
                       <div>
@@ -1060,21 +1151,61 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
                   </div>
 
                   {tailoring.suggested_fixes.length > 0 && (
-                    <Accordion type="single" collapsible>
+                    <Accordion type="single" collapsible defaultValue="suggested-fixes">
                       <AccordionItem value="suggested-fixes" className="rounded-xl border border-border/60 bg-card/50 px-3">
                         <AccordionTrigger className="text-sm">
-                          Suggested fixes ({tailoring.suggested_fixes.length})
+                          <span>
+                            <Sparkles className="mr-1.5 inline h-3.5 w-3.5 text-primary" />
+                            See suggested fixes ({tailoring.suggested_fixes.length})
+                          </span>
                         </AccordionTrigger>
                         <AccordionContent>
+                          <p className="pb-2 text-xs text-muted-foreground">
+                            These stretch a bit beyond what your résumé strictly proves — each is labeled with how far. Pick the ones you can stand behind in an interview.
+                          </p>
                           <div className="grid gap-2.5 pb-1">
-                            {tailoring.suggested_fixes.map((fix, index) => (
-                              <div key={`${fix.type}-${index}`} className="rounded-xl border border-border/60 bg-background px-3 py-3">
-                                <Badge variant="outline">{RESUME_SUGGESTION_TYPE_META[fix.type]}</Badge>
-                                <p className="mt-2 text-sm text-foreground/90">{fix.suggestion}</p>
-                                <p className="mt-1 text-sm text-muted-foreground">{fix.reason}</p>
-                              </div>
-                            ))}
+                            {tailoring.suggested_fixes.map((fix, index) => {
+                              const stretchMeta = STRETCH_LEVEL_META[fix.stretch_level];
+                              const canApply = Boolean(fix.original_text && fix.proposed_text);
+                              return (
+                                <div key={`${fix.type}-${index}`} className="rounded-xl border border-border/60 bg-background px-3 py-3">
+                                  <div className="flex items-start gap-2.5">
+                                    {canApply && (
+                                      <input
+                                        type="checkbox"
+                                        checked={checkedFixes.has(index)}
+                                        onChange={(e) => {
+                                          setCheckedFixes((prev) => {
+                                            const next = new Set(prev);
+                                            if (e.target.checked) next.add(index);
+                                            else next.delete(index);
+                                            return next;
+                                          });
+                                        }}
+                                        className="mt-1 h-4 w-4 shrink-0 rounded border-border accent-primary"
+                                        aria-label={`Include fix: ${fix.proposed_text ?? fix.rationale}`}
+                                      />
+                                    )}
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex flex-wrap items-center gap-1.5">
+                                        <Badge variant={stretchMeta.badgeVariant}>{stretchMeta.label}</Badge>
+                                        <Badge variant="outline">{RESUME_SUGGESTION_TYPE_META[fix.type]}</Badge>
+                                      </div>
+                                      {fix.proposed_text ? (
+                                        <p className="mt-2 text-sm text-foreground/90">{fix.proposed_text}</p>
+                                      ) : null}
+                                      <p className="mt-1 text-sm italic text-muted-foreground">{fix.rationale}</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
+                          {checkedFixes.size > 0 && (
+                            <Button type="button" size="sm" className="mt-1" onClick={handleApplySuggestedFixes}>
+                              Apply {checkedFixes.size} selected fix{checkedFixes.size === 1 ? "" : "es"}
+                            </Button>
+                          )}
                         </AccordionContent>
                       </AccordionItem>
                     </Accordion>
@@ -1095,7 +1226,19 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
                   )}
 
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-sm font-semibold">Tailored résumé</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold">Tailored résumé</p>
+                      <Select value={resumeTemplate} onValueChange={(v) => handleChangeTemplate(v as ResumeTemplateId)}>
+                        <SelectTrigger className="h-7 w-[110px] text-xs" title="Template — visual style of the preview and PDF only, never the content">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {RESUME_TEMPLATE_IDS.map((id) => (
+                            <SelectItem key={id} value={id}>{RESUME_TEMPLATE_META[id].label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <div className="flex gap-1.5">
                       <Button
                         type="button"
@@ -1130,7 +1273,7 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
                       rows={18}
                     />
                   ) : (
-                    <TailoredResumePreview text={tailoredResumeText} />
+                    <TailoredResumePreview text={tailoredResumeText} template={resumeTemplate} />
                   )}
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-xs text-muted-foreground">Review this carefully before submitting it anywhere.</p>
