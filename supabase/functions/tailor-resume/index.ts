@@ -46,6 +46,7 @@ Deno.serve(async (request) => {
       job,
       selectedResume: { id: selectedResume.id, name: selectedResume.name, extractedText: selectedResumeText },
       rawJobText,
+      currentDraftText: payload.currentDraftText,
     });
 
     const { error } = await adminClient

@@ -216,6 +216,30 @@ export interface JobAiResumeScoreDimension {
   description: string;
 }
 
+// A richer suggestion than JobAiResumeSuggestion: a concrete proposed
+// rewrite (when one applies) plus how far it stretches beyond what the
+// résumé strictly proves.
+export interface JobAiResumeFix {
+  type: "safe_wording" | "reorder" | "confirm_with_user" | "genuine_gap";
+  stretch_level: "safe" | "reasonable_stretch" | "aggressive_stretch";
+  // The exact existing text this fix would replace, verbatim from
+  // tailored_resume — null for genuine_gap (nothing to swap in).
+  original_text: string | null;
+  proposed_text: string | null;
+  rationale: string;
+}
+
+export interface JobAiResumeClaim {
+  text: string;
+  status: "supported" | "needs_evidence" | "contradicted";
+  note: string;
+}
+
+export interface JobAiResumeClaimCategory {
+  category: "summary" | "experience" | "projects" | "education" | "skills";
+  claims: JobAiResumeClaim[];
+}
+
 export interface JobAiResumeTailoring {
   resume_id: string | null;
   resume_name: string | null;
@@ -235,9 +259,14 @@ export interface JobAiResumeTailoring {
   missing_keywords: string[];
   tailored_resume: string;
   summary_of_changes: string[];
-  // Same shape as JobAiResumeSuggestion above, applied to this posting's
-  // specific gaps rather than analyze-job's general suggestions.
-  suggested_fixes: JobAiResumeSuggestion[];
+  suggested_fixes: JobAiResumeFix[];
+  // Powers the Risks panel: per-category claim-support counts and the
+  // "Across the document" claim list.
+  claim_audit: JobAiResumeClaimCategory[];
+  // Client-only, never validated against the AI response schema — the
+  // user's chosen visual template for the rendered preview/PDF export.
+  // Absent on older saved rows; TailoredResumePreview defaults to "classic".
+  template?: "classic" | "modern" | "minimal";
 }
 
 export interface Profile {

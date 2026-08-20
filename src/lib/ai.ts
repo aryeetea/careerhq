@@ -204,12 +204,34 @@ export type GenerateCoverLetterResponse = z.infer<typeof generateCoverLetterResp
 export const tailorResumeRequestSchema = z.object({
   jobId: z.string().uuid(),
   selectedResumeId: z.string().uuid().nullable().optional(),
+  // See RESCORE MODE in careerCoach.ts — supplied only by "Recalculate" on
+  // a hand-edited tailored résumé, never on a first-time generation.
+  currentDraftText: z.string().trim().min(1).optional(),
 });
 export type TailorResumeRequest = z.infer<typeof tailorResumeRequestSchema>;
 
 export const resumeScoreDimensionSchema = z.object({
   score: z.number().int().min(0).max(100),
   description: z.string(),
+});
+
+export const resumeFixSchema = z.object({
+  type: resumeSuggestionTypeSchema,
+  stretch_level: z.enum(["safe", "reasonable_stretch", "aggressive_stretch"]),
+  original_text: z.string().nullable(),
+  proposed_text: z.string().nullable(),
+  rationale: z.string(),
+});
+
+export const resumeClaimSchema = z.object({
+  text: z.string(),
+  status: z.enum(["supported", "needs_evidence", "contradicted"]),
+  note: z.string(),
+});
+
+export const resumeClaimCategorySchema = z.object({
+  category: z.enum(["summary", "experience", "projects", "education", "skills"]),
+  claims: z.array(resumeClaimSchema),
 });
 
 export const tailorResumeResponseSchema = z.object({
@@ -225,7 +247,8 @@ export const tailorResumeResponseSchema = z.object({
   missing_keywords: z.array(z.string()),
   tailored_resume: z.string(),
   summary_of_changes: z.array(z.string()),
-  suggested_fixes: z.array(resumeSuggestionSchema),
+  suggested_fixes: z.array(resumeFixSchema),
+  claim_audit: z.array(resumeClaimCategorySchema),
 });
 export type TailorResumeResponse = z.infer<typeof tailorResumeResponseSchema>;
 

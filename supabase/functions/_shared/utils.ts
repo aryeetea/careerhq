@@ -1305,6 +1305,40 @@ const resumeScoreDimensionJsonSchema = {
   },
 } as const;
 
+const resumeFixJsonSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["type", "stretch_level", "original_text", "proposed_text", "rationale"],
+  properties: {
+    type: { type: "string", enum: ["safe_wording", "reorder", "confirm_with_user", "genuine_gap"] },
+    stretch_level: { type: "string", enum: ["safe", "reasonable_stretch", "aggressive_stretch"] },
+    original_text: { type: ["string", "null"] },
+    proposed_text: { type: ["string", "null"] },
+    rationale: { type: "string" },
+  },
+} as const;
+
+const resumeClaimJsonSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["text", "status", "note"],
+  properties: {
+    text: { type: "string" },
+    status: { type: "string", enum: ["supported", "needs_evidence", "contradicted"] },
+    note: { type: "string" },
+  },
+} as const;
+
+const resumeClaimCategoryJsonSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["category", "claims"],
+  properties: {
+    category: { type: "string", enum: ["summary", "experience", "projects", "education", "skills"] },
+    claims: { type: "array", items: resumeClaimJsonSchema },
+  },
+} as const;
+
 const tailorResumeSchema = {
   type: "object",
   additionalProperties: false,
@@ -1322,6 +1356,7 @@ const tailorResumeSchema = {
     "tailored_resume",
     "summary_of_changes",
     "suggested_fixes",
+    "claim_audit",
   ],
   properties: {
     resume_id: { type: ["string", "null"] },
@@ -1336,9 +1371,8 @@ const tailorResumeSchema = {
     missing_keywords: { type: "array", items: { type: "string" } },
     tailored_resume: { type: "string" },
     summary_of_changes: { type: "array", items: { type: "string" } },
-    // Reuses the same per-item schema analyzeJobAndResumes uses for
-    // resumeSuggestions — same four labels, same shape.
-    suggested_fixes: { type: "array", items: resumeSuggestionJsonSchema },
+    suggested_fixes: { type: "array", items: resumeFixJsonSchema },
+    claim_audit: { type: "array", items: resumeClaimCategoryJsonSchema },
   },
 } as const;
 
@@ -1348,6 +1382,10 @@ export async function generateTailoredResumeText(
     job: JobRow;
     selectedResume: { id: string; name: string; extractedText: string };
     rawJobText: string;
+    // See RESCORE MODE in careerCoach.ts — when present, the model
+    // re-scores/re-audits this exact text instead of doing a fresh
+    // rewrite from selectedResume.extractedText.
+    currentDraftText?: string;
   },
 ) {
   const response = await createOpenAIResponse(client, {
@@ -1384,6 +1422,7 @@ export async function generateTailoredResumeText(
                   extracted_text: params.selectedResume.extractedText.slice(0, 12000),
                 },
                 raw_job_text: params.rawJobText.slice(0, 18000),
+                current_draft_text: params.currentDraftText?.slice(0, 12000) ?? null,
               },
               null,
               2,

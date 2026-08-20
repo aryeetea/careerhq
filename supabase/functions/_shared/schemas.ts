@@ -195,6 +195,13 @@ export const coverLetterResponseSchema = z.object({
 export const tailorResumeRequestSchema = z.object({
   jobId: z.string().uuid(),
   selectedResumeId: z.string().uuid().nullable().optional(),
+  // When supplied, this is the user's own hand-edited draft of a
+  // previously generated tailored résumé (see the "stale scores" banner in
+  // JobDetailDialog) — the model re-scores/re-audits THIS text instead of
+  // doing a fresh rewrite from the original résumé, and must return it
+  // back essentially unchanged (see RESCORE MODE in careerCoach.ts). Never
+  // supplied on a first-time "Tailor resume" generation.
+  currentDraftText: z.string().trim().min(1).optional(),
 });
 
 // A 0-100 score paired with a short, specific, non-generic explanation of
@@ -202,6 +209,44 @@ export const tailorResumeRequestSchema = z.object({
 export const resumeScoreDimensionSchema = z.object({
   score: z.number().int().min(0).max(100),
   description: z.string(),
+});
+
+// One atomic claim from the tailored résumé, checked against the source
+// résumé text. category groups it for the Risks panel's per-category
+// supported counts; status/note carry the actual audit result.
+export const resumeClaimSchema = z.object({
+  text: z.string(),
+  status: z.enum(["supported", "needs_evidence", "contradicted"]),
+  // Empty string when status is "supported" — required (non-empty) for
+  // needs_evidence/contradicted, explaining specifically why.
+  note: z.string(),
+});
+
+export const resumeClaimCategorySchema = z.object({
+  category: z.enum(["summary", "experience", "projects", "education", "skills"]),
+  claims: z.array(resumeClaimSchema),
+});
+
+// A richer suggestion than resumeSuggestionSchema above: a concrete
+// proposed rewrite (when one applies) plus how far it stretches beyond
+// what the résumé strictly proves, so the user can decide per-item
+// whether they'd stand behind it in an interview.
+export const resumeFixSchema = z.object({
+  type: z.enum(["safe_wording", "reorder", "confirm_with_user", "genuine_gap"]),
+  // How far proposed_text stretches beyond the résumé's literal evidence.
+  // "safe" = no inference at all; "reasonable_stretch" = a fair, defensible
+  // inference; "aggressive_stretch" = a real leap the user should think
+  // twice about. genuine_gap fixes (nothing to propose) should use "safe".
+  stretch_level: z.enum(["safe", "reasonable_stretch", "aggressive_stretch"]),
+  // The exact existing text this fix would replace — must be copied
+  // verbatim from tailored_resume so the app can apply it with a plain
+  // substring swap. Null for genuine_gap (there's nothing to swap in).
+  original_text: z.string().nullable(),
+  // The alternative wording. Null for genuine_gap.
+  proposed_text: z.string().nullable(),
+  // What's inferred vs. explicitly stated (for a rewrite), or what's
+  // missing and why it matters (for genuine_gap).
+  rationale: z.string(),
 });
 
 export const tailorResumeResponseSchema = z.object({
@@ -226,7 +271,10 @@ export const tailorResumeResponseSchema = z.object({
   summary_of_changes: z.array(z.string()),
   // Same shape/rules as resumeSuggestionSchema above, applied here to this
   // specific posting's gaps rather than analyze-job's general suggestions.
-  suggested_fixes: z.array(resumeSuggestionSchema),
+  suggested_fixes: z.array(resumeFixSchema),
+  // Powers the Risks panel: per-category claim-support counts and the
+  // "Across the document" claim list.
+  claim_audit: z.array(resumeClaimCategorySchema),
 });
 
 export const suggestProfileCopyRequestSchema = z.object({

@@ -26,7 +26,7 @@ import { StatusBadge } from "@/components/jobs/StatusBadge";
 import { FollowUpCheckmark } from "@/components/jobs/FollowUpCheckmark";
 import { ResumeScoreGauge } from "@/components/jobs/ResumeScoreGauge";
 import { TailoredResumePreview } from "@/components/jobs/TailoredResumePreview";
-import type { Job, JobAiResumeTailoring, Resume } from "@/types/database";
+import type { Job, JobAiResumeFix, JobAiResumeTailoring, Resume } from "@/types/database";
 import { jobFormSchema, type JobFormValues } from "@/lib/validation";
 import { useDeleteJob, useJobStatusHistory, useSaveCoverLetter, useSaveResumeTailoring, useUpdateJob } from "@/hooks/queries/useJobs";
 import { useSettings } from "@/hooks/queries/useProfile";
@@ -52,6 +52,28 @@ interface JobDetailDialogProps {
   resumes: Resume[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
+}
+
+const CLAIM_CATEGORY_LABEL: Record<JobAiResumeClaimCategory["category"], string> = {
+  summary: "Summary",
+  experience: "Experience",
+  projects: "Projects",
+  education: "Education",
+  skills: "Skills",
+};
+
+// Which suggested fixes are pre-checked when a fresh tailoring result
+// arrives: safe/reasonable-stretch fixes that actually have text to swap
+// in. Aggressive stretches start unchecked — the user should opt into
+// those deliberately, not have them applied by default.
+function defaultCheckedFixIndexes(fixes: JobAiResumeFix[]): Set<number> {
+  const indexes = new Set<number>();
+  fixes.forEach((fix, index) => {
+    if (fix.original_text && fix.proposed_text && fix.stretch_level !== "aggressive_stretch") {
+      indexes.add(index);
+    }
+  });
+  return indexes;
 }
 
 function jobToFormValues(job: Job): JobFormValues {
@@ -106,6 +128,11 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
   // plain-text editor. Editing always happens on the underlying plain
   // text — see TailoredResumePreview's header note.
   const [editingTailoredResume, setEditingTailoredResume] = React.useState(false);
+  // Which suggested_fixes are opted in for "Apply selected fixes" — see
+  // defaultCheckedFixIndexes.
+  const [checkedFixes, setCheckedFixes] = React.useState<Set<number>>(
+    () => new Set(job?.ai_resume_tailoring ? defaultCheckedFixIndexes(job.ai_resume_tailoring.suggested_fixes) : []),
+  );
   const [activeTab, setActiveTab] = React.useState("overview");
   const coverLetterDirty = coverLetter !== (job?.ai_cover_letter ?? "");
   const tailoredResumeDirty = tailoredResumeText !== (job?.ai_resume_tailoring?.tailored_resume ?? "");
@@ -139,6 +166,7 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
     setTailoring(job?.ai_resume_tailoring ?? null);
     setTailoredResumeText(job?.ai_resume_tailoring?.tailored_resume ?? "");
     setEditingTailoredResume(false);
+    setCheckedFixes(new Set(job?.ai_resume_tailoring ? defaultCheckedFixIndexes(job.ai_resume_tailoring.suggested_fixes) : []));
     setActiveTab("overview");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [job?.id]);
@@ -357,6 +385,7 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
       setTailoring(response);
       setTailoredResumeText(response.tailored_resume);
       setEditingTailoredResume(false);
+      setCheckedFixes(defaultCheckedFixIndexes(response.suggested_fixes));
       if (response.resume_id) {
         setValue("resumeId", response.resume_id, { shouldDirty: false });
       }
@@ -366,6 +395,27 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
       // Deliberately does not touch `tailoring`/`tailoredResumeText` — a
       // failed regeneration never clears or overwrites an existing draft.
       push(err instanceof Error ? err.message : "Couldn't tailor your resume yet.", "error");
+    }
+  }
+
+  // Re-scores the user's own hand-edited draft without rewriting it — see
+  // RESCORE MODE in careerCoach.ts. Distinct from handleTailorResume, which
+  // always does a fresh rewrite from the original résumé.
+  async function handleRecalculateScores() {
+    if (!job || !tailoredResumeText.trim()) return;
+    try {
+      const response = await tailorResume.mutateAsync({
+        jobId: job.id,
+        selectedResumeId: watch("resumeId") || null,
+        currentDraftText: tailoredResumeText,
+      });
+      await saveResumeTailoring.mutateAsync({ id: job.id, tailoring: response, resumeId: response.resume_id });
+      setTailoring(response);
+      setTailoredResumeText(response.tailored_resume);
+      setCheckedFixes(defaultCheckedFixIndexes(response.suggested_fixes));
+      push("Scores updated for your edited résumé.", "success");
+    } catch (err) {
+      push(err instanceof Error ? err.message : "Couldn't recalculate scores.", "error");
     }
   }
 
@@ -379,6 +429,31 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
     } catch (err) {
       push(err instanceof Error ? err.message : "Couldn't save your edits.", "error");
     }
+  }
+
+  // Applies checked suggested_fixes as plain substring swaps against the
+  // current draft — the safest general approach without a rich/structured
+  // editor. Silently skips a fix whose original_text no longer appears
+  // (e.g. already applied, or the user edited that spot manually).
+  function handleApplySuggestedFixes() {
+    if (!tailoring) return;
+    let updated = tailoredResumeText;
+    let appliedCount = 0;
+    tailoring.suggested_fixes.forEach((fix, index) => {
+      if (!checkedFixes.has(index) || !fix.original_text || !fix.proposed_text) return;
+      if (updated.includes(fix.original_text)) {
+        updated = updated.replace(fix.original_text, fix.proposed_text);
+        appliedCount += 1;
+      }
+    });
+    if (appliedCount === 0) {
+      push("Couldn't find that exact text to replace — it may have already changed. Try editing manually instead.", "error");
+      return;
+    }
+    setTailoredResumeText(updated);
+    setEditingTailoredResume(true);
+    setCheckedFixes(new Set());
+    push(`Applied ${appliedCount} fix${appliedCount === 1 ? "" : "es"} — review, then save your edits.`, "success");
   }
 
   async function handleCopyTailoredResume() {
@@ -874,6 +949,25 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
                           {overallBand.badgeVariant === "success" ? <Check className="h-4 w-4 shrink-0" /> : <AlertTriangle className="h-4 w-4 shrink-0" />}
                           {bannerCopy[overallBand.badgeVariant]}
                         </div>
+
+                        {tailoredResumeDirty && (
+                          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-warning/30 bg-warning/10 px-3 py-2.5 text-sm text-warning">
+                            <span className="flex items-center gap-1.5">
+                              <AlertTriangle className="h-4 w-4 shrink-0" />
+                              These scores predate your latest edit.
+                            </span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={handleRecalculateScores}
+                              disabled={tailorResume.isPending}
+                              className="h-7 px-2 text-xs text-warning underline hover:bg-warning/15 hover:text-warning"
+                            >
+                              {tailorResume.isPending ? "Recalculating…" : "Recalculate"}
+                            </Button>
+                          </div>
+                        )}
 
                         <div className="flex flex-wrap items-center gap-4 rounded-xl border border-border/60 bg-card/50 px-4 py-4">
                           <ResumeScoreGauge score={tailoring.overall_score} />
