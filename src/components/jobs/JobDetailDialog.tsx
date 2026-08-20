@@ -73,14 +73,55 @@ const CLAIM_CATEGORY_LABEL: Record<JobAiResumeClaimCategory["category"], string>
 // arrives: safe/reasonable-stretch fixes that actually have text to swap
 // in. Aggressive stretches start unchecked — the user should opt into
 // those deliberately, not have them applied by default.
-function defaultCheckedFixIndexes(fixes: JobAiResumeFix[]): Set<number> {
+// fixes is untrusted here — it comes straight off jsonb, so a row saved by
+// an earlier version of this feature (before suggested_fixes/claim_audit
+// existed, or with the older {suggestion, reason} fix shape) won't match
+// JobAiResumeFix at runtime even though TypeScript assumes it does. Guard
+// with Array.isArray rather than trusting the type, so stale saved data
+// degrades to "no fixes" instead of throwing on .forEach.
+function defaultCheckedFixIndexes(fixes: JobAiResumeFix[] | null | undefined): Set<number> {
   const indexes = new Set<number>();
+  if (!Array.isArray(fixes)) return indexes;
   fixes.forEach((fix, index) => {
-    if (fix.original_text && fix.proposed_text && fix.stretch_level !== "aggressive_stretch") {
+    if (fix?.original_text && fix?.proposed_text && fix.stretch_level !== "aggressive_stretch") {
       indexes.add(index);
     }
   });
   return indexes;
+}
+
+// Defends the whole tailoring UI against saved jsonb from an earlier
+// version of this feature — this app has already shipped three different
+// ai_resume_tailoring shapes in quick succession (see git history), so a
+// job saved under an older one is a real, current case, not a
+// hypothetical. Every field is defaulted so downstream .map/.forEach calls
+// can never throw on missing data; a job with genuinely stale tailoring
+// just renders as mostly-empty (0 scores, no keywords/fixes/claims) rather
+// than crashing the whole dialog. The fix is to re-tailor, not to lose the
+// job detail view entirely.
+function normalizeTailoring(raw: JobAiResumeTailoring | null | undefined): JobAiResumeTailoring | null {
+  if (!raw) return null;
+  const dimension = (d: unknown) =>
+    d && typeof d === "object" && "score" in d
+      ? (d as JobAiResumeTailoring["job_match"])
+      : { score: 0, description: "" };
+  return {
+    resume_id: raw.resume_id ?? null,
+    resume_name: raw.resume_name ?? null,
+    overall_score: typeof raw.overall_score === "number" ? raw.overall_score : 0,
+    job_match: dimension(raw.job_match),
+    ats_readability: dimension(raw.ats_readability),
+    evidence_strength: dimension(raw.evidence_strength),
+    truthfulness: dimension(raw.truthfulness),
+    covered_keywords: Array.isArray(raw.covered_keywords) ? raw.covered_keywords : [],
+    weak_keywords: Array.isArray(raw.weak_keywords) ? raw.weak_keywords : [],
+    missing_keywords: Array.isArray(raw.missing_keywords) ? raw.missing_keywords : [],
+    tailored_resume: typeof raw.tailored_resume === "string" ? raw.tailored_resume : "",
+    summary_of_changes: Array.isArray(raw.summary_of_changes) ? raw.summary_of_changes : [],
+    suggested_fixes: Array.isArray(raw.suggested_fixes) ? raw.suggested_fixes : [],
+    claim_audit: Array.isArray(raw.claim_audit) ? raw.claim_audit : [],
+    template: raw.template,
+  };
 }
 
 function jobToFormValues(job: Job): JobFormValues {
@@ -129,8 +170,13 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
   const [confirmOpen, setConfirmOpen] = React.useState(false);
   const [analysisState, setAnalysisState] = React.useState<JobAnalysisPayload | null>(job?.ai_analysis ?? null);
   const [coverLetter, setCoverLetter] = React.useState(job?.ai_cover_letter ?? "");
-  const [tailoring, setTailoring] = React.useState<JobAiResumeTailoring | null>(job?.ai_resume_tailoring ?? null);
-  const [tailoredResumeText, setTailoredResumeText] = React.useState(job?.ai_resume_tailoring?.tailored_resume ?? "");
+  // job.ai_resume_tailoring is raw jsonb with no runtime guarantee it
+  // matches JobAiResumeTailoring — normalize once here so every piece of
+  // state below (and every .map/.forEach on `tailoring` in the JSX) is
+  // safe even for a job saved under an earlier version of this feature's
+  // schema. See normalizeTailoring's comment for why that's a real case.
+  const [tailoring, setTailoring] = React.useState<JobAiResumeTailoring | null>(() => normalizeTailoring(job?.ai_resume_tailoring));
+  const [tailoredResumeText, setTailoredResumeText] = React.useState(() => normalizeTailoring(job?.ai_resume_tailoring)?.tailored_resume ?? "");
   // Read-only rendered preview by default; the pencil icon switches to the
   // plain-text editor. Editing always happens on the underlying plain
   // text — see TailoredResumePreview's header note.
@@ -138,12 +184,12 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
   // Which suggested_fixes are opted in for "Apply selected fixes" — see
   // defaultCheckedFixIndexes.
   const [checkedFixes, setCheckedFixes] = React.useState<Set<number>>(
-    () => new Set(job?.ai_resume_tailoring ? defaultCheckedFixIndexes(job.ai_resume_tailoring.suggested_fixes) : []),
+    () => defaultCheckedFixIndexes(normalizeTailoring(job?.ai_resume_tailoring)?.suggested_fixes),
   );
   // Client-only visual choice for the rendered preview/PDF export — see
   // resumeTemplates.ts. Persisted onto the saved tailoring blob, but never
   // sent to or validated against the AI response schema.
-  const [resumeTemplate, setResumeTemplate] = React.useState<ResumeTemplateId>(job?.ai_resume_tailoring?.template ?? "classic");
+  const [resumeTemplate, setResumeTemplate] = React.useState<ResumeTemplateId>(() => normalizeTailoring(job?.ai_resume_tailoring)?.template ?? "classic");
   const [activeTab, setActiveTab] = React.useState("overview");
   const coverLetterDirty = coverLetter !== (job?.ai_cover_letter ?? "");
   const tailoredResumeDirty = tailoredResumeText !== (job?.ai_resume_tailoring?.tailored_resume ?? "");
@@ -172,13 +218,14 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
   }, [job?.id]);
 
   React.useEffect(() => {
+    const normalizedTailoring = normalizeTailoring(job?.ai_resume_tailoring);
     setAnalysisState(job?.ai_analysis ?? null);
     setCoverLetter(job?.ai_cover_letter ?? "");
-    setTailoring(job?.ai_resume_tailoring ?? null);
-    setTailoredResumeText(job?.ai_resume_tailoring?.tailored_resume ?? "");
+    setTailoring(normalizedTailoring);
+    setTailoredResumeText(normalizedTailoring?.tailored_resume ?? "");
     setEditingTailoredResume(false);
-    setCheckedFixes(new Set(job?.ai_resume_tailoring ? defaultCheckedFixIndexes(job.ai_resume_tailoring.suggested_fixes) : []));
-    setResumeTemplate(job?.ai_resume_tailoring?.template ?? "classic");
+    setCheckedFixes(defaultCheckedFixIndexes(normalizedTailoring?.suggested_fixes));
+    setResumeTemplate(normalizedTailoring?.template ?? "classic");
     setActiveTab("overview");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [job?.id]);
