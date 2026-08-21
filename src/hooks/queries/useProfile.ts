@@ -93,6 +93,31 @@ export function useSettings() {
   });
 }
 
+// Mounted once in RealtimeSync — theme, hidden board columns, default
+// resume, and notification prefs changed on another device reach this
+// session immediately, the same way profiles/jobs/goals already do. Without
+// this, a setting flipped on one device would sit stale here until
+// something else happened to refetch it — and an unrelated settings save
+// from this device could then silently overwrite the other device's change.
+// `settings.user_id` is the table's primary key, so there's exactly one row.
+export function useSettingsRealtime() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  const userId = user?.id ?? "";
+
+  useRealtimeTable<Settings>({
+    channel: `settings:${userId}`,
+    table: "settings",
+    filter: userId ? `user_id=eq.${userId}` : undefined,
+    enabled: Boolean(userId),
+    onChange: (payload) => {
+      if (payload.eventType === "UPDATE" || payload.eventType === "INSERT") {
+        qc.setQueryData<Settings>(queryKeys.settings(userId), payload.new as Settings);
+      }
+    },
+  });
+}
+
 export function useUpdateSettings() {
   const { user } = useAuth();
   const qc = useQueryClient();

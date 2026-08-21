@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Plus, Trash2, Users } from "lucide-react";
+import { PartyPopper, Plus, Trash2, Users } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -13,15 +13,31 @@ import { useSharedContextProfiles } from "@/hooks/queries/useProfile";
 import { useAuth } from "@/hooks/useAuth";
 import { useDeleteGoal, useJoinGoal, useLeaveGoal, useUpdateGoalProgress } from "@/hooks/queries/useGoals";
 import { useToast } from "@/components/shared/toast";
+import { logActivity } from "@/services/activity";
 import { cn, formatDate, initials } from "@/lib/utils";
 import type { GoalWithMembers } from "@/services/goals";
 
-function MemberRow({ userId, displayName, avatarPath, progress, target, unit, isSelf, goalId, ownerId }: {
-  userId: string; displayName: string; avatarPath: string | null; progress: number; target: number; unit: string; isSelf: boolean; goalId: string; ownerId: string;
+function MemberRow({ userId, displayName, avatarPath, progress, target, unit, isSelf, goalId, goalName, ownerId }: {
+  userId: string; displayName: string; avatarPath: string | null; progress: number; target: number; unit: string; isSelf: boolean; goalId: string; goalName: string; ownerId: string;
 }) {
   const avatarUrl = useSignedAvatarUrl(avatarPath);
   const updateProgress = useUpdateGoalProgress();
+  const { push } = useToast();
+  const isComplete = target > 0 && progress >= target;
   const pct = target > 0 ? Math.min(100, Math.round((progress / target) * 100)) : 0;
+
+  // Caps at target so repeated clicks can't overcount past the goal, and
+  // fires the completion moment exactly once — on the click that first
+  // reaches it, since the button disappears (see isComplete below) the
+  // instant that happens.
+  async function handleIncrement() {
+    const nextProgress = Math.min(progress + 1, target);
+    await updateProgress.mutateAsync({ goalId, progressCount: nextProgress });
+    if (nextProgress >= target) {
+      push(`🎉 Goal reached: ${goalName}!`, "success");
+      void logActivity(userId, "goal_completed", `Reached your goal: ${goalName}`, { goalId });
+    }
+  }
 
   return (
     <div className="flex items-center gap-2.5">
@@ -36,14 +52,27 @@ function MemberRow({ userId, displayName, avatarPath, progress, target, unit, is
           <PersonLink userId={userId} className="truncate font-medium transition-colors hover:text-primary">
             {displayName}
           </PersonLink>
-          <span className="text-muted-foreground">{progress}/{target} {unit}</span>
+          <span className={cn("text-muted-foreground", isComplete && "font-medium text-success")}>
+            {progress}/{target} {unit}
+            {isComplete && " 🎉"}
+          </span>
         </div>
         <Progress value={pct} className="mt-1 h-1.5" />
       </div>
       {isSelf ? (
-        <Button size="sm" variant="outline" className="h-7 px-2" onClick={() => updateProgress.mutate({ goalId, progressCount: progress + 1 })}>
-          <Plus className="h-3 w-3" />
-        </Button>
+        isComplete ? (
+          <span
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-success/15 text-success"
+            aria-label="Goal completed"
+            title="Goal completed"
+          >
+            <PartyPopper className="h-3.5 w-3.5" />
+          </span>
+        ) : (
+          <Button size="sm" variant="outline" className="h-7 px-2" onClick={handleIncrement} disabled={updateProgress.isPending}>
+            <Plus className="h-3 w-3" />
+          </Button>
+        )
       ) : (
         userId !== ownerId && <ReactionPicker recipientId={userId} contextType="goal" contextId={goalId} />
       )}
@@ -106,6 +135,7 @@ export function GoalCard({ goal, highlighted = false }: { goal: GoalWithMembers;
                 unit={goal.unit}
                 isSelf={m.user_id === user?.id}
                 goalId={goal.id}
+                goalName={goal.name}
                 ownerId={goal.owner_id}
               />
             );

@@ -675,6 +675,7 @@ export type ProfileActivityType =
   | "certification_added"
   | "certification_completed"
   | "goal_created"
+  | "goal_completed"
   | "onboarding_completed";
 
 export interface ProfileActivity {

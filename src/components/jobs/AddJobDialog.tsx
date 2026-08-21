@@ -15,9 +15,10 @@ import { Label } from "@/components/ui/label";
 import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { jobFormSchema, type JobFormValues } from "@/lib/validation";
-import type { NewJob, Resume } from "@/types/database";
-import { useCreateJob } from "@/hooks/queries/useJobs";
+import type { Job, NewJob, Resume } from "@/types/database";
+import { useCreateJob, useJobs } from "@/hooks/queries/useJobs";
 import { useAnalyzeJob } from "@/hooks/queries/useJobAi";
 import { useSettings } from "@/hooks/queries/useProfile";
 import { useToast } from "@/components/shared/toast";
@@ -62,10 +63,16 @@ export function AddJobDialog({ open, onOpenChange, resumes }: AddJobDialogProps)
   const createJob = useCreateJob();
   const analyzeJob = useAnalyzeJob();
   const { data: settings } = useSettings();
+  const { data: existingJobs = [] } = useJobs();
   const { push } = useToast();
   const [analysis, setAnalysis] = React.useState<JobAnalysisPayload | null>(null);
   const [openSections, setOpenSections] = React.useState<string[]>([]);
   const analyzingHint = useProgressHint(analyzeJob.isPending, ANALYSIS_PROGRESS_STEPS);
+  // Set when onSubmit finds an existing job with the same company + title —
+  // the form is held here rather than saved until the user explicitly
+  // chooses to save anyway (see duplicateMatch ConfirmDialog below).
+  const [duplicateMatch, setDuplicateMatch] = React.useState<Job | null>(null);
+  const pendingSaveRef = React.useRef<{ input: NewJob; title: string; company: string } | null>(null);
 
   const {
     register,
@@ -91,6 +98,8 @@ export function AddJobDialog({ open, onOpenChange, resumes }: AddJobDialogProps)
       reset(DEFAULT_VALUES);
       setAnalysis(null);
       setOpenSections([]);
+      setDuplicateMatch(null);
+      pendingSaveRef.current = null;
     }
     onOpenChange(nextOpen);
   }
@@ -135,6 +144,30 @@ export function AddJobDialog({ open, onOpenChange, resumes }: AddJobDialogProps)
     }
   }
 
+  // Same company + title, case/whitespace-insensitive, among this user's own
+  // jobs — reposted listings and copy/paste retries still count as the same
+  // one, without needing the job URL (which is often missing or changes).
+  function findDuplicate(company: string, title: string): Job | null {
+    const norm = (s: string) => s.trim().toLowerCase();
+    return (
+      existingJobs.find((j) => norm(j.company) === norm(company) && norm(j.title) === norm(title)) ?? null
+    );
+  }
+
+  async function saveJob(input: NewJob, title: string, company: string) {
+    try {
+      const created = await createJob.mutateAsync(input);
+      if (created.status === "applied" && created.follow_up_date) {
+        push(`Application recorded. We'll remind you to follow up on ${formatDate(created.follow_up_date)}.`, "success");
+      } else {
+        push(`Saved ${title} at ${company}.`, "success");
+      }
+      close(false);
+    } catch (err) {
+      push(err instanceof Error ? err.message : "Couldn't save that job. Try again.", "error");
+    }
+  }
+
   async function onSubmit(values: JobFormValues) {
     const input: NewJob = {
       company: values.company.trim(),
@@ -172,17 +205,14 @@ export function AddJobDialog({ open, onOpenChange, resumes }: AddJobDialogProps)
       ai_prompt_version: analysis?.promptVersion ?? null,
     };
 
-    try {
-      const created = await createJob.mutateAsync(input);
-      if (created.status === "applied" && created.follow_up_date) {
-        push(`Application recorded. We'll remind you to follow up on ${formatDate(created.follow_up_date)}.`, "success");
-      } else {
-        push(`Saved ${values.title} at ${values.company}.`, "success");
-      }
-      close(false);
-    } catch (err) {
-      push(err instanceof Error ? err.message : "Couldn't save that job. Try again.", "error");
+    const duplicate = findDuplicate(values.company, values.title);
+    if (duplicate) {
+      pendingSaveRef.current = { input, title: values.title, company: values.company };
+      setDuplicateMatch(duplicate);
+      return;
     }
+
+    await saveJob(input, values.title, values.company);
   }
 
   return (
@@ -462,6 +492,33 @@ export function AddJobDialog({ open, onOpenChange, resumes }: AddJobDialogProps)
           </DialogFooter>
         </form>
       </DialogContent>
+
+      <ConfirmDialog
+        open={!!duplicateMatch}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) {
+            setDuplicateMatch(null);
+            pendingSaveRef.current = null;
+          }
+        }}
+        title="You already saved this job"
+        description={
+          duplicateMatch
+            ? `You saved ${duplicateMatch.title} at ${duplicateMatch.company} on ${formatDate(duplicateMatch.created_at)} — currently ${
+                JOB_STATUSES.find((s) => s.value === duplicateMatch.status)?.label ?? duplicateMatch.status
+              }. Save this one anyway?`
+            : ""
+        }
+        confirmLabel="Save anyway"
+        onConfirm={async () => {
+          if (pendingSaveRef.current) {
+            const { input, title, company } = pendingSaveRef.current;
+            await saveJob(input, title, company);
+          }
+          setDuplicateMatch(null);
+          pendingSaveRef.current = null;
+        }}
+      />
     </Dialog>
   );
 }
