@@ -80,8 +80,28 @@ export interface JobAiDealBreaker {
   // experience"), independent of this posting's exact wording — see
   // CandidateHardRequirementFact.requirement_key below and requirementKey
   // in the edge function's schemas.ts. Empty string on analyses saved
-  // before this field existed — HardRequirementConfirm treats that as
+  // before this field existed — ConfirmCandidateFact treats that as
   // "can't be confirmed" rather than matching it against anything.
+  requirementKey: string;
+}
+
+// A candidateFit item the AI couldn't evidence either way — see
+// candidateFitSchema.unknowns in src/lib/ai.ts. Same requirementKey
+// convention/namespace as JobAiDealBreaker (matched against the same
+// candidate_hard_requirement_facts table — see CandidateHardRequirementFact
+// below), deliberately allowing one confirmation to resolve both an unknown
+// and a dealBreaker that share a category. No status: a resolved unknown is
+// simply omitted from the array by the model on the next analysis, it
+// doesn't flip to a "confirmed" state the way a dealBreaker does.
+export interface JobAiUnknown {
+  label: string;
+  // Empty string on: (a) analyses saved before this field existed (where
+  // this interface is a TS-only cast over stored JSONB whose unknowns are
+  // still plain strings — see JobAiAnalysisResult.candidateFit.unknowns
+  // below), and (b) the two synthetic "no resume/profile evidence" system
+  // notes added server-side — neither case can be matched to a candidate
+  // answer or offered a confirm affordance. Same convention as
+  // JobAiDealBreaker.requirementKey above.
   requirementKey: string;
 }
 
@@ -92,7 +112,7 @@ export type CandidateFactAnswer = "yes" | "no" | "partial";
 // not on any one job: matched against JobAiDealBreaker.requirementKey so
 // one confirmation is reused across every posting that raises the same
 // requirement, and can be edited later if the candidate's situation
-// changes. See HardRequirementConfirm and CandidateFactsSettings.
+// changes. See ConfirmCandidateFact and CandidateFactsSettings.
 export interface CandidateHardRequirementFact {
   id: string;
   user_id: string;
@@ -223,7 +243,13 @@ export interface JobAiAnalysisResult {
     transferableStrengths: string[];
     criticalGaps: string[];
     preferredGaps: string[];
-    unknowns: string[];
+    // Type says JobAiUnknown[], but analyses persisted before this field's
+    // shape changed still have plain string[] in the stored JSONB (never
+    // backfilled) — same "type lies about pre-migration rows" situation as
+    // JobAiJobExtraction.logisticsConsiderations above. Every read site
+    // must normalize (`typeof item === "string" ? {label: item, ...} :
+    // item`) rather than trust this type at runtime. See AnalysisSummary.
+    unknowns: JobAiUnknown[];
   };
   // Every fresh analysis includes these, but analyses saved before this
   // field set existed won't have them in their stored JSONB — always read

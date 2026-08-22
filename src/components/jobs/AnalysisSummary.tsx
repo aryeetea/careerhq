@@ -20,7 +20,7 @@ import {
   RESUME_SUGGESTION_TYPE_META,
 } from "@/lib/constants";
 import type { JobAnalysisPayload } from "@/lib/ai";
-import { HardRequirementConfirm } from "@/components/jobs/HardRequirementConfirm";
+import { ConfirmCandidateFact } from "@/components/jobs/ConfirmCandidateFact";
 
 function ListBlock({ title, items, empty, muted }: { title: string; items: string[]; empty: string; muted?: boolean }) {
   return (
@@ -338,7 +338,7 @@ export function AnalysisSummary({
                         Items from analyses saved before requirementKey
                         existed (empty string) can't be matched to
                         anything, so they stay a plain badge. */}
-                    {item.requirementKey && <HardRequirementConfirm item={item} />}
+                    {item.requirementKey && <ConfirmCandidateFact item={item} />}
                   </div>
                 );
               })}
@@ -377,14 +377,41 @@ export function AnalysisSummary({
         </Card>
       )}
 
-      {analysis.analysis.candidateFit.unknowns.length > 0 && (
-        <ListBlock
-          title="Missing information"
-          items={analysis.analysis.candidateFit.unknowns}
-          empty="No major unknowns were identified."
-          muted
-        />
-      )}
+      {/* Unlike dealBreakers above, an unknown was never eligibility-
+          blocking — it's just something the résumé/profile didn't say one
+          way or the other. Kept visually lighter (muted tone, no status
+          badge — unknowns has no status enum) so this card never reads as
+          equally alarming as "Hard requirements to confirm". Answering one
+          here uses the same ConfirmCandidateFact flow and saves to the same
+          candidate_hard_requirement_facts table, so it's reused everywhere
+          that requirementKey comes up again, dealBreaker or unknown alike.
+          Old analyses stored unknowns as plain string[] — normalize before
+          rendering so those rows show the text with no confirm affordance
+          rather than crashing on a missing requirementKey. */}
+      {(() => {
+        const unknowns = analysis.analysis.candidateFit.unknowns.map((item) =>
+          typeof item === "string" ? { label: item, requirementKey: "" } : item
+        );
+        if (unknowns.length === 0) return null;
+        return (
+          <Card className="border-border/40 bg-card/30">
+            <CardContent className="p-4">
+              <p className="text-sm font-semibold">Missing information</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                These wouldn&apos;t disqualify you — Bloom just didn&apos;t have enough evidence to say either way. Answering helps future matches too.
+              </p>
+              <div className="mt-3 grid gap-2.5">
+                {unknowns.map((item, index) => (
+                  <div key={`${item.label}-${index}`} className="rounded-xl border border-border/40 bg-card/30 px-3 py-3">
+                    <p className="text-sm">{item.label}</p>
+                    {item.requirementKey && <ConfirmCandidateFact item={item} questionLabel="Do you have this?" />}
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* Everything below is real, but secondary — the five numeric
           sub-scores behind [FIT], the raw assessment/confidence metadata,

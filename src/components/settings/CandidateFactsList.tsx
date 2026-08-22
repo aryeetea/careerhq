@@ -19,11 +19,11 @@ const ANSWER_VARIANT: Record<CandidateFactAnswer, React.ComponentProps<typeof Ba
 };
 
 /** Everything the candidate has confirmed from "Hard requirements to
- * confirm" cards, gathered in one place so it reads like part of the
- * profile — not just a one-off answer buried in a single job's analysis.
- * Removing a fact here makes future analyses ask about it again, which is
- * the intended way to walk back an answer that no longer applies (as
- * opposed to "Update," which corrects it in place). */
+ * confirm" and "Missing information" cards, gathered in one place so it
+ * reads like part of the profile — not just a one-off answer buried in a
+ * single job's analysis. Removing a fact here makes future analyses ask
+ * about it again, which is the intended way to walk back an answer that no
+ * longer applies (as opposed to "Update," which corrects it in place). */
 export function CandidateFactsList() {
   const { data: facts, isLoading } = useCandidateFacts();
   const deleteFact = useDeleteCandidateFact();
@@ -46,15 +46,16 @@ export function CandidateFactsList() {
 
   return (
     <div>
-      <p className="mb-2 text-sm font-medium">Confirmed requirements</p>
+      <p className="mb-2 text-sm font-medium">Confirmed requirements &amp; skills</p>
       <p className="mb-2 text-xs text-muted-foreground">
-        Answers you've given to "Hard requirements to confirm" questions on job postings. Bloom reuses these across every job
-        that raises the same requirement, so you're never asked twice — update or remove one any time your situation changes.
+        Answers you've given to "Hard requirements to confirm" and "Missing information" questions on job postings. Bloom
+        reuses these across every job that raises the same requirement or skill, so you're never asked twice — update or
+        remove one any time your situation changes.
       </p>
       {!facts || facts.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          Nothing confirmed yet. When a job analysis flags a requirement it can't verify, you'll be able to answer it right
-          there and it'll show up here.
+          Nothing confirmed yet. When a job analysis flags a requirement or skill it can't verify, you'll be able to answer
+          it right there and it'll show up here.
         </p>
       ) : (
         <div className="grid gap-2">

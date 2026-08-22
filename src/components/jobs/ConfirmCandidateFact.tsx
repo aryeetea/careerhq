@@ -5,7 +5,7 @@ import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea";
 import { cn } from "@/lib/utils";
 import { useCandidateFacts, useUpsertCandidateFact } from "@/hooks/queries/useCandidateFacts";
 import { useToast } from "@/components/shared/toast";
-import type { CandidateFactAnswer, JobAiDealBreaker } from "@/types/database";
+import type { CandidateFactAnswer } from "@/types/database";
 
 const ANSWER_META: Record<CandidateFactAnswer, { label: string }> = {
   yes: { label: "Yes, I have this" },
@@ -13,15 +13,31 @@ const ANSWER_META: Record<CandidateFactAnswer, { label: string }> = {
   partial: { label: "Partially" },
 };
 
-/** Inline questionnaire for one "Hard requirements to confirm" item — lets
- * the user answer it directly instead of leaving it as a dead-end badge.
- * The answer is saved to candidate_hard_requirement_facts (keyed on
- * requirementKey, not this posting's wording), so it's reused across every
- * other job with a matching requirement and can be updated later if the
- * candidate's situation changes. Requires requirementKey — items from
- * analyses saved before that field existed can't be matched to anything,
- * so they fall back to just the plain badge (see AnalysisSummary). */
-export function HardRequirementConfirm({ item }: { item: JobAiDealBreaker }) {
+// Both JobAiDealBreaker and JobAiUnknown satisfy this shape structurally —
+// this component never needs a dealBreaker's status, so it works for either
+// call site without a cast.
+export interface ConfirmableFact {
+  label: string;
+  requirementKey: string;
+}
+
+/** Inline questionnaire for one confirmable "Hard requirements to confirm"
+ * or "Missing information" item — lets the user answer it directly instead
+ * of leaving it as a dead-end badge/line of text. The answer is saved to
+ * candidate_hard_requirement_facts (keyed on requirementKey, not this
+ * posting's wording), so it's reused across every other job with a matching
+ * requirement — whether that job raised it as a dealBreaker or an unknown —
+ * and can be updated later if the candidate's situation changes. Requires
+ * requirementKey — items from analyses saved before that field existed
+ * can't be matched to anything, so they fall back to just plain text (see
+ * AnalysisSummary). */
+export function ConfirmCandidateFact({
+  item,
+  questionLabel = "Do you meet this requirement?",
+}: {
+  item: ConfirmableFact;
+  questionLabel?: string;
+}) {
   const { data: facts } = useCandidateFacts();
   const upsertFact = useUpsertCandidateFact();
   const { push } = useToast();
@@ -68,7 +84,7 @@ export function HardRequirementConfirm({ item }: { item: JobAiDealBreaker }) {
 
   return (
     <div className="mt-2.5 border-t border-border/40 pt-2.5">
-      <p className="text-xs font-medium text-muted-foreground">Do you meet this requirement?</p>
+      <p className="text-xs font-medium text-muted-foreground">{questionLabel}</p>
       <div className="mt-1.5 flex flex-wrap gap-1.5">
         {(Object.keys(ANSWER_META) as CandidateFactAnswer[]).map((answer) => (
           <Button

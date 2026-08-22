@@ -2,7 +2,7 @@ import type { Job, JobAiDealBreaker } from "@/types/database";
 
 // Hard-requirement dealBreaker items on a job that the AI flagged as
 // uncertain (possible/insufficient_information) and the candidate hasn't
-// answered yet — see HardRequirementConfirm and candidate_hard_requirement_
+// answered yet — see ConfirmCandidateFact and candidate_hard_requirement_
 // facts (migration 0044). A "confirmed" status item, or one from an
 // analysis run before requirementKey existed (empty string, can't be
 // matched to a saved answer), never counts as pending.

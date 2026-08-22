@@ -657,11 +657,21 @@ export interface ConfirmedHardRequirementFact {
   detail: string | null;
 }
 
-function withMissingEvidenceUnknowns(existing: string[], context: CandidateEvidenceContext): string[] {
+function withMissingEvidenceUnknowns(
+  existing: Array<{ label: string; requirementKey: string }>,
+  context: CandidateEvidenceContext,
+): Array<{ label: string; requirementKey: string }> {
   const unknowns = [...existing];
-  if (!context.hasResumeEvidence) unknowns.push("No resume evidence was available to assess your fit.");
-  if (!context.hasProfileEvidence) unknowns.push("No profile evidence was available to assess your fit.");
-  return Array.from(new Set(unknowns));
+  // requirementKey is deliberately "" here — these are synthetic system
+  // notes about a missing evidence SOURCE, not a specific candidate fact,
+  // so there's nothing to confirm and no requirement to match against a
+  // saved answer (see JobAiUnknown.requirementKey in src/types/database.ts).
+  if (!context.hasResumeEvidence) unknowns.push({ label: "No resume evidence was available to assess your fit.", requirementKey: "" });
+  if (!context.hasProfileEvidence) unknowns.push({ label: "No profile evidence was available to assess your fit.", requirementKey: "" });
+  // Dedupe by label — a plain Set (used previously) only dedupes primitive
+  // strings by reference, not these objects. Preserves first occurrence.
+  const seen = new Set<string>();
+  return unknowns.filter((item) => (seen.has(item.label) ? false : (seen.add(item.label), true)));
 }
 
 export function normalizeAndValidateAnalysis(response: AnalysisResponse, context: CandidateEvidenceContext): AnalysisResponse {
@@ -1183,6 +1193,19 @@ const dealBreakerJsonSchema = {
   },
 } as const;
 
+const unknownItemJsonSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["label", "requirementKey"],
+  properties: {
+    label: { type: "string" },
+    // Same category-slug convention as dealBreakerJsonSchema.requirementKey
+    // above — see UNKNOWNS AND REQUIREMENTKEY in careerCoach.ts, which
+    // applies it to candidateFit.unknowns too.
+    requirementKey: { type: "string" },
+  },
+} as const;
+
 const logisticsConsiderationJsonSchema = {
   type: "object",
   additionalProperties: false,
@@ -1314,7 +1337,7 @@ const analysisResultJsonSchema = {
         transferableStrengths: { type: "array", items: { type: "string" } },
         criticalGaps: { type: "array", items: { type: "string" } },
         preferredGaps: { type: "array", items: { type: "string" } },
-        unknowns: { type: "array", items: { type: "string" } },
+        unknowns: { type: "array", items: unknownItemJsonSchema },
       },
     },
     scoringDimensions: scoringDimensionsJsonSchema,

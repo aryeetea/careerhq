@@ -82,6 +82,20 @@ export const dealBreakerSchema = z.object({
   requirementKey: z.string().optional().default(""),
 });
 
+// A candidateFit item where the AI genuinely lacks enough evidence to say
+// either way (e.g. "Whether you have hands-on proficiency with Excel") —
+// distinct from dealBreakerSchema, which is scoped to eligibility-blocking
+// hard requirements. Deliberately reuses the same requirementKey namespace
+// as dealBreakerSchema (see comment there): a fact confirmed via a
+// dealBreaker question can resolve a matching unknown on another job, and
+// vice versa. No status field — unlike a dealBreaker, a resolved unknown
+// doesn't change state, it simply stops being returned by the model at all
+// (see UNKNOWNS AND REQUIREMENTKEY in careerCoach.ts).
+export const unknownItemSchema = z.object({
+  label: z.string(),
+  requirementKey: z.string().optional().default(""),
+});
+
 // Logistics/lifestyle factors (relocation, travel, work arrangement,
 // schedule, …) — separate from dealBreakers, which is scoped to genuine
 // hard-eligibility issues only. See AnalysisSummary's "Things to consider".
@@ -156,7 +170,7 @@ export const candidateFitSchema = z.object({
   transferableStrengths: z.array(z.string()),
   criticalGaps: z.array(z.string()),
   preferredGaps: z.array(z.string()),
-  unknowns: z.array(z.string()),
+  unknowns: z.array(unknownItemSchema),
 });
 
 export const analysisResultSchema = z.object({
