@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import webpush from "npm:web-push@3";
 import { ZodError } from "npm:zod";
 import { analysisResponseSchema, coverLetterResponseSchema, tailorResumeResponseSchema, type AnalysisResponse } from "./schemas.ts";
 import { buildAnalysisPrompt, buildCoverLetterPrompt, buildTailorResumePrompt, CAREER_COACH_PROMPT_VERSION } from "./prompts/careerCoach.ts";
@@ -150,6 +151,76 @@ export function getOpenAIClient() {
   return { apiKey };
 }
 
+// PUSH NOTIFICATIONS
+//
+// Fans a notification out to every device the user has enabled push on
+// (see push_subscriptions, migration 0045). Deliberately the same
+// fail-open shape as tavilySearch below and getOpenAIClient above: a
+// missing/misconfigured VAPID secret, a network hiccup, or every
+// subscription being stale must never be the reason an AI request
+// itself fails — push is a notification ABOUT a result that already
+// exists, never a precondition for producing it. Call this after the
+// real work is done and already saved, and never await its failure path
+// in a way that could change the caller's response.
+let vapidConfigured = false;
+function ensureVapidConfigured(): boolean {
+  if (vapidConfigured) return true;
+  const publicKey = Deno.env.get("VAPID_PUBLIC_KEY");
+  const privateKey = Deno.env.get("VAPID_PRIVATE_KEY");
+  const subject = Deno.env.get("VAPID_SUBJECT");
+  if (!publicKey || !privateKey || !subject) return false;
+  webpush.setVapidDetails(subject, publicKey, privateKey);
+  vapidConfigured = true;
+  return true;
+}
+
+export interface PushPayload {
+  title: string;
+  body: string;
+  // Path only (e.g. "/jobs/<id>") — the service worker's notificationclick
+  // handler (src/sw.ts) resolves it against the app's own origin, so this
+  // never needs to know which origin it's running on (localhost vs.
+  // production) or embed one.
+  url: string;
+  // Same tag = same underlying SUBJECT collapses into one OS
+  // notification instead of stacking duplicates — callers scope this
+  // per-job (e.g. `bloom-job-analysis-<jobId>`) so re-running analysis on
+  // one job replaces its own earlier notification, while a push about a
+  // different job still arrives as its own separate notification rather
+  // than silently clobbering an unrelated one.
+  tag: string;
+}
+
+export async function sendPushToUser(adminClient: any, userId: string, payload: PushPayload): Promise<void> {
+  if (!ensureVapidConfigured()) return; // not configured — silent no-op, see comment above
+
+  const { data: subs, error } = await adminClient
+    .from("push_subscriptions")
+    .select("id,endpoint,p256dh,auth_key")
+    .eq("user_id", userId);
+  if (error || !subs || subs.length === 0) return;
+
+  await Promise.all(
+    (subs as Array<{ id: string; endpoint: string; p256dh: string; auth_key: string }>).map(async (sub) => {
+      try {
+        await webpush.sendNotification(
+          { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth_key } },
+          JSON.stringify(payload),
+        );
+      } catch (sendError) {
+        const statusCode = (sendError as { statusCode?: number })?.statusCode;
+        if (statusCode === 404 || statusCode === 410) {
+          // Endpoint gone (browser unsubscribed it, user cleared site
+          // data, etc.) — clean up rather than retrying it forever.
+          await adminClient.from("push_subscriptions").delete().eq("id", sub.id);
+        } else {
+          console.error("Push send failed", statusCode, sendError);
+        }
+      }
+    }),
+  );
+}
+
 interface TavilySearchResult {
   title: string;
   url: string;
@@ -190,14 +261,26 @@ async function tavilySearch(query: string, action: string): Promise<TavilySearch
 }
 
 // Backs companyLegitimacy.webCheck (see SCAM RED FLAGS in careerCoach.ts
-// for the text-pattern side of this).
-function searchCompanyWeb(companyName: string): Promise<TavilySearchResult[] | null> {
-  // Deliberately hiring/job-scam-focused, not a generic "company reviews"
-  // search — see evaluateCompanyPresence below for why: broad review
-  // queries surface ordinary product/billing complaints (every company
-  // with any online presence has some), which is a completely different
-  // concern from "is this JOB POSTING a scam."
-  return tavilySearch(`"${companyName}" hiring scam OR "job scam" OR "fake job posting" OR careers reviews`, "company_presence");
+// for the text-pattern side of this). Two separate, differently-purposed
+// queries, not one query doing both jobs — a scam-focused query (below)
+// almost never surfaces a company's own site, LinkedIn page, or Indeed
+// listing (those domains don't publish "hiring scam" content about
+// themselves), so using it alone to decide presenceConfirmed starved that
+// check for nearly every company, real or not. This neutral query is
+// what evaluateCompanyPresence uses to confirm an independent listing
+// actually exists.
+function searchCompanyPresenceWeb(companyName: string): Promise<TavilySearchResult[] | null> {
+  return tavilySearch(`"${companyName}" official site OR careers OR LinkedIn`, "company_presence");
+}
+
+// Deliberately hiring/job-scam-focused, not a generic "company reviews"
+// search — see evaluateCompanyPresence below for why: broad review
+// queries surface ordinary product/billing complaints (every company
+// with any online presence has some), which is a completely different
+// concern from "is this JOB POSTING a scam." Feeds only scamMentions, not
+// presenceConfirmed (see searchCompanyPresenceWeb above).
+function searchCompanyScamWeb(companyName: string): Promise<TavilySearchResult[] | null> {
+  return tavilySearch(`"${companyName}" hiring scam OR "job scam" OR "fake job posting" OR careers reviews`, "company_scam_check");
 }
 
 // Backs companyLegitimacy.locationConfidence — see LOCATION VERIFICATION
@@ -474,9 +557,13 @@ export async function enrichCompanyLegitimacyWithWebCheck(analysis: AnalysisResp
   let note = base.note;
 
   if (companyName) {
-    const presenceResults = await searchCompanyWeb(companyName);
-    if (presenceResults) {
-      const { presenceConfirmed, scamMentions, source: presenceSource } = evaluateCompanyPresence(companyName, presenceResults);
+    const [presenceResults, scamResults] = await Promise.all([
+      searchCompanyPresenceWeb(companyName),
+      searchCompanyScamWeb(companyName),
+    ]);
+    if (presenceResults || scamResults) {
+      const combinedResults = [...(presenceResults ?? []), ...(scamResults ?? [])];
+      const { presenceConfirmed, scamMentions, source: presenceSource } = evaluateCompanyPresence(companyName, combinedResults);
       webCheck = presenceConfirmed ? "confirmed_presence" : "no_presence_found";
       // Full Tavily snippet, untruncated — this is the actual evidence
       // behind "confirmed_presence" and the user should be able to read
@@ -1463,6 +1550,11 @@ export async function generateCoverLetterText(
     // prompt is instructed to fall back to an editable placeholder rather
     // than invent one.
     applicantName: string | null;
+    // See CONFIRMED CANDIDATE FACTS in careerCoach.ts — ground truth the
+    // candidate already confirmed for themselves elsewhere (e.g. via the
+    // job-analysis hard-requirement confirm flow), usable here as verified
+    // information even when it isn't literal résumé text.
+    confirmedFacts?: ConfirmedHardRequirementFact[];
   },
 ) {
   // Computed here, not left to the model, so the date line is always
@@ -1509,6 +1601,12 @@ export async function generateCoverLetterText(
                 raw_job_text: params.rawJobText.slice(0, 18000),
                 applicant_career_goal: params.careerGoal,
                 applicant_name: params.applicantName,
+                confirmed_candidate_facts: (params.confirmedFacts ?? []).map((fact) => ({
+                  requirement_key: fact.requirementKey,
+                  label: fact.label,
+                  answer: fact.answer,
+                  detail: fact.detail,
+                })),
                 today,
               },
               null,
@@ -1614,6 +1712,12 @@ export async function generateTailoredResumeText(
     // re-scores/re-audits this exact text instead of doing a fresh
     // rewrite from selectedResume.extractedText.
     currentDraftText?: string;
+    // See CONFIRMED CANDIDATE FACTS in careerCoach.ts — ground truth the
+    // candidate already confirmed for themselves elsewhere (e.g. via the
+    // job-analysis hard-requirement confirm flow), usable here as real
+    // evidence for covered_keywords/suggested_fixes even when it isn't
+    // literal résumé text.
+    confirmedFacts?: ConfirmedHardRequirementFact[];
   },
 ) {
   const response = await createOpenAIResponse(client, {
@@ -1651,6 +1755,12 @@ export async function generateTailoredResumeText(
                 },
                 raw_job_text: params.rawJobText.slice(0, 18000),
                 current_draft_text: params.currentDraftText?.slice(0, 12000) ?? null,
+                confirmed_candidate_facts: (params.confirmedFacts ?? []).map((fact) => ({
+                  requirement_key: fact.requirementKey,
+                  label: fact.label,
+                  answer: fact.answer,
+                  detail: fact.detail,
+                })),
               },
               null,
               2,

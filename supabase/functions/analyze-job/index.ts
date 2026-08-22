@@ -14,6 +14,7 @@ import {
   getOpenAIClient,
   getUserResumes,
   requireUser,
+  sendPushToUser,
 } from "../_shared/utils.ts";
 
 Deno.serve(async (request) => {
@@ -113,6 +114,28 @@ Deno.serve(async (request) => {
         .eq("user_id", user.id);
       if (error) throw error;
       savedJob = await getJobForUser(adminClient, user.id, savedJob.id);
+
+      // Push, not just the response below: analysis can take 30-70s (see
+      // ANALYSIS_TIMEOUT_MS), long enough that a user on their phone has
+      // often switched away from Bloom by the time it finishes — this is
+      // what actually reaches them there. Mirrors getPendingRequirement
+      // Confirmations (src/lib/jobRequirements.ts) so the push agrees with
+      // what the job card itself will show: an unconfirmed possible/
+      // insufficient_information dealBreaker not already answered.
+      const confirmedKeys = new Set(confirmedFacts.map((fact) => fact.requirementKey));
+      const pendingCount = analysis.jobExtraction.dealBreakers.filter(
+        (item) => item.requirementKey && (item.status === "possible" || item.status === "insufficient_information") && !confirmedKeys.has(item.requirementKey),
+      ).length;
+      const jobLabel = [analysis.jobExtraction.jobTitle, analysis.jobExtraction.company].filter(Boolean).join(" at ") || "this posting";
+      sendPushToUser(adminClient, user.id, {
+        title: pendingCount > 0 ? "Requirement to confirm" : "Job analysis ready",
+        body:
+          pendingCount > 0
+            ? `${jobLabel} has ${pendingCount} hard requirement${pendingCount === 1 ? "" : "s"} you can confirm.`
+            : `Your analysis for ${jobLabel} is ready.`,
+        url: `/jobs/${savedJob.id}`,
+        tag: `bloom-job-analysis-${savedJob.id}`,
+      }).catch((err) => console.error("Push send failed (analyze-job)", err));
     }
 
     return json({

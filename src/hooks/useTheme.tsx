@@ -47,6 +47,32 @@ export function useTheme() {
   return ctx;
 }
 
+/**
+ * Pulls the account's saved theme (settings.theme) down into this session
+ * whenever it loads or changes — including a change made from another
+ * device/browser, which arrives here via useSettingsRealtime same as any
+ * other settings field. ThemePicker is the only place that pushes a theme
+ * change back up to settings (see its `choose`); this is the read-side
+ * half of that round trip, so theme "just follows the account" instead of
+ * resetting to this browser's local default on a new device.
+ *
+ * Deliberately its own hook rather than living inside ThemeProvider:
+ * ThemeProvider is mounted above AuthProvider (so unauthenticated pages
+ * still get a theme), so it has no user/settings to read. This is called
+ * from RealtimeSync instead, once a session exists — the same place every
+ * other cross-device settings sync (jobs, journal, profile, ...) lives.
+ */
+export function useThemeSync(settingsTheme: ThemeName | undefined) {
+  const { theme, setTheme } = useTheme();
+  React.useEffect(() => {
+    if (settingsTheme && settingsTheme !== theme) setTheme(settingsTheme);
+    // Only react to the account's theme changing, not to local `theme` —
+    // including it would fire this right back at itself the moment
+    // ThemePicker's mutation round-trips its own change back down.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settingsTheme]);
+}
+
 /** True when the user's OS/browser requests reduced motion. */
 export function usePrefersReducedMotion(): boolean {
   const [reduced, setReduced] = React.useState(

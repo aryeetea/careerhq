@@ -3,8 +3,9 @@ import { useJournalRealtime } from "@/hooks/queries/useJournal";
 import { useFriendRealtime } from "@/hooks/queries/useFriends";
 import { useGroupsRealtime } from "@/hooks/queries/useGroups";
 import { useGoalsRealtime } from "@/hooks/queries/useGoals";
-import { useProfileRealtime, useSettingsRealtime } from "@/hooks/queries/useProfile";
+import { useProfileRealtime, useSettings, useSettingsRealtime } from "@/hooks/queries/useProfile";
 import { useResumesRealtime } from "@/hooks/queries/useResumes";
+import { useThemeSync } from "@/hooks/useTheme";
 
 /**
  * The one place every domain realtime subscription is mounted. Lives inside
@@ -27,5 +28,9 @@ export function RealtimeSync() {
   useProfileRealtime();
   useSettingsRealtime();
   useResumesRealtime();
+  // Cross-device theme sync (see useThemeSync) — reads through the same
+  // settings query the realtime subscription above keeps fresh.
+  const { data: settings } = useSettings();
+  useThemeSync(settings?.theme);
   return null;
 }

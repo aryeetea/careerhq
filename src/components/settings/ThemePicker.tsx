@@ -1,5 +1,6 @@
 import { Check, Flower2, Leaf, Moon, Square, Sunrise } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
+import { useUpdateSettings } from "@/hooks/queries/useProfile";
 import type { ThemeName } from "@/types/database";
 import { cn } from "@/lib/utils";
 
@@ -14,6 +15,17 @@ const THEMES: { id: ThemeName; label: string; description: string; icon: typeof 
 
 export function ThemePicker() {
   const { theme, setTheme } = useTheme();
+  // Persists the choice to settings.theme (in addition to the local/
+  // localStorage state useTheme already keeps) so it follows the account
+  // to another device or browser via useThemeSync, rather than resetting
+  // to the local default there. Settings-page-only, so a signed-in user is
+  // always present.
+  const updateSettings = useUpdateSettings();
+
+  function choose(id: ThemeName) {
+    setTheme(id);
+    updateSettings.mutate({ theme: id });
+  }
 
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -22,7 +34,7 @@ export function ThemePicker() {
         return (
           <button
             key={t.id}
-            onClick={() => setTheme(t.id)}
+            onClick={() => choose(t.id)}
             className={cn(
               "relative flex flex-col gap-2.5 rounded-2xl border p-4 text-left transition-all",
               active ? "border-primary shadow-soft ring-1 ring-primary/30" : "border-border hover:border-primary/30"

@@ -6,10 +6,12 @@ import {
   errorResponse,
   extractResumeText,
   generateTailoredResumeText,
+  getConfirmedHardRequirementFacts,
   getJobForUser,
   getOpenAIClient,
   getUserResumes,
   requireUser,
+  sendPushToUser,
 } from "../_shared/utils.ts";
 
 Deno.serve(async (request) => {
@@ -41,12 +43,14 @@ Deno.serve(async (request) => {
 
     const rawJobText =
       typeof job.ai_extracted_data?.rawJobText === "string" ? job.ai_extracted_data.rawJobText : job.job_description ?? "";
+    const confirmedFacts = await getConfirmedHardRequirementFacts(adminClient, user.id);
 
     const response = await generateTailoredResumeText(openai, {
       job,
       selectedResume: { id: selectedResume.id, name: selectedResume.name, extractedText: selectedResumeText },
       rawJobText,
       currentDraftText: payload.currentDraftText,
+      confirmedFacts,
     });
 
     const { error } = await adminClient
@@ -59,6 +63,16 @@ Deno.serve(async (request) => {
       .eq("id", job.id)
       .eq("user_id", user.id);
     if (error) throw error;
+
+    // See the same push comment in analyze-job/index.ts — tailoring runs
+    // just as long (TAILOR_RESUME_TIMEOUT_MS) and this is what reaches a
+    // user who's switched away from the tab while it finishes.
+    sendPushToUser(adminClient, user.id, {
+      title: "Tailored résumé ready",
+      body: `Your tailored résumé for ${[job.title, job.company].filter(Boolean).join(" at ") || "this posting"} is ready to review.`,
+      url: `/jobs/${job.id}`,
+      tag: `bloom-tailor-resume-${job.id}`,
+    }).catch((err) => console.error("Push send failed (tailor-resume)", err));
 
     return json(response);
   } catch (error) {

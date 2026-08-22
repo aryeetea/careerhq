@@ -1,7 +1,7 @@
 import { corsHeaders, json } from "../_shared/cors.ts";
 import { dailyEncouragementRequestSchema, dailyEncouragementResponseSchema } from "../_shared/schemas.ts";
 import { buildDailyEncouragementPrompt, type DailyEncouragementContext } from "../_shared/prompts/dailyEncouragement.ts";
-import { AppError, enforceRateLimit, errorResponse, getOpenAIClient, requireUser } from "../_shared/utils.ts";
+import { AppError, enforceRateLimit, errorResponse, getOpenAIClient, requireUser, sendPushToUser } from "../_shared/utils.ts";
 
 const MODEL = "gpt-5.6-terra";
 
@@ -192,6 +192,17 @@ Deno.serve(async (request) => {
       .eq("user_id", user.id)
       .eq("message_date", todayKey)
       .maybeSingle();
+
+    // Only on this fresh-generation path, never on the cache hit above —
+    // there's exactly one real message per user per day, so this fires at
+    // most once daily rather than every time the Dashboard/Profile card
+    // re-fetches an already-cached message.
+    sendPushToUser(adminClient, user.id, {
+      title: "Your daily encouragement",
+      body: (finalRow?.dashboard_message ?? messages.dashboardMessage).slice(0, 180),
+      url: "/dashboard",
+      tag: "bloom-daily-encouragement",
+    }).catch((err) => console.error("Push send failed (generate-daily-encouragement)", err));
 
     return json(
       finalRow
