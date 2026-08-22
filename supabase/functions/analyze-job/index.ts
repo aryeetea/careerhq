@@ -9,6 +9,7 @@ import {
   fetchJobSource,
   getCandidateCareerDirection,
   getCandidatePreferences,
+  getConfirmedHardRequirementFacts,
   getJobForUser,
   getOpenAIClient,
   getUserResumes,
@@ -48,6 +49,7 @@ Deno.serve(async (request) => {
 
     const candidatePreferences = await getCandidatePreferences(adminClient, user.id);
     const candidateCareerDirection = await getCandidateCareerDirection(adminClient, user.id);
+    const confirmedFacts = await getConfirmedHardRequirementFacts(adminClient, user.id);
 
     const rawAnalysis = await analyzeJobAndResumes(
       openai,
@@ -56,6 +58,7 @@ Deno.serve(async (request) => {
       { hasResumeEvidence: readyResumes.length > 0, hasProfileEvidence: false },
       candidatePreferences,
       candidateCareerDirection,
+      confirmedFacts,
     );
     // A real web search on top of the model's text-only read of the
     // posting (see SCAM RED FLAGS in careerCoach.ts) — never throws, so a

@@ -73,6 +73,13 @@ export const extractedJobSchema = z.object({
 export const dealBreakerSchema = z.object({
   label: z.string(),
   status: dealBreakerStatusSchema,
+  // Stable slug for the requirement's general category — see the same
+  // field in the edge function's schemas.ts. Optional/defaulted so
+  // analyses saved before this field existed still parse; a hard-
+  // requirement item with an empty requirementKey just can't be matched
+  // against a saved candidate_hard_requirement_facts answer or offered a
+  // "confirm" affordance in AnalysisSummary.
+  requirementKey: z.string().optional().default(""),
 });
 
 // Logistics/lifestyle factors (relocation, travel, work arrangement,

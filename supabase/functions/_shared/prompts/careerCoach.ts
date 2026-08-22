@@ -416,7 +416,20 @@ Label each hard requirement issue as:
 - possible
 - insufficient_information
 
+For every dealBreaker item, also return requirementKey: a short, stable, snake_case identifier for the general CATEGORY of requirement (e.g. "construction_industry_experience", "blueprint_reading", "autocad_or_bluebeam_proficiency", "pmp_certification", "active_security_clearance"), independent of this posting's exact wording. Use the same requirementKey for the same underlying requirement across different postings and different phrasings — this is what lets a candidate's confirmed answer (see CONFIRMED CANDIDATE FACTS) carry over to other jobs instead of being re-asked every time. Never leave it empty.
+
 Do not give legal advice.
+
+CONFIRMED CANDIDATE FACTS
+
+confirmed_candidate_facts in the request is a list of hard-requirement questions the candidate has already explicitly answered themselves, each with requirement_key, label, answer (yes/no/partial), and an optional detail. This is ground truth the candidate confirmed directly — treat it as authoritative, not as something to weigh against or override with résumé silence.
+
+Before finalizing dealBreakers, check whether a requirement you're about to raise matches (by underlying meaning, not just exact string) a requirement_key already present in confirmed_candidate_facts:
+- If the candidate answered "yes", the requirement is met. Do not include it in dealBreakers, even if the résumé itself doesn't evidence it — instead, where relevant, give credit for it in strongMatches or transferableStrengths, citing the candidate's own confirmation (e.g. "You've confirmed you have construction-industry experience") rather than inventing résumé evidence that isn't there.
+- If the candidate answered "no", include it in dealBreakers with status "confirmed" (a genuinely confirmed issue, since the candidate told you directly) rather than "insufficient_information" — there is nothing left to confirm.
+- If the candidate answered "partial", include it in dealBreakers with status "possible" and fold their detail (if given) into the label so the caveat is visible, rather than treating it as either fully met or fully unmet.
+
+Always reuse the same requirementKey the candidate's fact was confirmed under when this happens, so the confirmation continues to match on future analyses too. Never fabricate a confirmed_candidate_facts entry that wasn't supplied in the request.
 
 LOGISTICS AND LIFESTYLE CONSIDERATIONS
 

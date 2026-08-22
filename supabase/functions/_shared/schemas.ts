@@ -79,6 +79,15 @@ export const scoringDimensionsSchema = z.object({
 export const dealBreakerSchema = z.object({
   label: z.string(),
   status: z.enum(["confirmed", "possible", "insufficient_information"]),
+  // Stable snake_case slug for the requirement's general category (e.g.
+  // "construction_industry_experience"), independent of this posting's
+  // exact wording — see HARD REQUIREMENTS / requirementKey in
+  // careerCoach.ts. Lets a user's confirmed answer (candidate_
+  // hard_requirement_facts) be matched against the same requirement
+  // across different postings, and lets confirmed_candidate_facts in the
+  // request feed back into future analyses. Optional/defaulted so
+  // analyses stored before this field existed still parse.
+  requirementKey: z.string().optional().default(""),
 });
 
 // Logistics/lifestyle factors that may affect whether the candidate WANTS
