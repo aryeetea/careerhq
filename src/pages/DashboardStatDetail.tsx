@@ -11,6 +11,7 @@ import { JobCard } from "@/components/jobs/JobCard";
 import { JobDetailDialog } from "@/components/jobs/JobDetailDialog";
 import { useJobs } from "@/hooks/queries/useJobs";
 import { useResumes } from "@/hooks/queries/useResumes";
+import { useCandidateFacts } from "@/hooks/queries/useCandidateFacts";
 import { computeDashboardStats, getJobsForStatKind, DASHBOARD_STAT_META, type DashboardStatKind } from "@/lib/stats";
 
 const VALID_KINDS = new Set<string>(Object.keys(DASHBOARD_STAT_META));
@@ -26,7 +27,12 @@ export default function DashboardStatDetail() {
   const { kind: kindParam } = useParams<{ kind: string }>();
   const { data: jobs = [], isLoading, isError, refetch } = useJobs();
   const { data: resumes = [] } = useResumes();
+  const { data: candidateFacts } = useCandidateFacts();
   const resumeById = React.useMemo(() => new Map(resumes.map((r) => [r.id, r])), [resumes]);
+  const confirmedRequirementKeys = React.useMemo(
+    () => new Set((candidateFacts ?? []).map((fact) => fact.requirement_key)),
+    [candidateFacts]
+  );
 
   const [selectedJobId, setSelectedJobId] = React.useState<string | null>(null);
   const selectedJob = React.useMemo(() => jobs.find((j) => j.id === selectedJobId) ?? null, [jobs, selectedJobId]);
@@ -37,7 +43,10 @@ export default function DashboardStatDetail() {
   const kind = kindParam as DashboardStatKind;
   const meta = DASHBOARD_STAT_META[kind];
 
-  const list = React.useMemo(() => getJobsForStatKind(jobs, kind), [jobs, kind]);
+  const list = React.useMemo(
+    () => getJobsForStatKind(jobs, kind, confirmedRequirementKeys),
+    [jobs, kind, confirmedRequirementKeys]
+  );
   const stats = React.useMemo(() => computeDashboardStats(jobs), [jobs]);
 
   const backButton = (
