@@ -90,3 +90,61 @@ export async function unsubscribeFromPush(): Promise<void> {
   await subscription.unsubscribe();
   await supabase.from("push_subscriptions").delete().eq("endpoint", endpoint);
 }
+
+/** This browser's current push endpoint, if subscribed — lets the
+ * Settings "devices" list mark which push_subscriptions row is the one
+ * actually reading this page right now, and route removing THAT row
+ * through unsubscribeFromPush (real browser unsubscribe) instead of a
+ * bare DB delete that would leave this browser still locally subscribed
+ * with no matching row. Null if unsupported/not subscribed. */
+export async function getCurrentPushEndpoint(): Promise<string | null> {
+  if (!isPushSupported()) return null;
+  const registration = await navigator.serviceWorker.getRegistration();
+  const subscription = await registration?.pushManager.getSubscription();
+  return subscription?.endpoint ?? null;
+}
+
+/** A short, human-readable "browser on OS" label from a stored
+ * navigator.userAgent string (see push_subscriptions.user_agent) — good
+ * enough for a Settings "which device is this" list, not a real UA
+ * parser. Falls back to a truncated raw string for anything unrecognized
+ * rather than guessing wrong. */
+export function describeUserAgent(userAgent: string | null): string {
+  if (!userAgent) return "Unknown device";
+  const ua = userAgent;
+
+  const os = /iPhone|iPad|iPod/.test(ua)
+    ? "iOS"
+    : /Android/.test(ua)
+      ? "Android"
+      : /Mac OS X/.test(ua)
+        ? "macOS"
+        : /Windows/.test(ua)
+          ? "Windows"
+          : /Linux/.test(ua)
+            ? "Linux"
+            : null;
+
+  // Order matters: Edge/OPR/Chrome all include "Chrome" in their UA
+  // string, so the more specific match has to run first.
+  const browser = /Edg\//.test(ua)
+    ? "Edge"
+    : /OPR\//.test(ua)
+      ? "Opera"
+      : /Chrome\//.test(ua)
+        ? "Chrome"
+        : /CriOS\//.test(ua)
+          ? "Chrome"
+          : /FxiOS\//.test(ua)
+            ? "Firefox"
+            : /Firefox\//.test(ua)
+              ? "Firefox"
+              : /Safari\//.test(ua) && /Version\//.test(ua)
+                ? "Safari"
+                : null;
+
+  if (browser && os) return `${browser} on ${os}`;
+  if (browser) return browser;
+  if (os) return os;
+  return ua.length > 60 ? `${ua.slice(0, 60)}…` : ua;
+}

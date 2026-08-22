@@ -105,6 +105,21 @@ export interface CandidateHardRequirementFact {
   updated_at: string;
 }
 
+// One browser/device push subscription — see migration 0045 and
+// src/lib/push.ts. p256dh/auth_key are the Web Push encryption keys
+// (never displayed; only used server-side by sendPushToUser); user_agent
+// and created_at are what the Settings "manage devices" list shows.
+export interface PushSubscriptionRow {
+  id: string;
+  user_id: string;
+  endpoint: string;
+  p256dh: string;
+  auth_key: string;
+  user_agent: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 // Logistics/lifestyle factors (relocation, travel, work arrangement,
 // schedule, …) — kept separate from JobAiDealBreaker, which is scoped to
 // genuine hard-eligibility issues only. preferenceMatch reflects the

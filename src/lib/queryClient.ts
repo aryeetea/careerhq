@@ -50,4 +50,5 @@ export const queryKeys = {
   // uncached query, which is what naturally triggers tomorrow's message
   // instead of yesterday's staying stuck in the cache.
   dailyEncouragement: (userId: string, dayKey: string) => ["daily-encouragement", userId, dayKey] as const,
+  pushSubscriptions: (userId: string) => ["push-subscriptions", userId] as const,
 };
