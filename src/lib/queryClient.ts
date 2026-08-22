@@ -20,6 +20,7 @@ export const queryKeys = {
   allJobStatusHistory: (userId: string) => ["all-job-status-history", userId] as const,
   resumes: (userId: string) => ["resumes", userId] as const,
   certifications: (userId: string) => ["certifications", userId] as const,
+  candidateFacts: (userId: string) => ["candidate-facts", userId] as const,
   profile: (userId: string) => ["profile", userId] as const,
   settings: (userId: string) => ["settings", userId] as const,
   privacySettings: (userId: string) => ["privacy-settings", userId] as const,

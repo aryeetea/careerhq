@@ -1,4 +1,4 @@
-import { Award, Bookmark, GraduationCap, Send, Sparkles, Target, Trophy, Users, type LucideIcon } from "lucide-react";
+import { Award, Bookmark, GraduationCap, PartyPopper, Send, Sparkles, Target, Trophy, Users, type LucideIcon } from "lucide-react";
 import { timeAgo } from "@/lib/utils";
 import type { ProfileActivity, ProfileActivityType } from "@/types/database";
 
@@ -12,6 +12,7 @@ const ACTIVITY_ICONS: Record<ProfileActivityType, LucideIcon> = {
   certification_added: GraduationCap,
   certification_completed: Award,
   goal_created: Target,
+  goal_completed: PartyPopper,
   onboarding_completed: Sparkles,
 };
 

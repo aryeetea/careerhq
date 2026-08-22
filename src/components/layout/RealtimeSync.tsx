@@ -3,7 +3,8 @@ import { useJournalRealtime } from "@/hooks/queries/useJournal";
 import { useFriendRealtime } from "@/hooks/queries/useFriends";
 import { useGroupsRealtime } from "@/hooks/queries/useGroups";
 import { useGoalsRealtime } from "@/hooks/queries/useGoals";
-import { useProfileRealtime } from "@/hooks/queries/useProfile";
+import { useProfileRealtime, useSettingsRealtime } from "@/hooks/queries/useProfile";
+import { useResumesRealtime } from "@/hooks/queries/useResumes";
 
 /**
  * The one place every domain realtime subscription is mounted. Lives inside
@@ -24,5 +25,7 @@ export function RealtimeSync() {
   useGroupsRealtime();
   useGoalsRealtime();
   useProfileRealtime();
+  useSettingsRealtime();
+  useResumesRealtime();
   return null;
 }

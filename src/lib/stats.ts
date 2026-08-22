@@ -1,4 +1,5 @@
 import type { Job } from "@/types/database";
+import { jobNeedsRequirementConfirmation } from "@/lib/jobRequirements";
 
 function toDayKey(d: Date): string {
   return d.toISOString().slice(0, 10);
@@ -107,7 +108,8 @@ export type DashboardStatKind =
   | "rejections"
   | "follow-ups-due"
   | "response-rate"
-  | "no-response";
+  | "no-response"
+  | "requirements-to-confirm";
 
 export const DASHBOARD_STAT_META: Record<DashboardStatKind, { title: string; description: string; emptyMessage: string }> = {
   "jobs-saved": {
@@ -150,6 +152,11 @@ export const DASHBOARD_STAT_META: Record<DashboardStatKind, { title: string; des
     description: "Still sitting at \"Applied\" two weeks or more after you sent it — a factual signal, not a verdict.",
     emptyMessage: "Nothing's gone quiet for 14+ days.",
   },
+  "requirements-to-confirm": {
+    title: "Requirements to confirm",
+    description: "Jobs with a hard requirement the AI couldn't verify — answer it once and it's applied everywhere that requirement comes up.",
+    emptyMessage: "Nothing waiting on you — every flagged requirement has an answer.",
+  },
 };
 
 // Backs the dedicated detail page each Dashboard stat card links to.
@@ -157,7 +164,13 @@ export const DASHBOARD_STAT_META: Record<DashboardStatKind, { title: string; des
 // (rather than that function returning arrays it then .length's) so the
 // number on the card and the list behind it can never drift apart — see
 // the last7Days/applicationsThisWeek mismatch this app already hit once.
-export function getJobsForStatKind(jobs: Job[], kind: DashboardStatKind): Job[] {
+export function getJobsForStatKind(
+  jobs: Job[],
+  kind: DashboardStatKind,
+  // Only "requirements-to-confirm" needs this — every other kind ignores
+  // it, so callers that never touch that kind can omit it entirely.
+  confirmedRequirementKeys: ReadonlySet<string> = new Set()
+): Job[] {
   const now = new Date();
   switch (kind) {
     case "jobs-saved":
@@ -186,6 +199,8 @@ export function getJobsForStatKind(jobs: Job[], kind: DashboardStatKind): Job[] 
       return jobs.filter(
         (j) => j.status === "applied" && j.date_applied && now.getTime() - new Date(j.date_applied).getTime() >= 14 * 86400000
       );
+    case "requirements-to-confirm":
+      return jobs.filter((j) => jobNeedsRequirementConfirmation(j, confirmedRequirementKeys));
     default:
       return [];
   }

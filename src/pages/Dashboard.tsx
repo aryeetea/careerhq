@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Send, Bookmark, Users, Trophy, XCircle, TrendingUp, CalendarCheck2, Plus, Sparkles, GraduationCap, CalendarClock } from "lucide-react";
+import { Send, Bookmark, Users, Trophy, XCircle, TrendingUp, CalendarCheck2, Plus, Sparkles, GraduationCap, CalendarClock, AlertTriangle } from "lucide-react";
 import { TopBar } from "@/components/layout/TopBar";
 import { PageContent, PageContainer } from "@/components/layout/PageContent";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,9 @@ import { useJobs } from "@/hooks/queries/useJobs";
 import { useResumes } from "@/hooks/queries/useResumes";
 import { useCertifications } from "@/hooks/queries/useCertifications";
 import { useProfile } from "@/hooks/queries/useProfile";
+import { useCandidateFacts } from "@/hooks/queries/useCandidateFacts";
 import { computeDashboardStats, getUpcomingInterviews } from "@/lib/stats";
+import { jobNeedsRequirementConfirmation } from "@/lib/jobRequirements";
 import { CERTIFICATION_STATUS_META } from "@/lib/constants";
 import type { Job } from "@/types/database";
 
@@ -31,6 +33,7 @@ export default function Dashboard() {
   const { data: resumes = [] } = useResumes();
   const { data: certifications = [] } = useCertifications();
   const { data: profile } = useProfile();
+  const { data: candidateFacts } = useCandidateFacts();
   const navigate = useNavigate();
 
   const [addOpen, setAddOpen] = React.useState(false);
@@ -90,6 +93,18 @@ export default function Dashboard() {
     const today = new Date().toISOString().slice(0, 10);
     return jobs.filter((job) => job.follow_up_date && job.follow_up_date.slice(0, 10) <= today).length;
   }, [jobs]);
+  // Same predicate that drives each JobCard's own alert badge (see
+  // getPendingRequirementConfirmations) — this count and every badge on
+  // the board clear together the instant an answer is saved, since both
+  // read off the same useCandidateFacts cache.
+  const confirmedRequirementKeys = React.useMemo(
+    () => new Set((candidateFacts ?? []).map((fact) => fact.requirement_key)),
+    [candidateFacts]
+  );
+  const requirementsToConfirm = React.useMemo(
+    () => jobs.filter((job) => jobNeedsRequirementConfirmation(job, confirmedRequirementKeys)).length,
+    [jobs, confirmedRequirementKeys]
+  );
   const hasUsefulResponseRate = stats.applicationsSubmitted >= 3;
 
   const hasJobs = jobs.length > 0;
@@ -170,6 +185,13 @@ export default function Dashboard() {
               <StatCard icon={Trophy} label="Offers" value={stats.offers} accent="bg-success/15 text-success" to="/app/dashboard/offers" />
               <StatCard icon={XCircle} label="Rejections" value={stats.rejections} accent="bg-destructive/15 text-destructive" to="/app/dashboard/rejections" />
               <StatCard icon={CalendarCheck2} label="Follow-ups due" value={followUpsDue} accent="bg-gold/15 text-gold" to="/app/dashboard/follow-ups-due" />
+              <StatCard
+                icon={AlertTriangle}
+                label="Requirements to confirm"
+                value={requirementsToConfirm}
+                accent="bg-destructive/15 text-destructive"
+                to="/app/dashboard/requirements-to-confirm"
+              />
               <StatCard
                 icon={TrendingUp}
                 label="Response rate"

@@ -1,11 +1,13 @@
 import * as React from "react";
-import { MapPin, FileText, GripVertical, CalendarClock, CheckCircle2 } from "lucide-react";
+import { MapPin, FileText, GripVertical, CalendarClock, CheckCircle2, AlertTriangle } from "lucide-react";
 import type { DraggableAttributes, DraggableSyntheticListeners } from "@dnd-kit/core";
 import type { Job, Resume } from "@/types/database";
 import { VerdictBadge } from "@/components/jobs/StatusBadge";
 import { WORK_ARRANGEMENT_META, PRIORITY_META } from "@/lib/constants";
 import { formatDate, initials, cn } from "@/lib/utils";
 import { useSettings } from "@/hooks/queries/useProfile";
+import { useCandidateFacts } from "@/hooks/queries/useCandidateFacts";
+import { getPendingRequirementConfirmations } from "@/lib/jobRequirements";
 
 interface JobCardProps {
   job: Job;
@@ -21,6 +23,19 @@ export const JobCard = React.forwardRef<HTMLDivElement, JobCardProps>(
   ({ job, resume, onClick, isDragging, dragAttributes, dragListeners, style }, ref) => {
     const { data: settings } = useSettings();
     const showAiFit = settings?.show_ai_fit_score ?? true;
+    // Cheap even with many cards mounted at once (board, mobile list,
+    // dashboard detail) — react-query dedupes this to one shared request/
+    // cache entry per user, not one per card.
+    const { data: candidateFacts } = useCandidateFacts();
+    const confirmedRequirementKeys = React.useMemo(
+      () => new Set((candidateFacts ?? []).map((fact) => fact.requirement_key)),
+      [candidateFacts]
+    );
+    // Surfaces regardless of job status (saved, applied, interviewing, …) —
+    // a hard requirement the AI couldn't verify doesn't stop mattering just
+    // because the job moved further down the pipeline. Clears itself the
+    // moment the requirement is answered (see getPendingRequirementConfirmations).
+    const pendingRequirementCount = getPendingRequirementConfirmations(job, confirmedRequirementKeys).length;
     return (
       <div
         ref={ref}
@@ -59,6 +74,13 @@ export const JobCard = React.forwardRef<HTMLDivElement, JobCardProps>(
             <GripVertical className="h-4 w-4" />
           </button>
         </div>
+
+        {pendingRequirementCount > 0 && (
+          <div className="mt-2.5 flex items-center gap-1.5 rounded-lg bg-destructive/10 px-2 py-1.5 text-[11px] font-medium text-destructive">
+            <AlertTriangle className="h-3 w-3 shrink-0" />
+            {pendingRequirementCount === 1 ? "Requirement confirmation needed" : `${pendingRequirementCount} requirements need confirmation`}
+          </div>
+        )}
 
         {(job.location || job.work_arrangement) && (
           <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">

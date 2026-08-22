@@ -76,6 +76,33 @@ export interface JobAiExtraction {
 export interface JobAiDealBreaker {
   label: string;
   status: "confirmed" | "possible" | "insufficient_information";
+  // Stable snake_case category slug (e.g. "construction_industry_
+  // experience"), independent of this posting's exact wording — see
+  // CandidateHardRequirementFact.requirement_key below and requirementKey
+  // in the edge function's schemas.ts. Empty string on analyses saved
+  // before this field existed — HardRequirementConfirm treats that as
+  // "can't be confirmed" rather than matching it against anything.
+  requirementKey: string;
+}
+
+export type CandidateFactAnswer = "yes" | "no" | "partial";
+
+// A durable, user-confirmed answer to a hard-requirement question raised
+// by job analysis — see migration 0044. Lives on the candidate's profile,
+// not on any one job: matched against JobAiDealBreaker.requirementKey so
+// one confirmation is reused across every posting that raises the same
+// requirement, and can be edited later if the candidate's situation
+// changes. See HardRequirementConfirm and CandidateFactsSettings.
+export interface CandidateHardRequirementFact {
+  id: string;
+  user_id: string;
+  requirement_key: string;
+  label: string;
+  answer: CandidateFactAnswer;
+  detail: string | null;
+  source: "user_confirmed";
+  created_at: string;
+  updated_at: string;
 }
 
 // Logistics/lifestyle factors (relocation, travel, work arrangement,
@@ -675,6 +702,7 @@ export type ProfileActivityType =
   | "certification_added"
   | "certification_completed"
   | "goal_created"
+  | "goal_completed"
   | "onboarding_completed";
 
 export interface ProfileActivity {

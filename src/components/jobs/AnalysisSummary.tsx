@@ -20,6 +20,7 @@ import {
   RESUME_SUGGESTION_TYPE_META,
 } from "@/lib/constants";
 import type { JobAnalysisPayload } from "@/lib/ai";
+import { HardRequirementConfirm } from "@/components/jobs/HardRequirementConfirm";
 
 function ListBlock({ title, items, empty, muted }: { title: string; items: string[]; empty: string; muted?: boolean }) {
   return (
@@ -329,6 +330,15 @@ export function AnalysisSummary({
                       <Badge className={cn("border-0", status.className)}>{status.label}</Badge>
                       <p className="text-sm">{item.label}</p>
                     </div>
+                    {/* Turns the badge from a dead end into something
+                        actionable: the user answers directly, the answer
+                        is saved to their profile (candidate_hard_
+                        requirement_facts), and it's reused across every
+                        other posting with a matching requirementKey.
+                        Items from analyses saved before requirementKey
+                        existed (empty string) can't be matched to
+                        anything, so they stay a plain badge. */}
+                    {item.requirementKey && <HardRequirementConfirm item={item} />}
                   </div>
                 );
               })}

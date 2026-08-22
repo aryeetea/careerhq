@@ -556,6 +556,20 @@ export interface CandidateCareerDirection {
   targetJobTitles: string[];
 }
 
+// Mirrors candidate_hard_requirement_facts (migration 0044) — answers the
+// candidate has explicitly confirmed to hard-requirement questions raised
+// by a PAST analysis (see HARD REQUIREMENTS / requirementKey in
+// careerCoach.ts). Ground truth, not evidence to weigh against the
+// résumé: this is what turns the "Hard requirements to confirm" card from
+// a dead-end badge into something that actually improves future analyses,
+// for this job and every other posting with a matching requirementKey.
+export interface ConfirmedHardRequirementFact {
+  requirementKey: string;
+  label: string;
+  answer: "yes" | "no" | "partial";
+  detail: string | null;
+}
+
 function withMissingEvidenceUnknowns(existing: string[], context: CandidateEvidenceContext): string[] {
   const unknowns = [...existing];
   if (!context.hasResumeEvidence) unknowns.push("No resume evidence was available to assess your fit.");
@@ -894,6 +908,23 @@ export async function getCandidateCareerDirection(adminClient: any, userId: stri
   };
 }
 
+// Best-effort, same pattern as getCandidatePreferences/getCandidateCareer
+// Direction — a missing/unreadable row must never block analysis, so this
+// returns an empty array on error rather than throwing.
+export async function getConfirmedHardRequirementFacts(adminClient: any, userId: string): Promise<ConfirmedHardRequirementFact[]> {
+  const { data, error } = await adminClient
+    .from("candidate_hard_requirement_facts")
+    .select("requirement_key,label,answer,detail")
+    .eq("user_id", userId);
+  if (error || !data) return [];
+  return (data as Array<{ requirement_key: string; label: string; answer: "yes" | "no" | "partial"; detail: string | null }>).map((row) => ({
+    requirementKey: row.requirement_key,
+    label: row.label,
+    answer: row.answer,
+    detail: row.detail,
+  }));
+}
+
 export async function getJobForUser(adminClient: any, userId: string, jobId: string): Promise<JobRow> {
   const { data, error } = await adminClient
     .from("jobs")
@@ -1054,10 +1085,14 @@ export async function extractResumeText(client: ReturnType<typeof getOpenAIClien
 const dealBreakerJsonSchema = {
   type: "object",
   additionalProperties: false,
-  required: ["label", "status"],
+  required: ["label", "status", "requirementKey"],
   properties: {
     label: { type: "string" },
     status: { type: "string", enum: ["confirmed", "possible", "insufficient_information"] },
+    // See requirementKey in schemas.ts and HARD REQUIREMENTS in
+    // careerCoach.ts — a stable snake_case category slug, not the exact
+    // wording of this posting's requirement.
+    requirementKey: { type: "string" },
   },
 } as const;
 
@@ -1263,6 +1298,7 @@ export async function analyzeJobAndResumes(
   candidateEvidence: CandidateEvidenceContext,
   candidatePreferences: CandidatePreferences,
   candidateCareerDirection: CandidateCareerDirection,
+  confirmedFacts: ConfirmedHardRequirementFact[] = [],
 ) {
   const resumePayload = resumes.map((resume) => ({
     resume_id: resume.id,
@@ -1305,6 +1341,17 @@ export async function analyzeJobAndResumes(
                 career_goal: candidateCareerDirection.careerGoal,
                 target_job_titles: candidateCareerDirection.targetJobTitles,
               },
+              // Answers the candidate has already explicitly confirmed to
+              // hard-requirement questions raised by a past analysis (see
+              // CONFIRMED CANDIDATE FACTS in the prompt) — ground truth,
+              // not résumé-derived evidence. Empty array means nothing
+              // has been confirmed yet.
+              confirmed_candidate_facts: confirmedFacts.map((fact) => ({
+                requirement_key: fact.requirementKey,
+                label: fact.label,
+                answer: fact.answer,
+                detail: fact.detail,
+              })),
               resumes: resumePayload,
             },
             null,

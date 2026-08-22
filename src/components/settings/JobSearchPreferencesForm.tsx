@@ -3,6 +3,7 @@ import { Switch } from "@/components/ui/switch";
 import { useSettings, useUpdateSettings } from "@/hooks/queries/useProfile";
 import { useResumes } from "@/hooks/queries/useResumes";
 import { useToast } from "@/components/shared/toast";
+import { CandidateFactsList } from "@/components/settings/CandidateFactsList";
 
 const FOLLOW_UP_OPTIONS = [
   { value: "3", label: "3 days" },
@@ -197,6 +198,8 @@ export function JobSearchPreferencesForm() {
           aria-label="Show AI fit score"
         />
       </div>
+
+      <CandidateFactsList />
     </div>
   );
 }
