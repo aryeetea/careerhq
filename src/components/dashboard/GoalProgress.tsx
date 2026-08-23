@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 function encouragement(count: number, goal: number): string {
   if (goal <= 0) return "Set a weekly goal in Settings whenever you're ready — no pressure.";
   if (count === 0) return "Nothing sent yet this week. Whenever you're ready — one is enough to start.";
-  if (count >= goal) return "You've hit your goal this week. However the rest of the week goes, this counts.";
+  if (count >= goal) return `${count} of ${goal} this week — you've hit your goal. However the rest of the week goes, this counts.`;
   const remaining = goal - count;
   return `${count} of ${goal} this week — ${remaining} more gets you there.`;
 }

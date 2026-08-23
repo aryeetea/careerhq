@@ -26,14 +26,16 @@ function MemberRow({ userId, displayName, avatarPath, progress, target, unit, is
   const isComplete = target > 0 && progress >= target;
   const pct = target > 0 ? Math.min(100, Math.round((progress / target) * 100)) : 0;
 
-  // Caps at target so repeated clicks can't overcount past the goal, and
-  // fires the completion moment exactly once — on the click that first
-  // reaches it, since the button disappears (see isComplete below) the
-  // instant that happens.
+  // Doesn't cap at target — hitting the goal doesn't stop the count, it
+  // just switches the row into "complete" styling while + keeps working,
+  // so overachieving past target (e.g. 27/25) is visible. The completion
+  // toast/activity still fires exactly once, on the click that crosses
+  // the target, since progress was below it right before this update.
   async function handleIncrement() {
-    const nextProgress = Math.min(progress + 1, target);
+    const wasComplete = isComplete;
+    const nextProgress = progress + 1;
     await updateProgress.mutateAsync({ goalId, progressCount: nextProgress });
-    if (nextProgress >= target) {
+    if (!wasComplete && nextProgress >= target) {
       push(`🎉 Goal reached: ${goalName}!`, "success");
       void logActivity(userId, "goal_completed", `Reached your goal: ${goalName}`, { goalId });
     }
@@ -60,19 +62,27 @@ function MemberRow({ userId, displayName, avatarPath, progress, target, unit, is
         <Progress value={pct} className="mt-1 h-1.5" />
       </div>
       {isSelf ? (
-        isComplete ? (
-          <span
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-success/15 text-success"
-            aria-label="Goal completed"
-            title="Goal completed"
+        <div className="flex shrink-0 items-center gap-1.5">
+          {isComplete && (
+            <span
+              className="flex h-7 w-7 items-center justify-center rounded-full bg-success/15 text-success"
+              aria-label="Goal completed"
+              title="Goal completed"
+            >
+              <PartyPopper className="h-3.5 w-3.5" />
+            </span>
+          )}
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 px-2"
+            onClick={handleIncrement}
+            disabled={updateProgress.isPending}
+            title={isComplete ? `Keep going past ${target} ${unit}` : undefined}
           >
-            <PartyPopper className="h-3.5 w-3.5" />
-          </span>
-        ) : (
-          <Button size="sm" variant="outline" className="h-7 px-2" onClick={handleIncrement} disabled={updateProgress.isPending}>
             <Plus className="h-3 w-3" />
           </Button>
-        )
+        </div>
       ) : (
         userId !== ownerId && <ReactionPicker recipientId={userId} contextType="goal" contextId={goalId} />
       )}
