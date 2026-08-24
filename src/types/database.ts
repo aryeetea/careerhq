@@ -364,6 +364,7 @@ export interface Profile {
   primary_job_titles: string[];
   preferred_locations: string[];
   weekly_application_goal: number;
+  weekly_goal_cycle_started_at: string | null;
   sharing_enabled: boolean;
   status_message: string | null;
   onboarded_at: string | null;

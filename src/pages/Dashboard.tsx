@@ -21,9 +21,9 @@ import { FollowUpCheckmark } from "@/components/jobs/FollowUpCheckmark";
 import { useJobs } from "@/hooks/queries/useJobs";
 import { useResumes } from "@/hooks/queries/useResumes";
 import { useCertifications } from "@/hooks/queries/useCertifications";
-import { useProfile } from "@/hooks/queries/useProfile";
+import { useProfile, useUpdateProfile } from "@/hooks/queries/useProfile";
 import { useCandidateFacts } from "@/hooks/queries/useCandidateFacts";
-import { computeDashboardStats, getUpcomingInterviews } from "@/lib/stats";
+import { computeDashboardStats, getGoalCycleApplicationCount, getUpcomingInterviews } from "@/lib/stats";
 import { jobNeedsRequirementConfirmation } from "@/lib/jobRequirements";
 import { CERTIFICATION_STATUS_META } from "@/lib/constants";
 import type { Job } from "@/types/database";
@@ -33,6 +33,7 @@ export default function Dashboard() {
   const { data: resumes = [] } = useResumes();
   const { data: certifications = [] } = useCertifications();
   const { data: profile } = useProfile();
+  const updateProfile = useUpdateProfile();
   const { data: candidateFacts } = useCandidateFacts();
   const navigate = useNavigate();
 
@@ -50,6 +51,25 @@ export default function Dashboard() {
   const setSelectedJob = React.useCallback((job: Job) => setSelectedJobId(job.id), []);
 
   const stats = React.useMemo(() => computeDashboardStats(jobs), [jobs]);
+  const applicationsInGoalCycle = React.useMemo(
+    () => getGoalCycleApplicationCount(jobs, profile?.weekly_goal_cycle_started_at ?? null),
+    [jobs, profile?.weekly_goal_cycle_started_at]
+  );
+  const migratedGoalCycleRef = React.useRef<string | null>(null);
+
+  // Existing completed goals were celebrated before a durable cycle marker
+  // existed. Mark that first boundary once so they start a fresh cycle too.
+  React.useEffect(() => {
+    if (!profile || profile.weekly_goal_cycle_started_at || profile.weekly_application_goal <= 0) return;
+    if (stats.applicationsThisWeek < profile.weekly_application_goal || migratedGoalCycleRef.current === profile.id) return;
+    migratedGoalCycleRef.current = profile.id;
+    updateProfile.mutate({ weekly_goal_cycle_started_at: new Date().toISOString() });
+  }, [profile, stats.applicationsThisWeek, updateProfile]);
+
+  const handleGoalCycleComplete = React.useCallback(
+    (startedAt: string) => updateProfile.mutate({ weekly_goal_cycle_started_at: startedAt }),
+    [updateProfile]
+  );
 
   const upcomingFollowUps: UpcomingRow[] = React.useMemo(() => {
     // Compares calendar-date strings directly rather than epoch
@@ -204,13 +224,14 @@ export default function Dashboard() {
 
             <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
               <GoalProgress
-                applicationsThisWeek={stats.applicationsThisWeek}
+                applicationsInCycle={applicationsInGoalCycle}
                 weeklyGoal={profile?.weekly_application_goal ?? 0}
                 streak={stats.currentStreak}
+                onCycleComplete={handleGoalCycleComplete}
               />
               <Card className="glass-subtle border-border/60 lg:col-span-2">
                 <CardContent className="p-5">
-                  <p className="text-sm font-semibold">Applications this week</p>
+                  <p className="text-sm font-semibold">Applications in the last 7 days</p>
                   <div className="mt-4">
                     <MiniBarChart data={stats.last7Days} />
                   </div>

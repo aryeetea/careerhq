@@ -1,8 +1,26 @@
 import type { Job } from "@/types/database";
 import { jobNeedsRequirementConfirmation } from "@/lib/jobRequirements";
 
-function toDayKey(d: Date): string {
-  return d.toISOString().slice(0, 10);
+export function toLocalDayKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function lastSevenDayStartKey(now: Date): string {
+  const start = new Date(now);
+  start.setDate(start.getDate() - 6);
+  return toLocalDayKey(start);
+}
+
+function isInLastSevenCalendarDays(date: string, now: Date): boolean {
+  const key = toLocalDayKey(new Date(date));
+  return key >= lastSevenDayStartKey(now) && key <= toLocalDayKey(now);
+}
+
+/** Applications submitted after the latest completed goal cycle began,
+ * constrained to the same local seven-day window used by the dashboard chart. */
+export function getGoalCycleApplicationCount(jobs: Job[], cycleStartedAt: string | null, now = new Date()): number {
+  const cycleStartMs = cycleStartedAt ? new Date(cycleStartedAt).getTime() : Number.NEGATIVE_INFINITY;
+  return jobs.filter((job) => job.date_applied && isInLastSevenCalendarDays(job.date_applied, now) && new Date(job.date_applied).getTime() > cycleStartMs).length;
 }
 
 export interface DashboardStats {
@@ -33,8 +51,6 @@ export interface DashboardStats {
 
 export function computeDashboardStats(jobs: Job[]): DashboardStats {
   const now = new Date();
-  const weekAgo = new Date(now);
-  weekAgo.setDate(now.getDate() - 7);
   const monthAgo = new Date(now);
   monthAgo.setMonth(now.getMonth() - 1);
 
@@ -53,17 +69,17 @@ export function computeDashboardStats(jobs: Job[]): DashboardStats {
     (j) => j.status === "applied" && j.date_applied && now.getTime() - new Date(j.date_applied).getTime() >= 14 * 86400000
   ).length;
 
-  const applicationsThisWeek = applied.filter((j) => new Date(j.date_applied!) >= weekAgo).length;
+  const applicationsThisWeek = applied.filter((j) => isInLastSevenCalendarDays(j.date_applied!, now)).length;
   const applicationsThisMonth = applied.filter((j) => new Date(j.date_applied!) >= monthAgo).length;
 
   const responded = applied.filter((j) => ["interview", "final_interview", "offer", "rejected"].includes(j.status)).length;
   const responseRate = applicationsSubmitted > 0 ? Math.round((responded / applicationsSubmitted) * 100) : 0;
 
   // Streak: consecutive days up to today with >= 1 application.
-  const appliedDays = new Set(applied.map((j) => toDayKey(new Date(j.date_applied!))));
+  const appliedDays = new Set(applied.map((j) => toLocalDayKey(new Date(j.date_applied!))));
   let currentStreak = 0;
   const cursor = new Date(now);
-  while (appliedDays.has(toDayKey(cursor))) {
+  while (appliedDays.has(toLocalDayKey(cursor))) {
     currentStreak += 1;
     cursor.setDate(cursor.getDate() - 1);
   }
@@ -72,8 +88,8 @@ export function computeDashboardStats(jobs: Job[]): DashboardStats {
   for (let i = 6; i >= 0; i--) {
     const d = new Date(now);
     d.setDate(now.getDate() - i);
-    const key = toDayKey(d);
-    last7Days.push({ date: key, count: appliedDays.has(key) ? applied.filter((j) => toDayKey(new Date(j.date_applied!)) === key).length : 0 });
+    const key = toLocalDayKey(d);
+    last7Days.push({ date: key, count: appliedDays.has(key) ? applied.filter((j) => toLocalDayKey(new Date(j.date_applied!)) === key).length : 0 });
   }
 
   return {
@@ -186,7 +202,7 @@ export function getJobsForStatKind(
     case "rejections":
       return jobs.filter((j) => j.status === "rejected");
     case "follow-ups-due": {
-      const today = toDayKey(now);
+      const today = toLocalDayKey(now);
       return jobs
         .filter((j) => j.follow_up_date && j.follow_up_date.slice(0, 10) <= today)
         .sort((a, b) => a.follow_up_date!.localeCompare(b.follow_up_date!));
