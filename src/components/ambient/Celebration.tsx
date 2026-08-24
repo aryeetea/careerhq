@@ -2,7 +2,7 @@ import * as React from "react";
 import { usePrefersReducedMotion } from "@/hooks/useTheme";
 
 interface CelebrationContextValue {
-  celebrate: (message?: string) => void;
+  celebrate: (message?: string, options?: { onComplete?: () => void }) => void;
 }
 
 const CelebrationContext = React.createContext<CelebrationContextValue | null>(null);
@@ -19,14 +19,25 @@ export function CelebrationProvider({ children }: { children: React.ReactNode })
   const [burst, setBurst] = React.useState<{ id: number; message?: string } | null>(null);
   const reducedMotion = usePrefersReducedMotion();
   const idRef = React.useRef(0);
+  const timeoutRef = React.useRef<number | null>(null);
 
-  const celebrate = React.useCallback((message?: string) => {
+  const celebrate = React.useCallback((message?: string, options?: { onComplete?: () => void }) => {
     const id = ++idRef.current;
+    if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current);
     setBurst({ id, message });
-    window.setTimeout(() => {
+    timeoutRef.current = window.setTimeout(() => {
       setBurst((b) => (b?.id === id ? null : b));
+      options?.onComplete?.();
+      timeoutRef.current = null;
     }, 1800);
   }, []);
+
+  React.useEffect(
+    () => () => {
+      if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current);
+    },
+    []
+  );
 
   const value = React.useMemo(() => ({ celebrate }), [celebrate]);
 

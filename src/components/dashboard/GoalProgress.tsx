@@ -1,8 +1,11 @@
 import * as React from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Flame } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useCelebration } from "@/components/ambient/Celebration";
+import { useAuth } from "@/hooks/useAuth";
+import { queryKeys } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
 
 function encouragement(count: number, goal: number): string {
@@ -17,6 +20,8 @@ export function GoalProgress({ applicationsThisWeek, weeklyGoal, streak }: { app
   const pct = weeklyGoal > 0 ? Math.min(100, Math.round((applicationsThisWeek / weeklyGoal) * 100)) : 0;
   const complete = weeklyGoal > 0 && applicationsThisWeek >= weeklyGoal;
   const { celebrate } = useCelebration();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   // Tracks whether we've already celebrated this week's goal, seeded from
   // the current state so a page load that's already complete (yesterday's
@@ -26,11 +31,16 @@ export function GoalProgress({ applicationsThisWeek, weeklyGoal, streak }: { app
   React.useEffect(() => {
     if (complete && !hasCelebratedRef.current) {
       hasCelebratedRef.current = true;
-      celebrate(`Weekly goal hit — ${applicationsThisWeek} of ${weeklyGoal}! 🎉`);
+      celebrate(`Weekly goal hit — ${applicationsThisWeek} of ${weeklyGoal}! 🎉`, {
+        onComplete: () => {
+          if (!user?.id) return;
+          void queryClient.invalidateQueries({ queryKey: queryKeys.jobs(user.id) });
+        },
+      });
     } else if (!complete) {
       hasCelebratedRef.current = false;
     }
-  }, [complete, applicationsThisWeek, weeklyGoal, celebrate]);
+  }, [complete, applicationsThisWeek, weeklyGoal, celebrate, queryClient, user?.id]);
 
   return (
     <Card className={cn("glass-subtle border-border/60 transition-shadow", complete && "motion-safe:animate-ring-glow")}>
