@@ -1,6 +1,8 @@
+import * as React from "react";
 import { Flame } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { useCelebration } from "@/components/ambient/Celebration";
 import { cn } from "@/lib/utils";
 
 function encouragement(count: number, goal: number): string {
@@ -14,6 +16,21 @@ function encouragement(count: number, goal: number): string {
 export function GoalProgress({ applicationsThisWeek, weeklyGoal, streak }: { applicationsThisWeek: number; weeklyGoal: number; streak: number }) {
   const pct = weeklyGoal > 0 ? Math.min(100, Math.round((applicationsThisWeek / weeklyGoal) * 100)) : 0;
   const complete = weeklyGoal > 0 && applicationsThisWeek >= weeklyGoal;
+  const { celebrate } = useCelebration();
+
+  // Tracks whether we've already celebrated this week's goal, seeded from
+  // the current state so a page load that's already complete (yesterday's
+  // achievement, a refresh) doesn't re-trigger it — only the transition
+  // into "complete" during this session does.
+  const hasCelebratedRef = React.useRef(complete);
+  React.useEffect(() => {
+    if (complete && !hasCelebratedRef.current) {
+      hasCelebratedRef.current = true;
+      celebrate(`Weekly goal hit — ${applicationsThisWeek} of ${weeklyGoal}! 🎉`);
+    } else if (!complete) {
+      hasCelebratedRef.current = false;
+    }
+  }, [complete, applicationsThisWeek, weeklyGoal, celebrate]);
 
   return (
     <Card className={cn("glass-subtle border-border/60 transition-shadow", complete && "motion-safe:animate-ring-glow")}>

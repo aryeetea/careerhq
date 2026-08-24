@@ -13,6 +13,7 @@ import { useSharedContextProfiles } from "@/hooks/queries/useProfile";
 import { useAuth } from "@/hooks/useAuth";
 import { useDeleteGoal, useJoinGoal, useLeaveGoal, useUpdateGoalProgress } from "@/hooks/queries/useGoals";
 import { useToast } from "@/components/shared/toast";
+import { useCelebration } from "@/components/ambient/Celebration";
 import { logActivity } from "@/services/activity";
 import { cn, formatDate, initials } from "@/lib/utils";
 import type { GoalWithMembers } from "@/services/goals";
@@ -23,6 +24,7 @@ function MemberRow({ userId, displayName, avatarPath, progress, target, unit, is
   const avatarUrl = useSignedAvatarUrl(avatarPath);
   const updateProgress = useUpdateGoalProgress();
   const { push } = useToast();
+  const { celebrate } = useCelebration();
   const isComplete = target > 0 && progress >= target;
   const pct = target > 0 ? Math.min(100, Math.round((progress / target) * 100)) : 0;
 
@@ -36,7 +38,7 @@ function MemberRow({ userId, displayName, avatarPath, progress, target, unit, is
     const nextProgress = progress + 1;
     await updateProgress.mutateAsync({ goalId, progressCount: nextProgress });
     if (!wasComplete && nextProgress >= target) {
-      push(`🎉 Goal reached: ${goalName}!`, "success");
+      celebrate(`Goal reached: ${goalName}! 🎉`);
       void logActivity(userId, "goal_completed", `Reached your goal: ${goalName}`, { goalId });
     }
   }
