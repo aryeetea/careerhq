@@ -23,7 +23,7 @@ import { useResumes } from "@/hooks/queries/useResumes";
 import { useCertifications } from "@/hooks/queries/useCertifications";
 import { useProfile, useUpdateProfile } from "@/hooks/queries/useProfile";
 import { useCandidateFacts } from "@/hooks/queries/useCandidateFacts";
-import { computeDashboardStats, getGoalCycleApplicationCount, getUpcomingInterviews } from "@/lib/stats";
+import { computeDashboardStats, getGoalCycleApplicationCount, getUpcomingInterviews, toLocalDayKey } from "@/lib/stats";
 import { jobNeedsRequirementConfirmation } from "@/lib/jobRequirements";
 import { CERTIFICATION_STATUS_META } from "@/lib/constants";
 import type { Job } from "@/types/database";
@@ -110,7 +110,7 @@ export default function Dashboard() {
   const recent = React.useMemo(() => jobs.slice(0, 6), [jobs]);
   const activeCert = React.useMemo(() => certifications.find((c) => c.status === "in_progress"), [certifications]);
   const followUpsDue = React.useMemo(() => {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = toLocalDayKey(new Date());
     return jobs.filter((job) => job.follow_up_date && job.follow_up_date.slice(0, 10) <= today).length;
   }, [jobs]);
   // Same predicate that drives each JobCard's own alert badge (see

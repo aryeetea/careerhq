@@ -9,6 +9,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useToast } from "@/components/shared/toast";
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -23,12 +24,16 @@ interface ConfirmDialogProps {
  * work reliably across browsers/mobile and isn't screen-reader friendly. */
 export function ConfirmDialog({ open, onOpenChange, title, description, confirmLabel = "Delete", onConfirm }: ConfirmDialogProps) {
   const [busy, setBusy] = React.useState(false);
+  const { push } = useToast();
 
   async function handleConfirm() {
     setBusy(true);
     try {
       await onConfirm();
       onOpenChange(false);
+    } catch (error) {
+      // Keep the dialog open so the user can retry without restarting the flow.
+      push(error instanceof Error ? error.message : "Couldn't complete that. Try again.", "error");
     } finally {
       setBusy(false);
     }

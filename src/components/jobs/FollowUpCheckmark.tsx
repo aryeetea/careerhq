@@ -5,6 +5,7 @@ import { useCompleteFollowUp, useScheduleAnotherFollowUp } from "@/hooks/queries
 import { useSettings } from "@/hooks/queries/useProfile";
 import { useToast } from "@/components/shared/toast";
 import { cn } from "@/lib/utils";
+import { toLocalDayKey } from "@/lib/stats";
 import type { Job } from "@/types/database";
 
 /**
@@ -47,7 +48,7 @@ export function FollowUpCheckmark({ job, className }: { job: Job; className?: st
     const date = new Date();
     date.setDate(date.getDate() + days);
     try {
-      await scheduleAnother.mutateAsync({ id: job.id, followUpDate: date.toISOString().slice(0, 10) });
+      await scheduleAnother.mutateAsync({ id: job.id, followUpDate: toLocalDayKey(date) });
       push("One more follow-up scheduled.", "success");
     } catch {
       push("Couldn't schedule that — try again from the job.", "error");

@@ -21,6 +21,8 @@ export function DataPortability() {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [pending, setPending] = React.useState<BackupData | null>(null);
   const [importing, setImporting] = React.useState(false);
+  const [importFailed, setImportFailed] = React.useState(false);
+  const importProgressRef = React.useRef({ jobs: 0, certifications: 0, goals: 0 });
 
   async function onFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -28,6 +30,8 @@ export function DataPortability() {
     if (!file) return;
     try {
       const data = await parseBackupFile(file);
+      importProgressRef.current = { jobs: 0, certifications: 0, goals: 0 };
+      setImportFailed(false);
       setPending(data);
     } catch (err) {
       push(err instanceof Error ? `That file doesn't look right: ${err.message}` : "Couldn't read that file.", "error");
@@ -38,7 +42,8 @@ export function DataPortability() {
     if (!pending) return;
     setImporting(true);
     try {
-      for (const j of pending.jobs) {
+      for (let index = importProgressRef.current.jobs; index < pending.jobs.length; index += 1) {
+        const j = pending.jobs[index];
         await createJob.mutateAsync({
           company: j.company,
           title: j.title,
@@ -68,8 +73,10 @@ export function DataPortability() {
           missing_qualifications: j.missing_qualifications ?? null,
           cover_letter_used: j.cover_letter_used ?? null,
         });
+        importProgressRef.current.jobs = index + 1;
       }
-      for (const c of pending.certifications) {
+      for (let index = importProgressRef.current.certifications; index < pending.certifications.length; index += 1) {
+        const c = pending.certifications[index];
         await createCertification.mutateAsync({
           input: {
             name: c.name,
@@ -84,9 +91,11 @@ export function DataPortability() {
             notes: c.notes ?? null,
           },
         });
+        importProgressRef.current.certifications = index + 1;
       }
       if (pending.version === 2) {
-        for (const g of pending.goals) {
+        for (let index = importProgressRef.current.goals; index < pending.goals.length; index += 1) {
+          const g = pending.goals[index];
           await createGoal.mutateAsync({
             name: g.name,
             description: g.description ?? null,
@@ -95,6 +104,7 @@ export function DataPortability() {
             deadline: g.deadline ?? null,
             is_shared: g.is_shared ?? false,
           });
+          importProgressRef.current.goals = index + 1;
         }
       }
       const goalCount = pending.version === 2 ? pending.goals.length : 0;
@@ -103,8 +113,10 @@ export function DataPortability() {
         "success"
       );
       setPending(null);
+      setImportFailed(false);
     } catch (err) {
-      push(err instanceof Error ? err.message : "Import failed partway through.", "error");
+      setImportFailed(true);
+      throw new Error(err instanceof Error ? `${err.message} You can retry safely.` : "Import failed partway through. You can retry safely.");
     } finally {
       setImporting(false);
     }
@@ -151,14 +163,19 @@ export function DataPortability() {
 
       <ConfirmDialog
         open={Boolean(pending)}
-        onOpenChange={(open) => !open && setPending(null)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPending(null);
+            setImportFailed(false);
+          }
+        }}
         title="Import this backup?"
         description={
           pending
             ? `This will add ${pending.jobs.length} job${pending.jobs.length === 1 ? "" : "s"}, ${pending.certifications.length} certification${pending.certifications.length === 1 ? "" : "s"}${pending.version === 2 ? `, and ${pending.goals.length} goal${pending.goals.length === 1 ? "" : "s"}` : ""} to your account. Nothing existing will be changed or removed.`
             : ""
         }
-        confirmLabel={importing ? "Importing…" : "Import"}
+        confirmLabel={importing ? "Importing…" : importFailed ? "Retry import" : "Import"}
         onConfirm={confirmImport}
       />
     </div>
