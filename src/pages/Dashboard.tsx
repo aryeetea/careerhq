@@ -51,9 +51,38 @@ export default function Dashboard() {
   const setSelectedJob = React.useCallback((job: Job) => setSelectedJobId(job.id), []);
 
   const stats = React.useMemo(() => computeDashboardStats(jobs), [jobs]);
+  const goalCycleStorageKey = profile ? `bloom:weekly-goal-cycle:${profile.id}` : null;
+  const [localGoalCycleStartedAt, setLocalGoalCycleStartedAt] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (!goalCycleStorageKey) {
+      setLocalGoalCycleStartedAt(null);
+      return;
+    }
+    setLocalGoalCycleStartedAt(window.localStorage.getItem(goalCycleStorageKey));
+  }, [goalCycleStorageKey]);
+
+  // Prefer the newest marker so an immediate local reset is never undone
+  // while the account-level update is still in flight.
+  const goalCycleStartedAt = React.useMemo(() => {
+    const candidates = [profile?.weekly_goal_cycle_started_at, localGoalCycleStartedAt].filter(
+      (value): value is string => typeof value === "string" && !Number.isNaN(new Date(value).getTime())
+    );
+    return candidates.sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] ?? null;
+  }, [localGoalCycleStartedAt, profile?.weekly_goal_cycle_started_at]);
+
+  const persistGoalCycleStart = React.useCallback(
+    (startedAt: string) => {
+      setLocalGoalCycleStartedAt(startedAt);
+      if (goalCycleStorageKey) window.localStorage.setItem(goalCycleStorageKey, startedAt);
+      updateProfile.mutate({ weekly_goal_cycle_started_at: startedAt });
+    },
+    [goalCycleStorageKey, updateProfile]
+  );
+
   const applicationsInGoalCycle = React.useMemo(
-    () => getGoalCycleApplicationCount(jobs, profile?.weekly_goal_cycle_started_at ?? null),
-    [jobs, profile?.weekly_goal_cycle_started_at]
+    () => getGoalCycleApplicationCount(jobs, goalCycleStartedAt),
+    [goalCycleStartedAt, jobs]
   );
   const migratedGoalCycleRef = React.useRef<string | null>(null);
 
@@ -63,13 +92,8 @@ export default function Dashboard() {
     if (!profile || profile.weekly_goal_cycle_started_at || profile.weekly_application_goal <= 0) return;
     if (stats.applicationsThisWeek < profile.weekly_application_goal || migratedGoalCycleRef.current === profile.id) return;
     migratedGoalCycleRef.current = profile.id;
-    updateProfile.mutate({ weekly_goal_cycle_started_at: new Date().toISOString() });
-  }, [profile, stats.applicationsThisWeek, updateProfile]);
-
-  const handleGoalCycleComplete = React.useCallback(
-    (startedAt: string) => updateProfile.mutate({ weekly_goal_cycle_started_at: startedAt }),
-    [updateProfile]
-  );
+    persistGoalCycleStart(new Date().toISOString());
+  }, [persistGoalCycleStart, profile, stats.applicationsThisWeek]);
 
   const upcomingFollowUps: UpcomingRow[] = React.useMemo(() => {
     // Compares calendar-date strings directly rather than epoch
@@ -227,7 +251,7 @@ export default function Dashboard() {
                 applicationsInCycle={applicationsInGoalCycle}
                 weeklyGoal={profile?.weekly_application_goal ?? 0}
                 streak={stats.currentStreak}
-                onCycleComplete={handleGoalCycleComplete}
+                onCycleComplete={persistGoalCycleStart}
               />
               <Card className="glass-subtle border-border/60 lg:col-span-2">
                 <CardContent className="p-5">
