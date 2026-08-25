@@ -15,6 +15,8 @@ import type { Profile } from "@/types/database";
 export function ProgressSection({
   stats,
   weeklyGoal,
+  applicationsInCycle,
+  onCycleComplete,
   profile,
   resumes,
   jobs,
@@ -23,6 +25,8 @@ export function ProgressSection({
 }: {
   stats: DashboardStats;
   weeklyGoal: number;
+  applicationsInCycle: number;
+  onCycleComplete: (startedAt: string) => void;
   profile: Profile;
   resumes: Resume[];
   jobs: Job[];
@@ -35,7 +39,7 @@ export function ProgressSection({
       <p className="mt-1 text-sm text-foreground/70">How your search is growing, all in one place.</p>
 
       <div className="mt-7 grid gap-8 lg:grid-cols-2">
-        <WeeklyProgressCard stats={stats} weeklyGoal={weeklyGoal} />
+        <WeeklyProgressCard stats={stats} weeklyGoal={weeklyGoal} applicationsInCycle={applicationsInCycle} onCycleComplete={onCycleComplete} />
         <SearchHealthCard profile={profile} resumes={resumes} jobs={jobs} goals={goals} />
       </div>
 

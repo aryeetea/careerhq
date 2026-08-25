@@ -21,9 +21,10 @@ import { FollowUpCheckmark } from "@/components/jobs/FollowUpCheckmark";
 import { useJobs } from "@/hooks/queries/useJobs";
 import { useResumes } from "@/hooks/queries/useResumes";
 import { useCertifications } from "@/hooks/queries/useCertifications";
-import { useProfile, useUpdateProfile } from "@/hooks/queries/useProfile";
+import { useProfile } from "@/hooks/queries/useProfile";
 import { useCandidateFacts } from "@/hooks/queries/useCandidateFacts";
-import { computeDashboardStats, getGoalCycleApplicationCount, getUpcomingInterviews, toLocalDayKey } from "@/lib/stats";
+import { useGoalCycle } from "@/hooks/useGoalCycle";
+import { computeDashboardStats, getUpcomingInterviews, toLocalDayKey } from "@/lib/stats";
 import { jobNeedsRequirementConfirmation } from "@/lib/jobRequirements";
 import { CERTIFICATION_STATUS_META } from "@/lib/constants";
 import type { Job } from "@/types/database";
@@ -33,7 +34,6 @@ export default function Dashboard() {
   const { data: resumes = [] } = useResumes();
   const { data: certifications = [] } = useCertifications();
   const { data: profile } = useProfile();
-  const updateProfile = useUpdateProfile();
   const { data: candidateFacts } = useCandidateFacts();
   const navigate = useNavigate();
 
@@ -51,49 +51,7 @@ export default function Dashboard() {
   const setSelectedJob = React.useCallback((job: Job) => setSelectedJobId(job.id), []);
 
   const stats = React.useMemo(() => computeDashboardStats(jobs), [jobs]);
-  const goalCycleStorageKey = profile ? `bloom:weekly-goal-cycle:${profile.id}` : null;
-  const [localGoalCycleStartedAt, setLocalGoalCycleStartedAt] = React.useState<string | null>(null);
-
-  React.useEffect(() => {
-    if (!goalCycleStorageKey) {
-      setLocalGoalCycleStartedAt(null);
-      return;
-    }
-    setLocalGoalCycleStartedAt(window.localStorage.getItem(goalCycleStorageKey));
-  }, [goalCycleStorageKey]);
-
-  // Prefer the newest marker so an immediate local reset is never undone
-  // while the account-level update is still in flight.
-  const goalCycleStartedAt = React.useMemo(() => {
-    const candidates = [profile?.weekly_goal_cycle_started_at, localGoalCycleStartedAt].filter(
-      (value): value is string => typeof value === "string" && !Number.isNaN(new Date(value).getTime())
-    );
-    return candidates.sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] ?? null;
-  }, [localGoalCycleStartedAt, profile?.weekly_goal_cycle_started_at]);
-
-  const persistGoalCycleStart = React.useCallback(
-    (startedAt: string) => {
-      setLocalGoalCycleStartedAt(startedAt);
-      if (goalCycleStorageKey) window.localStorage.setItem(goalCycleStorageKey, startedAt);
-      updateProfile.mutate({ weekly_goal_cycle_started_at: startedAt });
-    },
-    [goalCycleStorageKey, updateProfile]
-  );
-
-  const applicationsInGoalCycle = React.useMemo(
-    () => getGoalCycleApplicationCount(jobs, goalCycleStartedAt),
-    [goalCycleStartedAt, jobs]
-  );
-  const migratedGoalCycleRef = React.useRef<string | null>(null);
-
-  // Existing completed goals were celebrated before a durable cycle marker
-  // existed. Mark that first boundary once so they start a fresh cycle too.
-  React.useEffect(() => {
-    if (!profile || profile.weekly_goal_cycle_started_at || profile.weekly_application_goal <= 0) return;
-    if (stats.applicationsThisWeek < profile.weekly_application_goal || migratedGoalCycleRef.current === profile.id) return;
-    migratedGoalCycleRef.current = profile.id;
-    persistGoalCycleStart(new Date().toISOString());
-  }, [persistGoalCycleStart, profile, stats.applicationsThisWeek]);
+  const { applicationsInCycle: applicationsInGoalCycle, onCycleComplete } = useGoalCycle(profile, jobs, stats.applicationsThisWeek);
 
   const upcomingFollowUps: UpcomingRow[] = React.useMemo(() => {
     // Compares calendar-date strings directly rather than epoch
@@ -251,7 +209,7 @@ export default function Dashboard() {
                 applicationsInCycle={applicationsInGoalCycle}
                 weeklyGoal={profile?.weekly_application_goal ?? 0}
                 streak={stats.currentStreak}
-                onCycleComplete={persistGoalCycleStart}
+                onCycleComplete={onCycleComplete}
               />
               <Card className="glass-subtle border-border/60 lg:col-span-2">
                 <CardContent className="p-5">

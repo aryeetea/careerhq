@@ -17,6 +17,7 @@ import { useResumes } from "@/hooks/queries/useResumes";
 import { useGoals } from "@/hooks/queries/useGoals";
 import { useRecentActivity } from "@/hooks/queries/useActivity";
 import { useSignedAvatarUrl } from "@/hooks/useSignedAvatarUrl";
+import { useGoalCycle } from "@/hooks/useGoalCycle";
 import { computeDashboardStats } from "@/lib/stats";
 import { getPersonProfilePath } from "@/lib/people";
 import { initials } from "@/lib/utils";
@@ -35,6 +36,7 @@ export default function ProfilePage() {
   const avatarUrl = useSignedAvatarUrl(profile?.avatar_url ?? null);
 
   const stats = React.useMemo(() => computeDashboardStats(jobs), [jobs]);
+  const { applicationsInCycle, onCycleComplete } = useGoalCycle(profile, jobs, stats.applicationsThisWeek);
 
   if (!profile) {
     return (
@@ -171,6 +173,8 @@ export default function ProfilePage() {
             <ProgressSection
               stats={stats}
               weeklyGoal={profile.weekly_application_goal}
+              applicationsInCycle={applicationsInCycle}
+              onCycleComplete={onCycleComplete}
               profile={profile}
               resumes={resumes}
               jobs={jobs}
