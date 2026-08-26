@@ -454,7 +454,6 @@ export interface Job {
   ai_resume_tailoring_updated_at: string | null;
   ai_last_analyzed_at: string | null;
   ai_prompt_version: string | null;
-  ai_rubric_version: string | null;
   created_at: string;
   updated_at: string;
 }
