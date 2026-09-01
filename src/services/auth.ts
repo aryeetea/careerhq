@@ -1,3 +1,4 @@
+import { FunctionsHttpError } from "@supabase/supabase-js";
 import { assertSupabaseConfigured, supabase } from "@/lib/supabase";
 import { invokeEdgeFunction } from "@/lib/edgeFunctions";
 
@@ -80,14 +81,24 @@ function authCallbackUrl(next: string): string {
 export async function signUp(email: string, password: string, displayName: string, next = "/app") {
   assertSupabaseConfigured();
   try {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { display_name: displayName },
-        emailRedirectTo: authCallbackUrl(next),
-      },
+    const { error: createError } = await supabase.functions.invoke("create-account", {
+      body: { email, password, displayName },
     });
+    if (createError) {
+      if (createError instanceof FunctionsHttpError) {
+        try {
+          const errorBody = await (createError.context as Response).clone().json();
+          if (typeof errorBody?.error === "string" && errorBody.error) {
+            throw new Error(errorBody.error);
+          }
+        } catch {
+          // Fall through to the generic auth error normalization below.
+        }
+      }
+      throw createError;
+    }
+
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
     return data;
   } catch (error) {
