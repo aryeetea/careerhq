@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AlertTriangle, Check, Copy, Download, ExternalLink, FileText, Pencil, ScanSearch, Sparkles, Trash2, X } from "lucide-react";
+import { AlertTriangle, Check, Copy, Download, ExternalLink, FileText, Sparkles, Trash2, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -24,20 +24,15 @@ import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { AnalysisSummary } from "@/components/jobs/AnalysisSummary";
 import { StatusBadge } from "@/components/jobs/StatusBadge";
 import { FollowUpCheckmark } from "@/components/jobs/FollowUpCheckmark";
-import { ResumeScoreGauge } from "@/components/jobs/ResumeScoreGauge";
-import { TailoredResumePreview } from "@/components/jobs/TailoredResumePreview";
-import { RESUME_TEMPLATE_IDS, RESUME_TEMPLATE_META, type ResumeTemplateId } from "@/lib/resumeTemplates";
-import type { Job, JobAiResumeClaimCategory, JobAiResumeFix, JobAiResumeTailoring, Resume } from "@/types/database";
+import type { Job, Resume } from "@/types/database";
 import { jobFormSchema, type JobFormValues } from "@/lib/validation";
-import { useDeleteJob, useJobStatusHistory, useSaveCoverLetter, useSaveResumeTailoring, useUpdateJob } from "@/hooks/queries/useJobs";
+import { useDeleteJob, useJobStatusHistory, useSaveCoverLetter, useUpdateJob } from "@/hooks/queries/useJobs";
 import { useSettings } from "@/hooks/queries/useProfile";
-import { useAnalyzeJob, useGenerateCoverLetter, useTailorResume } from "@/hooks/queries/useJobAi";
+import { useAnalyzeJob, useGenerateCoverLetter } from "@/hooks/queries/useJobAi";
 import { useToast } from "@/components/shared/toast";
 import { useCelebration } from "@/components/ambient/Celebration";
 import {
-  getResumeScoreBand,
   JOB_STATUSES,
-  RESUME_SUGGESTION_TYPE_META,
   STATUS_META,
   UNSET_SELECT_VALUE,
   VERDICT_META,
@@ -46,82 +41,13 @@ import {
 } from "@/lib/constants";
 import { dateInputToISO, deriveVerdictSource, formatDate, formatDateTime, toDateInputValue } from "@/lib/utils";
 import type { JobAnalysisPayload } from "@/lib/ai";
-import { ANALYSIS_PROGRESS_STEPS, COVER_LETTER_PROGRESS_STEPS, TAILOR_RESUME_PROGRESS_STEPS, useProgressHint } from "@/hooks/useProgressHint";
+import { ANALYSIS_PROGRESS_STEPS, COVER_LETTER_PROGRESS_STEPS, useProgressHint } from "@/hooks/useProgressHint";
 
 interface JobDetailDialogProps {
   job: Job | null;
   resumes: Resume[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
-}
-
-const STRETCH_LEVEL_META: Record<JobAiResumeFix["stretch_level"], { label: string; badgeVariant: "success" | "warning" | "destructive" }> = {
-  safe: { label: "Safe", badgeVariant: "success" },
-  reasonable_stretch: { label: "Reasonable stretch", badgeVariant: "warning" },
-  aggressive_stretch: { label: "Aggressive stretch", badgeVariant: "destructive" },
-};
-
-const CLAIM_CATEGORY_LABEL: Record<JobAiResumeClaimCategory["category"], string> = {
-  summary: "Summary",
-  experience: "Experience",
-  projects: "Projects",
-  education: "Education",
-  skills: "Skills",
-};
-
-// Which suggested fixes are pre-checked when a fresh tailoring result
-// arrives: safe/reasonable-stretch fixes that actually have text to swap
-// in. Aggressive stretches start unchecked — the user should opt into
-// those deliberately, not have them applied by default.
-// fixes is untrusted here — it comes straight off jsonb, so a row saved by
-// an earlier version of this feature (before suggested_fixes/claim_audit
-// existed, or with the older {suggestion, reason} fix shape) won't match
-// JobAiResumeFix at runtime even though TypeScript assumes it does. Guard
-// with Array.isArray rather than trusting the type, so stale saved data
-// degrades to "no fixes" instead of throwing on .forEach.
-function defaultCheckedFixIndexes(fixes: JobAiResumeFix[] | null | undefined): Set<number> {
-  const indexes = new Set<number>();
-  if (!Array.isArray(fixes)) return indexes;
-  fixes.forEach((fix, index) => {
-    if (fix?.original_text && fix?.proposed_text && fix.stretch_level !== "aggressive_stretch") {
-      indexes.add(index);
-    }
-  });
-  return indexes;
-}
-
-// Defends the whole tailoring UI against saved jsonb from an earlier
-// version of this feature — this app has already shipped three different
-// ai_resume_tailoring shapes in quick succession (see git history), so a
-// job saved under an older one is a real, current case, not a
-// hypothetical. Every field is defaulted so downstream .map/.forEach calls
-// can never throw on missing data; a job with genuinely stale tailoring
-// just renders as mostly-empty (0 scores, no keywords/fixes/claims) rather
-// than crashing the whole dialog. The fix is to re-tailor, not to lose the
-// job detail view entirely.
-function normalizeTailoring(raw: JobAiResumeTailoring | null | undefined): JobAiResumeTailoring | null {
-  if (!raw) return null;
-  const dimension = (d: unknown) =>
-    d && typeof d === "object" && "score" in d
-      ? (d as JobAiResumeTailoring["job_match"])
-      : { score: 0, description: "" };
-  return {
-    resume_id: raw.resume_id ?? null,
-    resume_name: raw.resume_name ?? null,
-    overall_score: typeof raw.overall_score === "number" ? raw.overall_score : 0,
-    job_match: dimension(raw.job_match),
-    ats_readability: dimension(raw.ats_readability),
-    evidence_strength: dimension(raw.evidence_strength),
-    truthfulness: dimension(raw.truthfulness),
-    covered_keywords: Array.isArray(raw.covered_keywords) ? raw.covered_keywords : [],
-    weak_keywords: Array.isArray(raw.weak_keywords) ? raw.weak_keywords : [],
-    missing_keywords: Array.isArray(raw.missing_keywords) ? raw.missing_keywords : [],
-    tailored_resume: typeof raw.tailored_resume === "string" ? raw.tailored_resume : "",
-    summary_of_changes: Array.isArray(raw.summary_of_changes) ? raw.summary_of_changes : [],
-    suggested_fixes: Array.isArray(raw.suggested_fixes) ? raw.suggested_fixes : [],
-    claim_audit: Array.isArray(raw.claim_audit) ? raw.claim_audit : [],
-    template: raw.template,
-  };
 }
 
 function jobToFormValues(job: Job): JobFormValues {
@@ -161,8 +87,6 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
   const analyzeJob = useAnalyzeJob();
   const generateCoverLetter = useGenerateCoverLetter();
   const saveCoverLetter = useSaveCoverLetter();
-  const tailorResume = useTailorResume();
-  const saveResumeTailoring = useSaveResumeTailoring();
   const { data: history = [] } = useJobStatusHistory(job?.id ?? null);
   const { data: settings } = useSettings();
   const { push } = useToast();
@@ -170,32 +94,10 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
   const [confirmOpen, setConfirmOpen] = React.useState(false);
   const [analysisState, setAnalysisState] = React.useState<JobAnalysisPayload | null>(job?.ai_analysis ?? null);
   const [coverLetter, setCoverLetter] = React.useState(job?.ai_cover_letter ?? "");
-  // job.ai_resume_tailoring is raw jsonb with no runtime guarantee it
-  // matches JobAiResumeTailoring — normalize once here so every piece of
-  // state below (and every .map/.forEach on `tailoring` in the JSX) is
-  // safe even for a job saved under an earlier version of this feature's
-  // schema. See normalizeTailoring's comment for why that's a real case.
-  const [tailoring, setTailoring] = React.useState<JobAiResumeTailoring | null>(() => normalizeTailoring(job?.ai_resume_tailoring));
-  const [tailoredResumeText, setTailoredResumeText] = React.useState(() => normalizeTailoring(job?.ai_resume_tailoring)?.tailored_resume ?? "");
-  // Read-only rendered preview by default; the pencil icon switches to the
-  // plain-text editor. Editing always happens on the underlying plain
-  // text — see TailoredResumePreview's header note.
-  const [editingTailoredResume, setEditingTailoredResume] = React.useState(false);
-  // Which suggested_fixes are opted in for "Apply selected fixes" — see
-  // defaultCheckedFixIndexes.
-  const [checkedFixes, setCheckedFixes] = React.useState<Set<number>>(
-    () => defaultCheckedFixIndexes(normalizeTailoring(job?.ai_resume_tailoring)?.suggested_fixes),
-  );
-  // Client-only visual choice for the rendered preview/PDF export — see
-  // resumeTemplates.ts. Persisted onto the saved tailoring blob, but never
-  // sent to or validated against the AI response schema.
-  const [resumeTemplate, setResumeTemplate] = React.useState<ResumeTemplateId>(() => normalizeTailoring(job?.ai_resume_tailoring)?.template ?? "classic");
   const [activeTab, setActiveTab] = React.useState("overview");
   const coverLetterDirty = coverLetter !== (job?.ai_cover_letter ?? "");
-  const tailoredResumeDirty = tailoredResumeText !== (job?.ai_resume_tailoring?.tailored_resume ?? "");
   const analyzingHint = useProgressHint(analyzeJob.isPending, ANALYSIS_PROGRESS_STEPS);
   const generatingCoverLetterHint = useProgressHint(generateCoverLetter.isPending, COVER_LETTER_PROGRESS_STEPS);
-  const tailoringResumeHint = useProgressHint(tailorResume.isPending, TAILOR_RESUME_PROGRESS_STEPS);
 
   const {
     register,
@@ -218,14 +120,8 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
   }, [job?.id]);
 
   React.useEffect(() => {
-    const normalizedTailoring = normalizeTailoring(job?.ai_resume_tailoring);
     setAnalysisState(job?.ai_analysis ?? null);
     setCoverLetter(job?.ai_cover_letter ?? "");
-    setTailoring(normalizedTailoring);
-    setTailoredResumeText(normalizedTailoring?.tailored_resume ?? "");
-    setEditingTailoredResume(false);
-    setCheckedFixes(defaultCheckedFixIndexes(normalizedTailoring?.suggested_fixes));
-    setResumeTemplate(normalizedTailoring?.template ?? "classic");
     setActiveTab("overview");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [job?.id]);
@@ -426,134 +322,6 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
     }
   }
 
-  async function handleTailorResume() {
-    if (!job) return;
-    if (!watch("resumeId")) {
-      push("Choose the resume you want to tailor on the Evaluation tab first.", "error");
-      focusResumeSelection();
-      return;
-    }
-    try {
-      const response = await tailorResume.mutateAsync({
-        jobId: job.id,
-        selectedResumeId: watch("resumeId") || null,
-      });
-      // Persist the moment it's ready — same immediate-save pattern as the
-      // cover letter, not gated on the form's separate "Save changes".
-      // Carries the current template choice forward — a regenerate
-      // shouldn't silently revert someone's chosen visual style.
-      const tailoringToSave: JobAiResumeTailoring = { ...response, template: resumeTemplate };
-      await saveResumeTailoring.mutateAsync({ id: job.id, tailoring: tailoringToSave, resumeId: response.resume_id });
-      setTailoring(tailoringToSave);
-      setTailoredResumeText(response.tailored_resume);
-      setEditingTailoredResume(false);
-      setCheckedFixes(defaultCheckedFixIndexes(response.suggested_fixes));
-      if (response.resume_id) {
-        setValue("resumeId", response.resume_id, { shouldDirty: false });
-      }
-      setActiveTab("tailor-resume");
-      push("Your tailored resume is ready.", "success");
-    } catch (err) {
-      // Deliberately does not touch `tailoring`/`tailoredResumeText` — a
-      // failed regeneration never clears or overwrites an existing draft.
-      push(err instanceof Error ? err.message : "Couldn't tailor your resume yet.", "error");
-    }
-  }
-
-  // Re-scores the user's own hand-edited draft without rewriting it — see
-  // RESCORE MODE in careerCoach.ts. Distinct from handleTailorResume, which
-  // always does a fresh rewrite from the original résumé.
-  async function handleRecalculateScores() {
-    if (!job || !tailoredResumeText.trim()) return;
-    try {
-      const response = await tailorResume.mutateAsync({
-        jobId: job.id,
-        selectedResumeId: watch("resumeId") || null,
-        currentDraftText: tailoredResumeText,
-      });
-      const tailoringToSave: JobAiResumeTailoring = { ...response, template: resumeTemplate };
-      await saveResumeTailoring.mutateAsync({ id: job.id, tailoring: tailoringToSave, resumeId: response.resume_id });
-      setTailoring(tailoringToSave);
-      setTailoredResumeText(response.tailored_resume);
-      setCheckedFixes(defaultCheckedFixIndexes(response.suggested_fixes));
-      push("Scores updated for your edited résumé.", "success");
-    } catch (err) {
-      push(err instanceof Error ? err.message : "Couldn't recalculate scores.", "error");
-    }
-  }
-
-  async function handleSaveTailoredResumeEdit() {
-    if (!job || !tailoring) return;
-    try {
-      const updated = { ...tailoring, tailored_resume: tailoredResumeText };
-      await saveResumeTailoring.mutateAsync({ id: job.id, tailoring: updated, resumeId: null });
-      setTailoring(updated);
-      push("Tailored resume saved.", "success");
-    } catch (err) {
-      push(err instanceof Error ? err.message : "Couldn't save your edits.", "error");
-    }
-  }
-
-  // Applies checked suggested_fixes as plain substring swaps against the
-  // current draft — the safest general approach without a rich/structured
-  // editor. Silently skips a fix whose original_text no longer appears
-  // (e.g. already applied, or the user edited that spot manually).
-  function handleApplySuggestedFixes() {
-    if (!tailoring) return;
-    let updated = tailoredResumeText;
-    let appliedCount = 0;
-    tailoring.suggested_fixes.forEach((fix, index) => {
-      if (!checkedFixes.has(index) || !fix.original_text || !fix.proposed_text) return;
-      if (updated.includes(fix.original_text)) {
-        updated = updated.replace(fix.original_text, fix.proposed_text);
-        appliedCount += 1;
-      }
-    });
-    if (appliedCount === 0) {
-      push("Couldn't find that exact text to replace — it may have already changed. Try editing manually instead.", "error");
-      return;
-    }
-    setTailoredResumeText(updated);
-    setEditingTailoredResume(true);
-    setCheckedFixes(new Set());
-    push(`Applied ${appliedCount} fix${appliedCount === 1 ? "" : "es"} — review, then save your edits.`, "success");
-  }
-
-  async function handleCopyTailoredResume() {
-    try {
-      await navigator.clipboard.writeText(tailoredResumeText);
-      push("Copied to your clipboard.", "success");
-    } catch {
-      push("Couldn't copy — try selecting the text instead.", "error");
-    }
-  }
-
-  async function handleDownloadTailoredResume() {
-    if (!job) return;
-    const fileName = `${job.company} - ${job.title} - tailored resume.pdf`.replace(/[/\\?%*:|"<>]/g, "-");
-    try {
-      // Dynamically imported for the same reason as coverLetterPdf (jsPDF's
-      // html2canvas plugin) — template-aware, matching whatever the
-      // rendered preview is currently showing (see resumeTemplates.ts).
-      const { downloadTailoredResumePdf } = await import("@/lib/tailoredResumePdf");
-      downloadTailoredResumePdf(tailoredResumeText, fileName, resumeTemplate);
-    } catch {
-      push("Couldn't create the PDF — try again in a moment.", "error");
-    }
-  }
-
-  async function handleChangeTemplate(template: ResumeTemplateId) {
-    setResumeTemplate(template);
-    if (!job || !tailoring) return;
-    try {
-      const updated = { ...tailoring, template };
-      await saveResumeTailoring.mutateAsync({ id: job.id, tailoring: updated, resumeId: null });
-      setTailoring(updated);
-    } catch (err) {
-      push(err instanceof Error ? err.message : "Couldn't save your template choice.", "error");
-    }
-  }
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="lg">
@@ -591,10 +359,6 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
               <TabsTrigger value="cover-letter" className="gap-1.5">
                 Cover Letter
                 {job.ai_cover_letter && <Check className="h-3 w-3 text-success" aria-hidden="true" />}
-              </TabsTrigger>
-              <TabsTrigger value="tailor-resume" className="gap-1.5">
-                Tailor Resume
-                {job.ai_resume_tailoring && <Check className="h-3 w-3 text-success" aria-hidden="true" />}
               </TabsTrigger>
               <TabsTrigger value="history">History</TabsTrigger>
             </TabsList>
@@ -966,377 +730,6 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
               )}
             </TabsContent>
 
-            <TabsContent value="tailor-resume" className="grid gap-3">
-              <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border/60 bg-card/50 p-3">
-                <div>
-                  <p className="flex items-center gap-1.5 text-sm font-medium">
-                    <ScanSearch className="h-4 w-4 text-primary" />
-                    Tailor resume
-                  </p>
-                  <p className="mt-1 text-sm text-muted-foreground" aria-live="polite">
-                    {tailoringResumeHint ??
-                      "Scores your selected resume against this posting's keywords, then rewrites it to a one-page version in your resume's own format — without inventing experience."}
-                  </p>
-                </div>
-                <Button type="button" size="sm" onClick={handleTailorResume} disabled={tailorResume.isPending}>
-                  {tailorResume.isPending ? "Tailoring…" : tailoring ? "Regenerate" : "Tailor resume"}
-                </Button>
-              </div>
-
-              {!tailoring ? (
-                <div className="rounded-xl border border-dashed border-border/70 px-4 py-10 text-center">
-                  <p className="text-sm font-medium">No tailored resume yet</p>
-                  <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
-                    Choose the resume you want to tailor on the Evaluation tab, then generate one — it takes up to a minute.
-                  </p>
-                </div>
-              ) : (
-                <>
-                  {(() => {
-                    // Explicit class maps, not `text-${variant}` string
-                    // interpolation — Tailwind's build-time scanner only
-                    // picks up class names that appear as literal strings
-                    // in source, so a dynamically-built class name would
-                    // silently produce no styling at all.
-                    const overallBand = getResumeScoreBand(tailoring.overall_score);
-                    const bannerCopy: Record<typeof overallBand.badgeVariant, string> = {
-                      success: "Strong match — ready to send.",
-                      default: "Good match — a few tweaks would strengthen it.",
-                      warning: "Needs some work before sending.",
-                      destructive: "Needs meaningful work before sending.",
-                    };
-                    const bannerClass: Record<typeof overallBand.badgeVariant, string> = {
-                      success: "border-success/30 bg-success/10 text-success",
-                      default: "border-primary/30 bg-primary/10 text-primary",
-                      warning: "border-warning/30 bg-warning/10 text-warning",
-                      destructive: "border-destructive/30 bg-destructive/10 text-destructive",
-                    };
-                    const labelClass: Record<typeof overallBand.badgeVariant, string> = {
-                      success: "text-success",
-                      default: "text-primary",
-                      warning: "text-warning",
-                      destructive: "text-destructive",
-                    };
-                    return (
-                      <>
-                        <div className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-medium ${bannerClass[overallBand.badgeVariant]}`}>
-                          {overallBand.badgeVariant === "success" ? <Check className="h-4 w-4 shrink-0" /> : <AlertTriangle className="h-4 w-4 shrink-0" />}
-                          {bannerCopy[overallBand.badgeVariant]}
-                        </div>
-
-                        {tailoredResumeDirty && (
-                          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-warning/30 bg-warning/10 px-3 py-2.5 text-sm text-warning">
-                            <span className="flex items-center gap-1.5">
-                              <AlertTriangle className="h-4 w-4 shrink-0" />
-                              These scores predate your latest edit.
-                            </span>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={handleRecalculateScores}
-                              disabled={tailorResume.isPending}
-                              className="h-7 px-2 text-xs text-warning underline hover:bg-warning/15 hover:text-warning"
-                            >
-                              {tailorResume.isPending ? "Recalculating…" : "Recalculate"}
-                            </Button>
-                          </div>
-                        )}
-
-                        <div className="flex flex-wrap items-center gap-4 rounded-xl border border-border/60 bg-card/50 px-4 py-4">
-                          <ResumeScoreGauge score={tailoring.overall_score} />
-                          <div>
-                            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Overall</p>
-                            <p className={`text-lg font-semibold ${labelClass[overallBand.badgeVariant]}`}>{overallBand.label}</p>
-                            <p className="mt-0.5 text-xs text-muted-foreground">
-                              Weighted read across all dimensions.
-                              {watch("resumeId") && resumes.find((r) => r.id === watch("resumeId")) && ` Tailored from ${resumes.find((r) => r.id === watch("resumeId"))?.name}.`}
-                              {job.ai_resume_tailoring_updated_at && ` Last updated ${formatDateTime(job.ai_resume_tailoring_updated_at)}.`}
-                            </p>
-                          </div>
-                        </div>
-                      </>
-                    );
-                  })()}
-
-                  <div className="grid gap-3">
-                    {(
-                      [
-                        ["Job Match", tailoring.job_match],
-                        ["ATS Readability", tailoring.ats_readability],
-                        ["Evidence Strength", tailoring.evidence_strength],
-                        ["Truthfulness", tailoring.truthfulness],
-                      ] as const
-                    ).map(([label, dimension]) => {
-                      const band = getResumeScoreBand(dimension.score);
-                      return (
-                        <div key={label}>
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="text-sm font-medium">{label}</p>
-                            <div className="flex items-center gap-1.5 text-sm">
-                              <Badge variant={band.badgeVariant}>{band.label}</Badge>
-                              <span className="text-muted-foreground">{dimension.score}/100</span>
-                            </div>
-                          </div>
-                          <Progress value={dimension.score} className="mt-1.5" />
-                          <p className="mt-1 text-xs text-muted-foreground">{dimension.description}</p>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {tailoring.claim_audit.length > 0 && (
-                    <div className="rounded-xl border border-border/60 bg-card/50 px-4 py-4">
-                      <p className="text-sm font-semibold">Risks</p>
-                      <p className="text-xs text-muted-foreground">Claims that need evidence, and anything the record contradicts.</p>
-                      <p className="mt-2 text-sm">
-                        <span className="font-medium">{tailoring.missing_keywords.length}</span> requirement
-                        {tailoring.missing_keywords.length === 1 ? "" : "s"} unaddressed
-                      </p>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {tailoring.claim_audit.map((group) => {
-                          const supportedCount = group.claims.filter((c) => c.status === "supported").length;
-                          const hasContradiction = group.claims.some((c) => c.status === "contradicted");
-                          const hasNeedsEvidence = group.claims.some((c) => c.status === "needs_evidence");
-                          const Icon = hasContradiction ? X : hasNeedsEvidence ? AlertTriangle : Check;
-                          const colorClass = hasContradiction ? "text-destructive" : hasNeedsEvidence ? "text-warning" : "text-success";
-                          return (
-                            <span
-                              key={group.category}
-                              className={`inline-flex items-center gap-1 rounded-full border border-border/60 bg-background px-2.5 py-1 text-xs ${colorClass}`}
-                            >
-                              <Icon className="h-3 w-3" />
-                              {CLAIM_CATEGORY_LABEL[group.category]} · {supportedCount} supported
-                            </span>
-                          );
-                        })}
-                      </div>
-                      <Accordion type="single" collapsible className="mt-2">
-                        <AccordionItem value="claim-audit" className="border-b-0">
-                          <AccordionTrigger className="text-xs font-medium">Across the document</AccordionTrigger>
-                          <AccordionContent>
-                            <div className="grid gap-3 pb-1">
-                              {tailoring.claim_audit.map((group) => (
-                                <div key={group.category}>
-                                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                    {CLAIM_CATEGORY_LABEL[group.category]}
-                                  </p>
-                                  <ul className="mt-1 grid gap-1">
-                                    {group.claims.map((claim, index) => (
-                                      <li key={index} className="flex items-start gap-1.5 text-sm">
-                                        {claim.status === "supported" ? (
-                                          <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-muted-foreground" aria-hidden="true" />
-                                        ) : claim.status === "needs_evidence" ? (
-                                          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />
-                                        ) : (
-                                          <X className="mt-0.5 h-3.5 w-3.5 shrink-0 text-destructive" />
-                                        )}
-                                        <span>
-                                          {claim.text}
-                                          {claim.status !== "supported" && (
-                                            <span className="ml-1 text-xs text-muted-foreground">— {claim.note}</span>
-                                          )}
-                                        </span>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              ))}
-                            </div>
-                          </AccordionContent>
-                        </AccordionItem>
-                      </Accordion>
-                    </div>
-                  )}
-
-                  <div className="grid gap-4">
-                    {tailoring.missing_keywords.length > 0 && (
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Missing</p>
-                        <ul className="mt-1.5 grid gap-1.5">
-                          {tailoring.missing_keywords.map((item) => (
-                            <li key={item} className="flex items-start gap-1.5 text-sm">
-                              <X className="mt-0.5 h-3.5 w-3.5 shrink-0 text-destructive" />
-                              <span>
-                                {item} <span className="text-xs text-destructive">(missing)</span>
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    {tailoring.weak_keywords.length > 0 && (
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Weak</p>
-                        <ul className="mt-1.5 grid gap-1.5">
-                          {tailoring.weak_keywords.map((item) => (
-                            <li key={item} className="flex items-start gap-1.5 text-sm">
-                              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />
-                              <span>
-                                {item} <span className="text-xs text-warning">(weak)</span>
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    {tailoring.covered_keywords.length > 0 && (
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Covered</p>
-                        <ul className="mt-1.5 grid gap-1.5">
-                          {tailoring.covered_keywords.map((item) => (
-                            <li key={item} className="flex items-start gap-1.5 text-sm">
-                              <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-success" />
-                              <span>
-                                {item} <span className="text-xs text-success">(covered)</span>
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-
-                  {tailoring.suggested_fixes.length > 0 && (
-                    <Accordion type="single" collapsible defaultValue="suggested-fixes">
-                      <AccordionItem value="suggested-fixes" className="rounded-xl border border-border/60 bg-card/50 px-3">
-                        <AccordionTrigger className="text-sm">
-                          <span>
-                            <Sparkles className="mr-1.5 inline h-3.5 w-3.5 text-primary" />
-                            See suggested fixes ({tailoring.suggested_fixes.length})
-                          </span>
-                        </AccordionTrigger>
-                        <AccordionContent>
-                          <p className="pb-2 text-xs text-muted-foreground">
-                            These stretch a bit beyond what your résumé strictly proves — each is labeled with how far. Pick the ones you can stand behind in an interview.
-                          </p>
-                          <div className="grid gap-2.5 pb-1">
-                            {tailoring.suggested_fixes.map((fix, index) => {
-                              const stretchMeta = STRETCH_LEVEL_META[fix.stretch_level];
-                              const canApply = Boolean(fix.original_text && fix.proposed_text);
-                              return (
-                                <div key={`${fix.type}-${index}`} className="rounded-xl border border-border/60 bg-background px-3 py-3">
-                                  <div className="flex items-start gap-2.5">
-                                    {canApply && (
-                                      <input
-                                        type="checkbox"
-                                        checked={checkedFixes.has(index)}
-                                        onChange={(e) => {
-                                          setCheckedFixes((prev) => {
-                                            const next = new Set(prev);
-                                            if (e.target.checked) next.add(index);
-                                            else next.delete(index);
-                                            return next;
-                                          });
-                                        }}
-                                        className="mt-1 h-4 w-4 shrink-0 rounded border-border accent-primary"
-                                        aria-label={`Include fix: ${fix.proposed_text ?? fix.rationale}`}
-                                      />
-                                    )}
-                                    <div className="min-w-0 flex-1">
-                                      <div className="flex flex-wrap items-center gap-1.5">
-                                        <Badge variant={stretchMeta.badgeVariant}>{stretchMeta.label}</Badge>
-                                        <Badge variant="outline">{RESUME_SUGGESTION_TYPE_META[fix.type]}</Badge>
-                                      </div>
-                                      {fix.proposed_text ? (
-                                        <p className="mt-2 text-sm text-foreground/90">{fix.proposed_text}</p>
-                                      ) : null}
-                                      <p className="mt-1 text-sm italic text-muted-foreground">{fix.rationale}</p>
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                          {checkedFixes.size > 0 && (
-                            <Button type="button" size="sm" className="mt-1" onClick={handleApplySuggestedFixes}>
-                              Apply {checkedFixes.size} selected fix{checkedFixes.size === 1 ? "" : "es"}
-                            </Button>
-                          )}
-                        </AccordionContent>
-                      </AccordionItem>
-                    </Accordion>
-                  )}
-
-                  {tailoring.summary_of_changes.length > 0 && (
-                    <div>
-                      <p className="text-sm font-semibold">What changed</p>
-                      <ul className="mt-1.5 grid gap-1 text-sm text-muted-foreground">
-                        {tailoring.summary_of_changes.map((change, index) => (
-                          <li key={index} className="flex gap-1.5">
-                            <span aria-hidden="true">•</span>
-                            <span>{change}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-semibold">Tailored résumé</p>
-                      <Select value={resumeTemplate} onValueChange={(v) => handleChangeTemplate(v as ResumeTemplateId)}>
-                        <SelectTrigger className="h-7 w-[110px] text-xs" title="Template — visual style of the preview and PDF only, never the content">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {RESUME_TEMPLATE_IDS.map((id) => (
-                            <SelectItem key={id} value={id}>{RESUME_TEMPLATE_META[id].label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="flex gap-1.5">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setEditingTailoredResume((v) => !v)}
-                        className="h-7 gap-1 px-2 text-xs"
-                        title={editingTailoredResume ? "Preview" : "Edit"}
-                      >
-                        <Pencil className="h-3 w-3" /> {editingTailoredResume ? "Preview" : "Edit"}
-                      </Button>
-                      <Button type="button" variant="ghost" size="sm" onClick={handleCopyTailoredResume} className="h-7 gap-1 px-2 text-xs">
-                        <Copy className="h-3 w-3" /> Copy
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleDownloadTailoredResume}
-                        className="h-7 gap-1 px-2 text-xs"
-                        title="Download as PDF"
-                      >
-                        <Download className="h-3 w-3" /> Download PDF
-                      </Button>
-                    </div>
-                  </div>
-                  {editingTailoredResume ? (
-                    <Textarea
-                      id="d-aiTailoredResume"
-                      value={tailoredResumeText}
-                      onChange={(e) => setTailoredResumeText(e.target.value)}
-                      rows={18}
-                    />
-                  ) : (
-                    <TailoredResumePreview text={tailoredResumeText} template={resumeTemplate} />
-                  )}
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-xs text-muted-foreground">Review this carefully before submitting it anywhere.</p>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={handleSaveTailoredResumeEdit}
-                      disabled={!tailoredResumeDirty || saveResumeTailoring.isPending}
-                    >
-                      {saveResumeTailoring.isPending ? "Saving…" : tailoredResumeDirty ? "Save edits" : "Saved"}
-                    </Button>
-                  </div>
-                </>
-              )}
-            </TabsContent>
 
             <TabsContent value="history">
               {history.length === 0 ? (
