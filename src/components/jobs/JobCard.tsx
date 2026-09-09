@@ -50,18 +50,19 @@ export const JobCard = React.forwardRef<HTMLDivElement, JobCardProps>(
           }
         }}
         className={cn(
-          "hover-lift group cursor-pointer rounded-2xl border border-border bg-card p-3.5 shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          "hover-lift group cursor-pointer rounded-2xl border border-border bg-card p-4 shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
           isDragging && "opacity-40"
         )}
       >
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex min-w-0 items-center gap-2.5">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-secondary to-secondary/60 text-[11px] font-semibold text-secondary-foreground">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-start gap-2.5">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-secondary to-secondary/60 text-[11px] font-semibold text-secondary-foreground">
               {initials(job.company)}
             </div>
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium leading-tight">{job.title}</p>
-              <p className="truncate text-xs text-muted-foreground">{job.company}</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/80">Company</p>
+              <p className="mt-0.5 truncate text-sm font-semibold leading-tight text-foreground">{job.company}</p>
+              <p className="mt-1 truncate text-xs text-muted-foreground">{job.title}</p>
             </div>
           </div>
           <button
@@ -83,12 +84,19 @@ export const JobCard = React.forwardRef<HTMLDivElement, JobCardProps>(
         )}
 
         {(job.location || job.work_arrangement) && (
-          <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
             {job.location && (
-              <span className="flex items-center gap-1">
-                <MapPin className="h-3 w-3" />
-                {job.location}
-                {job.work_arrangement ? ` · ${WORK_ARRANGEMENT_META[job.work_arrangement]}` : ""}
+              <span className="flex items-center gap-1.5">
+                <MapPin className="h-3.5 w-3.5" />
+                <span>{job.location}</span>
+                {job.work_arrangement && (
+                  <>
+                    <span aria-hidden="true" className="text-muted-foreground/60">
+                      •
+                    </span>
+                    <span>{WORK_ARRANGEMENT_META[job.work_arrangement]}</span>
+                  </>
+                )}
               </span>
             )}
           </div>

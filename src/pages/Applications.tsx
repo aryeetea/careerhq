@@ -176,13 +176,15 @@ export default function Applications() {
         </PageContent>
       ) : view === "board" ? (
         <div className="flex-1 overflow-x-auto px-4 pb-8 pt-6 sm:px-8 lg:px-10">
-          <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-            <div className="flex h-full gap-3" style={{ minWidth: visibleColumns.length * 296 }}>
-              {visibleColumns.map((status) => (
-                <KanbanColumn key={status} status={status} jobs={byStatus.get(status) ?? []} resumeById={resumeById} onOpenJob={openJob} />
-              ))}
-            </div>
-          </DndContext>
+          <div className="rounded-[1.75rem] border border-border/60 bg-card/30 p-2 shadow-soft backdrop-blur-sm">
+            <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+              <div className="flex h-full gap-3" style={{ minWidth: visibleColumns.length * 296 }}>
+                {visibleColumns.map((status) => (
+                  <KanbanColumn key={status} status={status} jobs={byStatus.get(status) ?? []} resumeById={resumeById} onOpenJob={openJob} />
+                ))}
+              </div>
+            </DndContext>
+          </div>
         </div>
       ) : view === "list" ? (
         <div className="flex-1 overflow-y-auto pt-6">

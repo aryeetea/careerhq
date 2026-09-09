@@ -22,16 +22,16 @@ export function KanbanColumn({
     <div
       ref={setNodeRef}
       className={cn(
-        "flex w-72 shrink-0 flex-col rounded-2xl p-1.5 transition-colors",
+        "flex w-72 shrink-0 flex-col rounded-[1.5rem] border border-border/60 bg-card/50 p-2 shadow-soft transition-colors",
         isOver && "bg-primary/5 ring-1 ring-primary/25"
       )}
     >
-      <div className="flex items-center gap-2 px-1.5 py-2">
+      <div className="flex items-center gap-2 rounded-xl bg-background/60 px-2.5 py-2.5">
         <span className={cn("h-1.5 w-1.5 rounded-full", meta.dot)} />
         <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{meta.label}</h3>
         <span className="ml-auto text-xs tabular-nums text-muted-foreground">{jobs.length}</span>
       </div>
-      <div className="flex flex-1 flex-col gap-2 overflow-y-auto pb-2">
+      <div className="mt-2 flex flex-1 flex-col gap-2.5 overflow-y-auto pb-1">
         {jobs.map((job) => (
           <DraggableJobCard key={job.id} job={job} resume={job.resume_id ? resumeById.get(job.resume_id) : undefined} onClick={() => onOpenJob(job)} />
         ))}
