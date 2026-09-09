@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { Sparkles } from "lucide-react";
 import { AmbientBackground } from "@/components/ambient/AmbientBackground";
 import { BrandMark } from "@/components/shared/BrandMark";
@@ -13,6 +13,10 @@ import { useAuth } from "@/hooks/useAuth";
 // dependency beyond what's available at this route level.
 export default function LegacyFriendLink() {
   const { user, loading } = useAuth();
+  const { token } = useParams<{ token: string }>();
+  const nextTarget = token ? `/join/friend/${token}` : "/signup";
+  const signUpHref = `/signup?next=${encodeURIComponent(nextTarget)}`;
+  const signInHref = `/login?next=${encodeURIComponent(nextTarget)}`;
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-background">
@@ -29,15 +33,25 @@ export default function LegacyFriendLink() {
             </div>
             <CardTitle className="font-display text-2xl">This invite link is no longer used</CardTitle>
             <CardDescription className="text-sm leading-6 text-muted-foreground">
-              Ask your friend for their Bloom friend code instead — you can enter it from Community once you&apos;re signed
-              in.
+              Friend invites now work through Bloom friend codes. Create an account or sign in, then head to Community
+              to enter your friend&apos;s code.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            {!loading && (
-              <Button asChild size="lg" className="w-full">
-                <Link to={user ? "/app/community/friends" : "/login"}>{user ? "Go to Community" : "Sign in"}</Link>
+          <CardContent className="grid gap-2 sm:grid-cols-2">
+            {!loading && user && (
+              <Button asChild size="lg" className="w-full sm:col-span-2">
+                <Link to="/app/community/friends">Go to Community</Link>
               </Button>
+            )}
+            {!loading && !user && (
+              <>
+                <Button asChild size="lg" className="w-full">
+                  <Link to={signUpHref}>Create an account</Link>
+                </Button>
+                <Button asChild size="lg" variant="outline" className="w-full">
+                  <Link to={signInHref}>I already have an account</Link>
+                </Button>
+              </>
             )}
           </CardContent>
         </Card>
