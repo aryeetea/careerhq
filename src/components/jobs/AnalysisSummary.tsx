@@ -255,42 +255,32 @@ export function AnalysisSummary({
                 ) : (
                   <ShieldAlert className="h-4 w-4 shrink-0 text-destructive" />
                 )}
-                {isClean ? "Company check" : "Posting red flags"}
+                Company & posting check
               </p>
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <Badge className={cn("border-0", risk.className)}>{risk.label}</Badge>
               </div>
-              {legitimacy.redFlags.length > 0 && (
-                <ul className="mt-2.5 grid gap-1.5 text-sm">
-                  {legitimacy.redFlags.map((flag) => (
-                    <li key={flag} className="rounded-lg bg-secondary/50 px-2.5 py-2">
-                      {flag}
-                    </li>
-                  ))}
-                </ul>
-              )}
               <p className="mt-2.5 text-sm leading-6 text-foreground/80">{legitimacy.note}</p>
-              {/* Transparency on what actually backs this: a live web
-                  search for the company, or just a read of the posting
-                  text. "not_checked" (no company name to search, or the
-                  search API wasn't reachable) says nothing here rather
-                  than implying a check that didn't happen. */}
+              {legitimacy.redFlags.length > 0 && (
+                <div className="mt-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">What to verify</p>
+                  <ul className="mt-2 grid gap-1.5 text-sm">
+                    {legitimacy.redFlags.map((flag) => (
+                      <li key={flag} className="rounded-lg bg-secondary/50 px-2.5 py-2">
+                        {flag}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               {legitimacy.webCheck && legitimacy.webCheck !== "not_checked" && (
-                <div className="mt-2.5 border-t border-border/40 pt-2.5">
-                  <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <div className="mt-3 border-t border-border/40 pt-3">
+                  <p className="flex items-center gap-1.5 text-xs leading-5 text-muted-foreground">
                     <Search className="h-3 w-3 shrink-0" />
                     {legitimacy.webCheck === "confirmed_presence"
-                      ? "Includes a live web search — found an independent listing for this company."
-                      : "Includes a live web search — no independent listing turned up for this company."}
+                      ? "Web search found an independent company listing."
+                      : "Web search found no independent company listing."}
                   </p>
-                  {/* The actual listing that backs "confirmed_presence" —
-                      real information about the company (where it was
-                      found, and the full text of what that source says),
-                      not just the risk verdict above. Absent on analyses
-                      saved before this field existed, or when nothing was
-                      found. The link goes to the source page itself, kept
-                      separate from the text so the full snippet stays
-                      readable rather than crammed inside a link block. */}
                   {legitimacy.source && (
                     <div className="mt-1.5 rounded-lg bg-secondary/50 px-2.5 py-2 text-xs">
                       <p className="font-medium text-foreground/85">{legitimacy.source.title}</p>
