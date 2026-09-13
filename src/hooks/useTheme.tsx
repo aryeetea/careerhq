@@ -3,7 +3,7 @@ import type { ThemeName } from "@/types/database";
 
 const STORAGE_KEY = "bloom-theme";
 const THEME_MIGRATION_KEY = "bloom-theme-migrated";
-const THEME_MIGRATION_VERSION = "2";
+const THEME_MIGRATION_VERSION = "3";
 
 // These were the themes available before the playful theme refresh. They
 // remain valid choices in the picker, but an old persisted value should not
@@ -87,7 +87,18 @@ export function useTheme() {
 export function useThemeSync(settingsTheme: ThemeName | undefined) {
   const { theme, setTheme } = useTheme();
   React.useEffect(() => {
-    if (settingsTheme && settingsTheme !== theme) setTheme(settingsTheme);
+    // A deployment can reach the client before its accompanying database
+    // migration has rewritten older settings rows. Never let one of those
+    // rows immediately undo the Arcade migration in this browser. This also
+    // corrects an already-open tab whose state was set before the migration.
+    if (settingsTheme && LEGACY_THEMES.includes(settingsTheme)) {
+      if (theme !== "arcade") setTheme("arcade");
+      return;
+    }
+
+    if (settingsTheme && settingsTheme !== theme) {
+      setTheme(settingsTheme);
+    }
     // Only react to the account's theme changing, not to local `theme` —
     // including it would fire this right back at itself the moment
     // ThemePicker's mutation round-trips its own change back down.
