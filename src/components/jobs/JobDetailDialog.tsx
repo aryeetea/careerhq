@@ -443,8 +443,11 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
                   minRows={3}
                   maxHeight={288}
                   value={watch("jobDescription") ?? ""}
-                  onChange={(e) => setValue("jobDescription", e.target.value, { shouldDirty: true })}
+                  onChange={() => undefined}
+                  readOnly
+                  className="bg-muted/30 text-muted-foreground"
                 />
+                <p className="text-xs text-muted-foreground">Source text is read-only. Re-run analysis to update it from the job link.</p>
               </div>
             </TabsContent>
 
