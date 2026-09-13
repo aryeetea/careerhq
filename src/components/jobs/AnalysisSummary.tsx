@@ -1,9 +1,8 @@
 import * as React from "react";
-import { AlertCircle, ChevronsUpDown, Search, ShieldAlert, ShieldCheck, Sparkles, Target } from "lucide-react";
+import { AlertCircle, ChevronLeft, ChevronRight, Search, ShieldAlert, ShieldCheck, Sparkles, Target } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
 import {
   ANALYSIS_SOURCE_META,
@@ -95,6 +94,12 @@ export function AnalysisSummary({
   const scoring = analysis.analysis.scoringDimensions as JobAnalysisPayload["analysis"]["scoringDimensions"] | undefined;
   const careerDirectionFit = scoring?.careerDirectionFit ?? null;
   const hasNewFields = Boolean(analysis.analysis.scoringDimensions && analysis.analysis.gapSeverity && analysis.analysis.recommendationPriority);
+  const [breakdownSlide, setBreakdownSlide] = React.useState(0);
+  const breakdownSlideLabels = ["Fit details", "Assessment details", "Résumé comparison", "Résumé improvements"];
+  const breakdownSlideCount = 4;
+  const changeBreakdownSlide = (direction: -1 | 1) => {
+    setBreakdownSlide((current) => (current + direction + breakdownSlideCount) % breakdownSlideCount);
+  };
 
   return (
     <div className="grid gap-3">
@@ -403,84 +408,94 @@ export function AnalysisSummary({
         );
       })()}
 
-      {/* Everything below is real, but secondary — the five numeric
-          sub-scores behind [FIT], the raw assessment/confidence metadata,
-          and the full résumé breakdown. Collapsed by default so the
-          headline above doesn't get buried in metrics. */}
-      <Accordion type="single" collapsible className="rounded-xl border border-border/60 bg-card/60 px-4">
-        <AccordionItem value="detailed-scoring" className="border-b-0">
-          <AccordionTrigger className="gap-2 text-sm">
-            <span className="flex items-center gap-1.5">
-              <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground" />
-              Detailed scoring &amp; résumé analysis
-            </span>
-          </AccordionTrigger>
-          <AccordionContent className="grid gap-4 pb-4">
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-              <ScoreTile label="Qualification" value={scoring?.qualificationFit ?? null} />
-              <ScoreTile label="Transferable" value={scoring?.transferableSkillsFit ?? null} />
-              <ScoreTile label="Career direction" value={scoring?.careerDirectionFit ?? null} />
-              <ScoreTile label="Experience/seniority" value={scoring?.experienceSeniorityFit ?? null} />
-              <ScoreTile label="Location/arrangement" value={scoring?.locationWorkArrangementFit ?? null} />
-              {/* Unlike the other five (pure candidate-fit reads), this is
-                  whether the posting itself is believed real at the
-                  location/terms displayed — see the comment on
-                  scoringDimensionsSchema in src/lib/ai.ts. Shown here so a
-                  legitimacy/location concern that pulled fitScore down is
-                  never invisible — a user can see exactly which number
-                  moved, not just a verdict label. */}
-              <ScoreTile label="Posting legitimacy" value={scoring?.legitimacyConfidence ?? null} />
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-              <Badge className={cn("border-0", opportunityAssessment.className)}>{opportunityAssessment.label}</Badge>
-              <span className={cn("font-medium", confidence.className)}>{confidence.label}</span>
-              <span className={cn("font-medium", importStatus.className)}>{importStatus.label}</span>
-              <span>Prompt v{analysis.promptVersion}</span>
-            </div>
-
+      <Card className="border-border/60 bg-card/60">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-semibold">Résumé ranking</p>
-              {analysis.resumeRanking.length === 0 ? (
-                <p className="mt-2 text-sm text-muted-foreground">No active resumes with extractable text were available to compare.</p>
-              ) : (
-                <div className="mt-3 grid gap-2.5">
-                  {analysis.resumeRanking.map((resume, index) => (
-                    <div key={resume.resumeId} className={cn("rounded-xl border px-3 py-3", selectedResumeId === resume.resumeId ? "border-primary/40 bg-primary/5" : "border-border/60 bg-card/50")}>
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p className="text-sm font-medium">
-                          {index + 1}. {resume.resumeName}
-                        </p>
-                        <Badge variant="outline">{resume.compatibilityScore}/100</Badge>
-                      </div>
-                      <p className="mt-1 text-sm text-muted-foreground">{resume.recommendationReason}</p>
-                    </div>
-                  ))}
+              <p className="text-sm font-semibold">Analysis breakdown</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">{breakdownSlideLabels[breakdownSlide]}</p>
+            </div>
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => changeBreakdownSlide(-1)} aria-label="Previous breakdown section">
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => changeBreakdownSlide(1)} aria-label="Next breakdown section">
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          <div className="mt-4" role="region" aria-live="polite" aria-label="Analysis breakdown">
+            {breakdownSlide === 0 && (
+              <div>
+                <p className="text-sm font-medium">Fit details</p>
+                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  <ScoreTile label="Qualification" value={scoring?.qualificationFit ?? null} />
+                  <ScoreTile label="Transferable" value={scoring?.transferableSkillsFit ?? null} />
+                  <ScoreTile label="Career direction" value={scoring?.careerDirectionFit ?? null} />
+                  <ScoreTile label="Experience/seniority" value={scoring?.experienceSeniorityFit ?? null} />
+                  <ScoreTile label="Location/arrangement" value={scoring?.locationWorkArrangementFit ?? null} />
+                  <ScoreTile label="Posting legitimacy" value={scoring?.legitimacyConfidence ?? null} />
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
-            <div>
-              <p className="text-sm font-semibold">Résumé improvement suggestions</p>
-              {analysis.resumeSuggestions.length === 0 ? (
-                <p className="mt-2 text-sm text-muted-foreground">No resume-improvement suggestions were needed from the available evidence.</p>
-              ) : (
-                <div className="mt-3 grid gap-2.5">
-                  {analysis.resumeSuggestions.map((suggestion, index) => (
-                    <div key={`${suggestion.type}-${index}`} className="rounded-xl border border-border/60 bg-card/50 px-3 py-3">
-                      <div className="flex flex-wrap items-center gap-2">
+            {breakdownSlide === 1 && (
+              <div>
+                <p className="text-sm font-medium">Assessment details</p>
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                  <Badge className={cn("border-0", opportunityAssessment.className)}>{opportunityAssessment.label}</Badge>
+                  <span className={cn("font-medium", confidence.className)}>{confidence.label}</span>
+                  <span className={cn("font-medium", importStatus.className)}>{importStatus.label}</span>
+                </div>
+              </div>
+            )}
+
+            {breakdownSlide === 2 && (
+              <div>
+                <p className="text-sm font-medium">Résumé comparison</p>
+                {analysis.resumeRanking.length === 0 ? (
+                  <p className="mt-2 text-sm text-muted-foreground">No active resumes with extractable text were available to compare.</p>
+                ) : (
+                  <div className="mt-3 grid gap-2.5">
+                    {analysis.resumeRanking.map((resume, index) => (
+                      <div key={resume.resumeId} className={cn("rounded-xl border px-3 py-3", selectedResumeId === resume.resumeId ? "border-primary/40 bg-primary/5" : "border-border/60 bg-card/50")}>
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium">{resume.resumeName}</p>
+                            {index === 0 && <Badge className="border-0 bg-primary/10 text-primary">Best match</Badge>}
+                          </div>
+                          <Badge variant="outline">{resume.compatibilityScore}/100</Badge>
+                        </div>
+                        <p className="mt-1 text-sm text-muted-foreground">{resume.recommendationReason}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {breakdownSlide === 3 && (
+              <div>
+                <p className="text-sm font-medium">Résumé improvements</p>
+                {analysis.resumeSuggestions.length === 0 ? (
+                  <p className="mt-2 text-sm text-muted-foreground">No resume-improvement suggestions were needed from the available evidence.</p>
+                ) : (
+                  <div className="mt-3 grid gap-2.5">
+                    {analysis.resumeSuggestions.map((suggestion, index) => (
+                      <div key={`${suggestion.type}-${index}`} className="rounded-xl border border-border/60 bg-card/50 px-3 py-3">
                         <Badge variant="outline">{RESUME_SUGGESTION_TYPE_META[suggestion.type]}</Badge>
+                        <p className="mt-2 text-sm text-foreground/90">{suggestion.suggestion}</p>
+                        <p className="mt-1 text-sm text-muted-foreground">{suggestion.reason}</p>
                       </div>
-                      <p className="mt-2 text-sm text-foreground/90">{suggestion.suggestion}</p>
-                      <p className="mt-1 text-sm text-muted-foreground">{suggestion.reason}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
