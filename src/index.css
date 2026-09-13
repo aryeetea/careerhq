@@ -525,7 +525,6 @@
 
   * {
     @apply border-border;
-    border-width: 1px;
   }
 
   html {
