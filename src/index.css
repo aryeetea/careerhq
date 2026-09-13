@@ -232,45 +232,45 @@
   }
 
   :root[data-theme="growth"] {
-    --background: 116 36% 96%;
-    --foreground: 144 28% 17%;
+    --background: 116 48% 95%;
+    --foreground: 151 42% 15%;
     --card: 0 0% 100%;
     --card-foreground: 144 28% 17%;
     --popover: 0 0% 100%;
     --popover-foreground: 144 28% 17%;
-    --primary: 145 42% 37%;
+    --primary: 151 61% 34%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 84 46% 89%;
-    --secondary-foreground: 142 30% 23%;
-    --muted: 110 28% 92%;
-    --muted-foreground: 136 12% 40%;
-    --accent: 43 83% 90%;
-    --accent-foreground: 37 38% 25%;
+    --secondary: 88 66% 86%;
+    --secondary-foreground: 146 38% 21%;
+    --muted: 112 34% 90%;
+    --muted-foreground: 142 14% 38%;
+    --accent: 42 92% 86%;
+    --accent-foreground: 34 48% 22%;
     --destructive: 4 67% 54%;
     --destructive-foreground: 0 0% 100%;
-    --success: 145 42% 37%;
+    --success: 151 61% 34%;
     --success-foreground: 0 0% 100%;
     --warning: 37 76% 48%;
     --warning-foreground: 0 0% 100%;
-    --border: 112 24% 82%;
-    --input: 112 24% 82%;
-    --ring: 145 42% 37%;
-    --rose: 8 62% 65%;
+    --border: 116 31% 79%;
+    --input: 116 31% 79%;
+    --ring: 151 61% 34%;
+    --rose: 8 76% 63%;
     --rose-foreground: 0 0% 100%;
-    --sage: 145 38% 46%;
+    --sage: 151 52% 43%;
     --sage-foreground: 0 0% 100%;
     --lavender: 258 40% 72%;
     --lavender-foreground: 0 0% 100%;
-    --gold: 42 78% 57%;
+    --gold: 42 90% 55%;
     --gold-foreground: 38 42% 19%;
     --peach: 22 72% 74%;
     --peach-foreground: 20 38% 20%;
-    --sky: 192 46% 60%;
+    --sky: 190 62% 55%;
     --sky-foreground: 0 0% 100%;
-    --shadow-color: 142 26% 20%;
+    --shadow-color: 151 42% 17%;
     --glass-bg: 0 0% 100%;
     --glass-highlight: 0 0% 100%;
-    --glass-border: 112 28% 84%;
+    --glass-border: 116 40% 80%;
     --radius: 1.15rem;
   }
 
@@ -495,9 +495,10 @@
 
   :root[data-theme="growth"] body {
     background-image:
-      radial-gradient(circle at top left, hsl(var(--secondary) / 0.78), transparent 30%),
-      radial-gradient(circle at top right, hsl(var(--accent) / 0.54), transparent 26%),
-      linear-gradient(180deg, hsl(var(--background)) 0%, hsl(var(--background)) 100%);
+      radial-gradient(circle at 8% 2%, hsl(var(--secondary) / 0.94), transparent 28%),
+      radial-gradient(circle at 92% 7%, hsl(var(--accent) / 0.8), transparent 24%),
+      radial-gradient(circle at 80% 88%, hsl(var(--sky) / 0.16), transparent 29%),
+      linear-gradient(145deg, hsl(var(--background)) 0%, hsl(95 58% 93%) 52%, hsl(48 90% 94%) 100%);
   }
 
   :root[data-theme="growth"] .glass,
@@ -606,6 +607,21 @@
     backdrop-filter: blur(30px) saturate(170%);
     border: 1px solid hsl(var(--glass-border) / 0.8);
     box-shadow: 0 28px 64px -30px hsl(var(--shadow-color) / 0.42), inset 0 1px 0 hsl(var(--glass-highlight) / 0.85);
+  }
+
+  /* Growth's surfaces are intentionally more expressive than the neutral
+     base: a sunlit tint, crisp green edge, and a soft sense of lift. */
+  :root[data-theme="growth"] .glass,
+  :root[data-theme="growth"] .glass-subtle,
+  :root[data-theme="growth"] .glass-strong {
+    background: linear-gradient(135deg, hsl(0 0% 100% / 0.94), hsl(var(--secondary) / 0.28));
+    border-color: hsl(var(--primary) / 0.22);
+    box-shadow: 0 18px 42px -28px hsl(var(--primary) / 0.36), inset 0 1px 0 hsl(0 0% 100% / 0.95);
+  }
+
+  :root[data-theme="growth"] .hover-lift:hover {
+    border-color: hsl(var(--primary) / 0.45);
+    box-shadow: 0 20px 40px -24px hsl(var(--primary) / 0.4), 0 0 0 3px hsl(var(--accent) / 0.38);
   }
 
   /* Gentle lift on hover — used on job cards, resume cards, friend cards. */
