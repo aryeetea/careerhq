@@ -53,7 +53,7 @@ export type VisibilityLevel = "private" | "friends_only" | "selected_friends" | 
 export type FriendRequestStatus = "pending" | "accepted" | "declined" | "cancelled";
 export type ReactionType = "proud" | "keep_going" | "you_got_this" | "congrats" | "cheering";
 export type ReactionContext = "weekly_progress" | "goal" | "group" | "general";
-export type ThemeName = "floral" | "neutral" | "sunrise" | "meadow" | "dark" | "midnight";
+export type ThemeName = "floral" | "neutral" | "sunrise" | "meadow" | "dark" | "midnight" | "comic-pop" | "arcade" | "candy";
 
 export interface JobAiExtraction {
   company: string | null;

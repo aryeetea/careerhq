@@ -12,8 +12,19 @@ const ThemeContext = React.createContext<ThemeContextValue | null>(null);
 
 function getInitialTheme(): ThemeName {
   const stored = localStorage.getItem(STORAGE_KEY) as ThemeName | null;
-  if (stored === "floral" || stored === "neutral" || stored === "sunrise" || stored === "meadow" || stored === "dark" || stored === "midnight") return stored;
-  return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "floral";
+  if (
+    stored === "floral" ||
+    stored === "neutral" ||
+    stored === "sunrise" ||
+    stored === "meadow" ||
+    stored === "dark" ||
+    stored === "midnight" ||
+    stored === "comic-pop" ||
+    stored === "arcade" ||
+    stored === "candy"
+  )
+    return stored;
+  return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "comic-pop";
 }
 
 function applyTheme(theme: ThemeName) {

@@ -1,16 +1,19 @@
-import { Check, Flower2, Leaf, Moon, Square, Sunrise } from "lucide-react";
+import { Check, Flower2, Leaf, Moon, Sparkles, Square, Sunrise } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { useUpdateSettings } from "@/hooks/queries/useProfile";
 import type { ThemeName } from "@/types/database";
 import { cn } from "@/lib/utils";
 
 const THEMES: { id: ThemeName; label: string; description: string; icon: typeof Flower2; preview: string[] }[] = [
-  { id: "floral", label: "Floral", description: "Warm ivory, rose, and sage — the default", icon: Flower2, preview: ["#fbf3ea", "#d98b93", "#8fae95"] },
-  { id: "neutral", label: "Neutral", description: "Clean and calm, less color", icon: Square, preview: ["#f7f6f3", "#46527a", "#c9c4b8"] },
+  { id: "comic-pop", label: "Comic Pop", description: "Big personality, bright colors, playful energy", icon: Sparkles, preview: ["#fff7f0", "#ff6b6b", "#7c4dff"] },
+  { id: "arcade", label: "Arcade", description: "Neon glow, game-night vibes, punchy contrast", icon: Square, preview: ["#0b1120", "#22d3ee", "#a78bfa"] },
+  { id: "candy", label: "Candy", description: "Pastel sweetness with a cheerful, bubbly feel", icon: Flower2, preview: ["#fff0f5", "#ff8fab", "#7dd3a1"] },
   { id: "sunrise", label: "Sunrise", description: "Apricot, coral, and buttercream", icon: Sunrise, preview: ["#fff2e3", "#ef8e72", "#f2c86b"] },
+  { id: "floral", label: "Floral", description: "Warm ivory, rose, and sage", icon: Flower2, preview: ["#fbf3ea", "#d98b93", "#8fae95"] },
+  { id: "neutral", label: "Neutral", description: "Clean and calm, less color", icon: Square, preview: ["#f7f6f3", "#46527a", "#c9c4b8"] },
   { id: "meadow", label: "Meadow", description: "Soft greens with a fresh notebook feel", icon: Leaf, preview: ["#f5f8ef", "#7ca26a", "#d7bf8a"] },
   { id: "dark", label: "Dark", description: "Warm charcoal, easy at night", icon: Moon, preview: ["#17151c", "#e08a96", "#2a2733"] },
-  { id: "midnight", label: "Midnight", description: "Deep ink, lilac glow, and cool blue", icon: Moon, preview: ["#111827", "#8b7cf6", "#60a5fa"] },
+  { id: "midnight", label: "Midnight", description: "Deep ink, lilac glow, and electric blue", icon: Moon, preview: ["#111827", "#8b7cf6", "#60a5fa"] },
 ];
 
 export function ThemePicker() {

@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=JetBrains+Mono:wght@500&family=Shantell+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;500;700&family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&family=Space+Grotesk:wght@500;600;700&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -177,6 +177,168 @@
     --glass-border: 28 52% 88%;
   }
 
+  :root[data-theme="comic-pop"] {
+    --background: 44 100% 97%;
+    --foreground: 255 34% 18%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 255 34% 18%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 255 34% 18%;
+
+    --primary: 352 94% 67%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 43 100% 92%;
+    --secondary-foreground: 255 30% 24%;
+
+    --muted: 42 100% 95%;
+    --muted-foreground: 255 16% 42%;
+
+    --accent: 269 88% 94%;
+    --accent-foreground: 269 40% 28%;
+
+    --destructive: 8 82% 58%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 156 38% 44%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 90% 58%;
+    --warning-foreground: 255 34% 18%;
+
+    --border: 32 58% 82%;
+    --input: 32 58% 82%;
+    --ring: 352 94% 67%;
+
+    --rose: 352 94% 71%;
+    --rose-foreground: 255 34% 18%;
+    --sage: 156 33% 52%;
+    --sage-foreground: 0 0% 100%;
+    --lavender: 272 84% 75%;
+    --lavender-foreground: 255 34% 18%;
+    --gold: 43 95% 64%;
+    --gold-foreground: 255 34% 18%;
+    --peach: 20 90% 76%;
+    --peach-foreground: 255 34% 18%;
+    --sky: 196 93% 74%;
+    --sky-foreground: 255 34% 18%;
+
+    --shadow-color: 279 40% 16%;
+    --glass-bg: 0 0% 100%;
+    --glass-highlight: 0 0% 100%;
+    --glass-border: 32 58% 82%;
+  }
+
+  :root[data-theme="arcade"] {
+    --background: 222 42% 10%;
+    --foreground: 190 100% 92%;
+
+    --card: 222 35% 15%;
+    --card-foreground: 190 100% 92%;
+
+    --popover: 222 35% 15%;
+    --popover-foreground: 190 100% 92%;
+
+    --primary: 189 96% 62%;
+    --primary-foreground: 222 42% 10%;
+
+    --secondary: 263 92% 67%;
+    --secondary-foreground: 222 42% 10%;
+
+    --muted: 220 30% 18%;
+    --muted-foreground: 190 35% 76%;
+
+    --accent: 173 90% 52%;
+    --accent-foreground: 222 42% 10%;
+
+    --destructive: 0 92% 66%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 152 65% 48%;
+    --success-foreground: 222 42% 10%;
+
+    --warning: 38 96% 58%;
+    --warning-foreground: 222 42% 10%;
+
+    --border: 220 26% 24%;
+    --input: 220 26% 24%;
+    --ring: 189 96% 62%;
+
+    --rose: 327 81% 69%;
+    --rose-foreground: 222 42% 10%;
+    --sage: 165 62% 58%;
+    --sage-foreground: 222 42% 10%;
+    --lavender: 262 90% 74%;
+    --lavender-foreground: 222 42% 10%;
+    --gold: 42 96% 62%;
+    --gold-foreground: 222 42% 10%;
+    --peach: 24 88% 68%;
+    --peach-foreground: 222 42% 10%;
+    --sky: 198 96% 68%;
+    --sky-foreground: 222 42% 10%;
+
+    --shadow-color: 225 54% 4%;
+    --glass-bg: 222 34% 17%;
+    --glass-highlight: 190 100% 92%;
+    --glass-border: 220 22% 30%;
+  }
+
+  :root[data-theme="candy"] {
+    --background: 334 100% 97%;
+    --foreground: 318 30% 18%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 318 30% 18%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 318 30% 18%;
+
+    --primary: 330 90% 72%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 157 69% 90%;
+    --secondary-foreground: 318 30% 18%;
+
+    --muted: 332 100% 96%;
+    --muted-foreground: 318 16% 38%;
+
+    --accent: 286 84% 92%;
+    --accent-foreground: 286 40% 26%;
+
+    --destructive: 6 80% 62%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 148 45% 48%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 35 90% 58%;
+    --warning-foreground: 318 30% 18%;
+
+    --border: 326 72% 86%;
+    --input: 326 72% 86%;
+    --ring: 330 90% 72%;
+
+    --rose: 332 93% 74%;
+    --rose-foreground: 318 30% 18%;
+    --sage: 151 52% 60%;
+    --sage-foreground: 0 0% 100%;
+    --lavender: 278 75% 74%;
+    --lavender-foreground: 318 30% 18%;
+    --gold: 36 95% 64%;
+    --gold-foreground: 318 30% 18%;
+    --peach: 18 92% 78%;
+    --peach-foreground: 318 30% 18%;
+    --sky: 199 92% 76%;
+    --sky-foreground: 318 30% 18%;
+
+    --shadow-color: 320 28% 22%;
+    --glass-bg: 0 0% 100%;
+    --glass-highlight: 0 0% 100%;
+    --glass-border: 326 72% 86%;
+  }
+
   :root[data-theme="meadow"] {
     --background: 84 32% 95%;
     --foreground: 96 14% 18%;
@@ -352,6 +514,11 @@
 
   body {
     @apply bg-background text-foreground antialiased;
+    background-image:
+      radial-gradient(circle at top left, hsl(var(--primary) / 0.20), transparent 30%),
+      radial-gradient(circle at top right, hsl(var(--sky) / 0.18), transparent 28%),
+      linear-gradient(180deg, hsl(var(--background)) 0%, hsl(var(--background)) 100%);
+    background-attachment: fixed;
     font-feature-settings: "cv11", "ss01";
     letter-spacing: 0.01em;
   }
@@ -388,32 +555,37 @@
   .glass {
     background: linear-gradient(
       160deg,
-      hsl(var(--glass-bg) / 0.72),
-      hsl(var(--glass-bg) / 0.55)
+      hsl(var(--glass-bg) / 0.82),
+      hsl(var(--glass-bg) / 0.62)
     );
-    -webkit-backdrop-filter: blur(20px) saturate(140%);
-    backdrop-filter: blur(20px) saturate(140%);
-    border: 1px solid hsl(var(--glass-border) / 0.6);
-    box-shadow: theme("boxShadow.glass");
+    -webkit-backdrop-filter: blur(22px) saturate(160%);
+    backdrop-filter: blur(22px) saturate(160%);
+    border: 1px solid hsl(var(--glass-border) / 0.7);
+    box-shadow: 0 20px 50px -28px hsl(var(--shadow-color) / 0.38), inset 0 1px 0 hsl(var(--glass-highlight) / 0.8);
   }
 
   .glass-subtle {
-    background: hsl(var(--glass-bg) / 0.65);
-    -webkit-backdrop-filter: blur(14px) saturate(130%);
-    backdrop-filter: blur(14px) saturate(130%);
-    border: 1px solid hsl(var(--glass-border) / 0.5);
+    background: linear-gradient(
+      180deg,
+      hsl(var(--glass-bg) / 0.78),
+      hsl(var(--glass-bg) / 0.58)
+    );
+    -webkit-backdrop-filter: blur(16px) saturate(150%);
+    backdrop-filter: blur(16px) saturate(150%);
+    border: 1px solid hsl(var(--glass-border) / 0.6);
+    box-shadow: 0 14px 32px -20px hsl(var(--shadow-color) / 0.32);
   }
 
   .glass-strong {
     background: linear-gradient(
       160deg,
-      hsl(var(--glass-bg) / 0.9),
-      hsl(var(--glass-bg) / 0.78)
+      hsl(var(--glass-bg) / 0.98),
+      hsl(var(--glass-bg) / 0.74)
     );
-    -webkit-backdrop-filter: blur(28px) saturate(150%);
-    backdrop-filter: blur(28px) saturate(150%);
-    border: 1px solid hsl(var(--glass-border) / 0.7);
-    box-shadow: theme("boxShadow.glass");
+    -webkit-backdrop-filter: blur(30px) saturate(170%);
+    backdrop-filter: blur(30px) saturate(170%);
+    border: 1px solid hsl(var(--glass-border) / 0.8);
+    box-shadow: 0 28px 64px -30px hsl(var(--shadow-color) / 0.42), inset 0 1px 0 hsl(var(--glass-highlight) / 0.85);
   }
 
   /* Gentle lift on hover — used on job cards, resume cards, friend cards. */

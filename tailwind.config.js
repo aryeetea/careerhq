@@ -9,8 +9,8 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ["'Shantell Sans'", "-apple-system", "BlinkMacSystemFont", "sans-serif"],
-        display: ["'Caveat'", "'Shantell Sans'", "cursive"],
+        sans: ["'Comic Neue'", "'Segoe UI'", "sans-serif"],
+        display: ["'Fredoka'", "'Comic Neue'", "sans-serif"],
         mono: ["'JetBrains Mono'", "monospace"],
       },
       colors: {
