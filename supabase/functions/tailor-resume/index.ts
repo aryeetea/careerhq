@@ -70,7 +70,7 @@ Deno.serve(async (request) => {
     sendPushToUser(adminClient, user.id, {
       title: "Tailored résumé ready",
       body: `Your tailored résumé for ${[job.title, job.company].filter(Boolean).join(" at ") || "this posting"} is ready to review.`,
-      url: `/jobs/${job.id}`,
+      url: "/app/applications",
       tag: `bloom-tailor-resume-${job.id}`,
     }).catch((err) => console.error("Push send failed (tailor-resume)", err));
 

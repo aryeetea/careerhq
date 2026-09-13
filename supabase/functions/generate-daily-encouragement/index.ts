@@ -200,7 +200,7 @@ Deno.serve(async (request) => {
     sendPushToUser(adminClient, user.id, {
       title: "Your daily encouragement",
       body: (finalRow?.dashboard_message ?? messages.dashboardMessage).slice(0, 180),
-      url: "/dashboard",
+      url: "/app",
       tag: "bloom-daily-encouragement",
     }).catch((err) => console.error("Push send failed (generate-daily-encouragement)", err));
 

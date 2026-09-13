@@ -133,7 +133,7 @@ Deno.serve(async (request) => {
           pendingCount > 0
             ? `${jobLabel} has ${pendingCount} hard requirement${pendingCount === 1 ? "" : "s"} you can confirm.`
             : `Your analysis for ${jobLabel} is ready.`,
-        url: `/jobs/${savedJob.id}`,
+        url: "/app/applications",
         tag: `bloom-job-analysis-${savedJob.id}`,
       }).catch((err) => console.error("Push send failed (analyze-job)", err));
     }

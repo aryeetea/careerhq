@@ -63,7 +63,7 @@ Deno.serve(async (request) => {
     sendPushToUser(adminClient, user.id, {
       title: "Cover letter ready",
       body: `Your cover letter for ${[job.title, job.company].filter(Boolean).join(" at ") || "this posting"} is ready to review.`,
-      url: `/jobs/${job.id}`,
+      url: "/app/applications",
       tag: `bloom-cover-letter-${job.id}`,
     }).catch((err) => console.error("Push send failed (generate-cover-letter)", err));
 
