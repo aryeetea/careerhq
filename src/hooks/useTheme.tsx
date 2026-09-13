@@ -2,6 +2,7 @@ import * as React from "react";
 import type { ThemeName } from "@/types/database";
 
 const STORAGE_KEY = "bloom-theme";
+const THEME_MIGRATION_KEY = "bloom-theme-migrated";
 
 interface ThemeContextValue {
   theme: ThemeName;
@@ -12,6 +13,13 @@ const ThemeContext = React.createContext<ThemeContextValue | null>(null);
 
 function getInitialTheme(): ThemeName {
   const stored = localStorage.getItem(STORAGE_KEY) as ThemeName | null;
+
+  if (stored === "dark" && localStorage.getItem(THEME_MIGRATION_KEY) !== "1") {
+    localStorage.setItem(STORAGE_KEY, "arcade");
+    localStorage.setItem(THEME_MIGRATION_KEY, "1");
+    return "arcade";
+  }
+
   if (
     stored === "floral" ||
     stored === "neutral" ||
@@ -22,9 +30,14 @@ function getInitialTheme(): ThemeName {
     stored === "comic-pop" ||
     stored === "arcade" ||
     stored === "candy"
-  )
+  ) {
+    localStorage.setItem(THEME_MIGRATION_KEY, "1");
     return stored;
-  return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "arcade";
+  }
+
+  localStorage.setItem(STORAGE_KEY, "arcade");
+  localStorage.setItem(THEME_MIGRATION_KEY, "1");
+  return "arcade";
 }
 
 function applyTheme(theme: ThemeName) {
