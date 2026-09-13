@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 
 const THEMES: { id: ThemeName; label: string; description: string; icon: typeof Flower2; preview: string[] }[] = [
   { id: "comic-pop", label: "Comic Pop", description: "Big personality, bright colors, playful energy", icon: Sparkles, preview: ["#fff7f0", "#ff6b6b", "#7c4dff"] },
-  { id: "arcade", label: "Arcade", description: "Neon glow, game-night vibes, punchy contrast", icon: Square, preview: ["#0b1120", "#22d3ee", "#a78bfa"] },
+  { id: "arcade", label: "Retro Arcade", description: "Neon glow, game-night vibes, punchy contrast", icon: Square, preview: ["#0b1120", "#22d3ee", "#a78bfa"] },
   { id: "candy", label: "Candy", description: "Pastel sweetness with a cheerful, bubbly feel", icon: Flower2, preview: ["#fff0f5", "#ff8fab", "#7dd3a1"] },
   { id: "sunrise", label: "Sunrise", description: "Apricot, coral, and buttercream", icon: Sunrise, preview: ["#fff2e3", "#ef8e72", "#f2c86b"] },
   { id: "floral", label: "Floral", description: "Warm ivory, rose, and sage", icon: Flower2, preview: ["#fbf3ea", "#d98b93", "#8fae95"] },

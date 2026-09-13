@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;500;700&family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&family=Space+Grotesk:wght@500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;500;700&family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&family=Press+Start+2P:wght@400&family=Space+Grotesk:wght@500;600;700&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -504,8 +504,103 @@
     --glass-border: 223 24% 28%;
   }
 
+  :root[data-theme="arcade"] {
+    --background: 222 42% 10%;
+    --foreground: 190 100% 92%;
+
+    --card: 222 35% 15%;
+    --card-foreground: 190 100% 92%;
+
+    --popover: 222 35% 15%;
+    --popover-foreground: 190 100% 92%;
+
+    --primary: 189 96% 62%;
+    --primary-foreground: 222 42% 10%;
+
+    --secondary: 263 92% 67%;
+    --secondary-foreground: 222 42% 10%;
+
+    --muted: 220 30% 18%;
+    --muted-foreground: 190 35% 76%;
+
+    --accent: 173 90% 52%;
+    --accent-foreground: 222 42% 10%;
+
+    --destructive: 0 92% 66%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 152 65% 48%;
+    --success-foreground: 222 42% 10%;
+
+    --warning: 38 96% 58%;
+    --warning-foreground: 222 42% 10%;
+
+    --border: 220 26% 24%;
+    --input: 220 26% 24%;
+    --ring: 189 96% 62%;
+
+    --rose: 327 81% 69%;
+    --rose-foreground: 222 42% 10%;
+    --sage: 165 62% 58%;
+    --sage-foreground: 222 42% 10%;
+    --lavender: 262 90% 74%;
+    --lavender-foreground: 222 42% 10%;
+    --gold: 42 96% 62%;
+    --gold-foreground: 222 42% 10%;
+    --peach: 24 88% 68%;
+    --peach-foreground: 222 42% 10%;
+    --sky: 198 96% 68%;
+    --sky-foreground: 222 42% 10%;
+
+    --shadow-color: 225 54% 4%;
+    --glass-bg: 222 34% 17%;
+    --glass-highlight: 190 100% 92%;
+    --glass-border: 198 96% 64%;
+    --radius: 0.3rem;
+  }
+
+  :root[data-theme="arcade"] .font-display {
+    font-family: "Press Start 2P", "Courier New", monospace !important;
+    letter-spacing: 0.06em;
+    text-transform: none;
+  }
+
+  :root[data-theme="arcade"] body {
+    background-image:
+      radial-gradient(circle at top left, hsl(var(--primary) / 0.3), transparent 24%),
+      radial-gradient(circle at top right, hsl(var(--secondary) / 0.28), transparent 26%),
+      linear-gradient(180deg, hsl(var(--background)) 0%, hsl(var(--background)) 100%);
+  }
+
+  :root[data-theme="arcade"] .glass,
+  :root[data-theme="arcade"] .glass-subtle,
+  :root[data-theme="arcade"] .glass-strong {
+    border-width: 2px;
+    border-color: hsl(var(--primary) / 0.72);
+    border-radius: 0.3rem;
+    box-shadow:
+      0 0 0 2px hsl(var(--primary) / 0.3),
+      0 18px 42px -24px hsl(var(--shadow-color) / 0.76),
+      0 0 20px hsl(var(--primary) / 0.28);
+  }
+
+  :root[data-theme="arcade"] .shadow-soft {
+    box-shadow:
+      0 1px 2px hsl(var(--shadow-color) / 0.12),
+      0 0 0 2px hsl(var(--primary) / 0.18),
+      0 18px 36px -24px hsl(var(--primary) / 0.5);
+  }
+
+  :root[data-theme="arcade"] .shadow-lift {
+    box-shadow:
+      0 2px 4px hsl(var(--shadow-color) / 0.15),
+      0 0 0 2px hsl(var(--primary) / 0.18),
+      0 20px 46px -24px hsl(var(--secondary) / 0.52);
+  }
+
   * {
     @apply border-border;
+    border-width: 1px;
   }
 
   html {
@@ -521,6 +616,7 @@
     background-attachment: fixed;
     font-feature-settings: "cv11", "ss01";
     letter-spacing: 0.01em;
+    text-rendering: optimizeLegibility;
   }
 
   ::-webkit-scrollbar {

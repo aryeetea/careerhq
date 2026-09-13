@@ -24,7 +24,7 @@ function getInitialTheme(): ThemeName {
     stored === "candy"
   )
     return stored;
-  return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "comic-pop";
+  return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "arcade";
 }
 
 function applyTheme(theme: ThemeName) {
