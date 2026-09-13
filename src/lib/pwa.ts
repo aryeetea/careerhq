@@ -15,6 +15,16 @@ export function registerServiceWorker() {
   // web app, not an error.
   if (import.meta.env.DEV || !("serviceWorker" in navigator)) return;
 
+  // A worker can activate while this page is still running its old hashed
+  // JS/CSS bundle. Reload once when control changes so a deployed visual
+  // update is actually rendered, rather than waiting for a manual refresh.
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    const reloadedAt = Number(sessionStorage.getItem("bloom-sw-reloaded-at") ?? 0);
+    if (Date.now() - reloadedAt < 10_000) return;
+    sessionStorage.setItem("bloom-sw-reloaded-at", String(Date.now()));
+    window.location.reload();
+  });
+
   import("virtual:pwa-register")
     .then(({ registerSW }) => registerSW({ immediate: true }))
     .catch((error) => console.error("Service worker registration failed", error));

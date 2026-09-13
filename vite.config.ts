@@ -38,12 +38,12 @@ export default defineConfig({
         scope: "/",
         display: "standalone",
         // Matches the existing <meta name="theme-color"> in index.html
-        // and the Floral theme's own ivory background (see useTheme.tsx)
+        // and the Growth theme's own soft green background (see useTheme.tsx)
         // — the installed app's chrome/splash should match what the app
         // already looks like on first load, before any saved theme
         // preference is known.
-        background_color: "#fbf3ea",
-        theme_color: "#fbf3ea",
+        background_color: "#f2f8f1",
+        theme_color: "#f2f8f1",
         icons: [
           { src: "/pwa-192x192.png", sizes: "192x192", type: "image/png", purpose: "any" },
           { src: "/pwa-512x512.png", sizes: "512x512", type: "image/png", purpose: "any" },
