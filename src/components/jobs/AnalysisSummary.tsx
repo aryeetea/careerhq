@@ -1,9 +1,9 @@
 import * as React from "react";
-import { AlertCircle, ChevronLeft, ChevronRight, Search, ShieldAlert, ShieldCheck, Sparkles, Target } from "lucide-react";
+import { AlertCircle, ChevronLeft, ChevronRight, FileText, Search, ShieldAlert, ShieldCheck, Sparkles, Target } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 import {
   ANALYSIS_SOURCE_META,
   ANALYSIS_VERDICT_META,
@@ -100,6 +100,22 @@ export function AnalysisSummary({
   const breakdownTrackRef = React.useRef<HTMLDivElement | null>(null);
   const breakdownSlideLabels = ["Fit details", "Assessment details", "Résumé comparison", "Résumé improvements"];
   const breakdownSlideCount = 4;
+  const jobDetails = [
+    { label: "Location", value: analysis.jobExtraction.location },
+    { label: "Work setup", value: analysis.jobExtraction.workArrangement?.replace(/_/g, " ") ?? null },
+    { label: "Employment", value: analysis.jobExtraction.employmentType?.replace(/_/g, " ") ?? null },
+    { label: "Compensation", value: analysis.jobExtraction.salary },
+    { label: "Deadline", value: analysis.jobExtraction.applicationDeadline ? formatDate(analysis.jobExtraction.applicationDeadline) : null },
+  ].filter((detail): detail is { label: string; value: string } => Boolean(detail.value));
+  const responsibilities = Array.from(new Set(analysis.jobExtraction.responsibilities)).slice(0, 3);
+  const requirements = Array.from(
+    new Set([
+      ...analysis.jobExtraction.requiredQualifications,
+      ...analysis.jobExtraction.experienceRequirements,
+      ...analysis.jobExtraction.educationRequirements,
+      ...analysis.jobExtraction.requiredSkills,
+    ]),
+  ).slice(0, 4);
   const changeBreakdownSlide = (direction: -1 | 1) => {
     setBreakdownSlide((current) => (current + direction + breakdownSlideCount) % breakdownSlideCount);
   };
@@ -191,6 +207,42 @@ export function AnalysisSummary({
               </div>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      <Card className="border-primary/20 bg-primary/5">
+        <CardContent className="p-4">
+          <p className="flex items-center gap-1.5 text-sm font-semibold">
+            <FileText className="h-4 w-4 shrink-0 text-primary" />
+            Job at a glance
+          </p>
+          <p className="mt-2 text-sm leading-6 text-foreground/80">
+            {[analysis.jobExtraction.jobTitle, analysis.jobExtraction.company].filter(Boolean).join(" at ") || "Role details"}
+          </p>
+          {jobDetails.length > 0 && (
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {jobDetails.map((detail) => (
+                <div key={detail.label} className="rounded-lg bg-card/60 px-2.5 py-2">
+                  <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{detail.label}</p>
+                  <p className="mt-0.5 text-sm font-medium capitalize">{detail.value}</p>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="mt-3 grid gap-3 lg:grid-cols-2">
+            <ListBlock
+              title="Key responsibilities"
+              items={responsibilities}
+              empty="The source did not provide specific responsibilities."
+              muted
+            />
+            <ListBlock
+              title="Core requirements"
+              items={requirements}
+              empty="The source did not provide specific qualifications or skills."
+              muted
+            />
+          </div>
         </CardContent>
       </Card>
 
