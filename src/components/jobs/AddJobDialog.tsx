@@ -24,7 +24,7 @@ import { useSettings } from "@/hooks/queries/useProfile";
 import { useToast } from "@/components/shared/toast";
 import { JOB_STATUSES, UNSET_SELECT_VALUE, VERDICT_OPTIONS } from "@/lib/constants";
 import { AnalysisSummary } from "@/components/jobs/AnalysisSummary";
-import { deriveVerdictSource, formatDate, toDateInputValue } from "@/lib/utils";
+import { compactJobDescription, deriveVerdictSource, formatDate, toDateInputValue } from "@/lib/utils";
 import type { JobAnalysisPayload } from "@/lib/ai";
 import { ANALYSIS_PROGRESS_STEPS, useProgressHint } from "@/hooks/useProgressHint";
 
@@ -123,7 +123,7 @@ export function AddJobDialog({ open, onOpenChange, resumes }: AddJobDialogProps)
       setValue("salary", next.jobExtraction.salary ?? "", { shouldDirty: true });
       setValue("workArrangement", next.jobExtraction.workArrangement ?? "", { shouldDirty: true });
       setValue("deadline", toDateInputValue(next.jobExtraction.applicationDeadline), { shouldDirty: true });
-      setValue("jobDescription", next.jobExtraction.rawJobText, { shouldDirty: true });
+      setValue("jobDescription", compactJobDescription(next.jobExtraction.rawJobText), { shouldDirty: true });
       setValue("fitScore", next.analysis.candidateFit.fitScore, { shouldDirty: true });
       setValue("verdict", next.analysis.verdict === "not_yet_assessed" ? "" : next.analysis.verdict, { shouldDirty: true });
       setValue("strengths", next.analysis.candidateFit.strongMatches.join("\n"), { shouldDirty: true });
@@ -178,7 +178,7 @@ export function AddJobDialog({ open, onOpenChange, resumes }: AddJobDialogProps)
       salary: values.salary?.trim() || null,
       source: values.source?.trim() || null,
       job_url: values.jobUrl?.trim() || null,
-      job_description: values.jobDescription?.trim() || null,
+      job_description: compactJobDescription(values.jobDescription ?? "") || null,
       status: values.status,
       verdict: (values.verdict || null) as NewJob["verdict"],
       verdict_source: deriveVerdictSource(
@@ -286,8 +286,8 @@ export function AddJobDialog({ open, onOpenChange, resumes }: AddJobDialogProps)
               <Label htmlFor="jobDescription">Job description</Label>
               <AutoResizeTextarea
                 id="jobDescription"
-                minRows={5}
-                maxHeight={480}
+                minRows={3}
+                maxHeight={288}
                 placeholder="Paste the full job description here…"
                 value={watch("jobDescription") ?? ""}
                 onChange={(e) => setValue("jobDescription", e.target.value, { shouldDirty: true })}

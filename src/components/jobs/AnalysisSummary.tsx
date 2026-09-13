@@ -95,11 +95,27 @@ export function AnalysisSummary({
   const careerDirectionFit = scoring?.careerDirectionFit ?? null;
   const hasNewFields = Boolean(analysis.analysis.scoringDimensions && analysis.analysis.gapSeverity && analysis.analysis.recommendationPriority);
   const [breakdownSlide, setBreakdownSlide] = React.useState(0);
+  const [breakdownHeight, setBreakdownHeight] = React.useState<number | null>(null);
+  const breakdownTouchStartX = React.useRef<number | null>(null);
+  const breakdownTrackRef = React.useRef<HTMLDivElement | null>(null);
   const breakdownSlideLabels = ["Fit details", "Assessment details", "Résumé comparison", "Résumé improvements"];
   const breakdownSlideCount = 4;
   const changeBreakdownSlide = (direction: -1 | 1) => {
     setBreakdownSlide((current) => (current + direction + breakdownSlideCount) % breakdownSlideCount);
   };
+  const handleBreakdownTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
+    const startX = breakdownTouchStartX.current;
+    breakdownTouchStartX.current = null;
+    if (startX === null) return;
+    const distance = event.changedTouches[0].clientX - startX;
+    if (Math.abs(distance) < 48) return;
+    changeBreakdownSlide(distance < 0 ? 1 : -1);
+  };
+
+  React.useLayoutEffect(() => {
+    const activeSlide = breakdownTrackRef.current?.querySelector<HTMLElement>(`[data-breakdown-slide="${breakdownSlide}"]`);
+    setBreakdownHeight(activeSlide?.offsetHeight ?? null);
+  }, [analysis, breakdownSlide]);
 
   return (
     <div className="grid gap-3">
@@ -425,9 +441,21 @@ export function AnalysisSummary({
             </div>
           </div>
 
-          <div className="mt-4" role="region" aria-live="polite" aria-label="Analysis breakdown">
-            {breakdownSlide === 0 && (
-              <div>
+          <div
+            className="mt-4 overflow-hidden transition-[height] duration-300 ease-out motion-reduce:transition-none"
+            style={breakdownHeight === null ? undefined : { height: breakdownHeight }}
+            role="region"
+            aria-live="polite"
+            aria-label="Analysis breakdown"
+          >
+            <div
+              ref={breakdownTrackRef}
+              className="flex touch-pan-y transition-transform duration-300 ease-out motion-reduce:transition-none"
+              style={{ transform: `translateX(-${breakdownSlide * 100}%)` }}
+              onTouchStart={(event) => { breakdownTouchStartX.current = event.touches[0].clientX; }}
+              onTouchEnd={handleBreakdownTouchEnd}
+            >
+              <section data-breakdown-slide="0" className="w-full shrink-0" aria-hidden={breakdownSlide !== 0}>
                 <p className="text-sm font-medium">Fit details</p>
                 <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
                   <ScoreTile label="Qualification" value={scoring?.qualificationFit ?? null} />
@@ -437,22 +465,18 @@ export function AnalysisSummary({
                   <ScoreTile label="Location/arrangement" value={scoring?.locationWorkArrangementFit ?? null} />
                   <ScoreTile label="Posting legitimacy" value={scoring?.legitimacyConfidence ?? null} />
                 </div>
-              </div>
-            )}
+              </section>
 
-            {breakdownSlide === 1 && (
-              <div>
+              <section data-breakdown-slide="1" className="w-full shrink-0" aria-hidden={breakdownSlide !== 1}>
                 <p className="text-sm font-medium">Assessment details</p>
                 <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                   <Badge className={cn("border-0", opportunityAssessment.className)}>{opportunityAssessment.label}</Badge>
                   <span className={cn("font-medium", confidence.className)}>{confidence.label}</span>
                   <span className={cn("font-medium", importStatus.className)}>{importStatus.label}</span>
                 </div>
-              </div>
-            )}
+              </section>
 
-            {breakdownSlide === 2 && (
-              <div>
+              <section data-breakdown-slide="2" className="w-full shrink-0" aria-hidden={breakdownSlide !== 2}>
                 <p className="text-sm font-medium">Résumé comparison</p>
                 {analysis.resumeRanking.length === 0 ? (
                   <p className="mt-2 text-sm text-muted-foreground">No active resumes with extractable text were available to compare.</p>
@@ -472,11 +496,9 @@ export function AnalysisSummary({
                     ))}
                   </div>
                 )}
-              </div>
-            )}
+              </section>
 
-            {breakdownSlide === 3 && (
-              <div>
+              <section data-breakdown-slide="3" className="w-full shrink-0" aria-hidden={breakdownSlide !== 3}>
                 <p className="text-sm font-medium">Résumé improvements</p>
                 {analysis.resumeSuggestions.length === 0 ? (
                   <p className="mt-2 text-sm text-muted-foreground">No resume-improvement suggestions were needed from the available evidence.</p>
@@ -491,8 +513,8 @@ export function AnalysisSummary({
                     ))}
                   </div>
                 )}
-              </div>
-            )}
+              </section>
+            </div>
           </div>
         </CardContent>
       </Card>

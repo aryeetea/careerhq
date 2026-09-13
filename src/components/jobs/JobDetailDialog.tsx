@@ -39,7 +39,7 @@ import {
   VERDICT_OPTIONS,
   normalizeEditableJobStatus,
 } from "@/lib/constants";
-import { dateInputToISO, deriveVerdictSource, formatDate, formatDateTime, toDateInputValue } from "@/lib/utils";
+import { compactJobDescription, dateInputToISO, deriveVerdictSource, formatDate, formatDateTime, toDateInputValue } from "@/lib/utils";
 import type { JobAnalysisPayload } from "@/lib/ai";
 import { ANALYSIS_PROGRESS_STEPS, COVER_LETTER_PROGRESS_STEPS, useProgressHint } from "@/hooks/useProgressHint";
 
@@ -60,7 +60,7 @@ function jobToFormValues(job: Job): JobFormValues {
     salary: job.salary ?? "",
     source: job.source ?? "",
     jobUrl: job.job_url ?? "",
-    jobDescription: job.job_description ?? "",
+    jobDescription: compactJobDescription(job.job_description ?? ""),
     status: normalizeEditableJobStatus(job.status),
     verdict: job.verdict ?? "",
     fitScore: job.fit_score,
@@ -148,7 +148,7 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
           salary: values.salary?.trim() || null,
           source: values.source?.trim() || null,
           job_url: values.jobUrl?.trim() || null,
-          job_description: values.jobDescription?.trim() || null,
+          job_description: compactJobDescription(values.jobDescription ?? "") || null,
           status: values.status,
           verdict: (values.verdict || null) as Job["verdict"],
           verdict_source: deriveVerdictSource(
@@ -243,7 +243,7 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
       setValue("salary", result.analysis.jobExtraction.salary ?? watch("salary"), { shouldDirty: true });
       setValue("workArrangement", result.analysis.jobExtraction.workArrangement ?? watch("workArrangement"), { shouldDirty: true });
       setValue("deadline", toDateInputValue(result.analysis.jobExtraction.applicationDeadline), { shouldDirty: true });
-      setValue("jobDescription", result.analysis.jobExtraction.rawJobText, { shouldDirty: true });
+      setValue("jobDescription", compactJobDescription(result.analysis.jobExtraction.rawJobText), { shouldDirty: true });
       setValue("fitScore", result.analysis.analysis.candidateFit.fitScore, { shouldDirty: true });
       setValue("verdict", result.analysis.analysis.verdict === "not_yet_assessed" ? "" : result.analysis.analysis.verdict, { shouldDirty: true });
       setValue("strengths", result.analysis.analysis.candidateFit.strongMatches.join("\n"), { shouldDirty: true });
@@ -440,8 +440,8 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
                 <Label htmlFor="d-jobDescription">Job description</Label>
                 <AutoResizeTextarea
                   id="d-jobDescription"
-                  minRows={6}
-                  maxHeight={480}
+                  minRows={3}
+                  maxHeight={288}
                   value={watch("jobDescription") ?? ""}
                   onChange={(e) => setValue("jobDescription", e.target.value, { shouldDirty: true })}
                 />

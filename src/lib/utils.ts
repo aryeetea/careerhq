@@ -71,6 +71,19 @@ export function clamp(n: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, n));
 }
 
+export function compactJobDescription(value: string): string {
+  return value
+    .replace(/\r\n?/g, "\n")
+    .split("\n")
+    .map((line) => line.replace(/[\t\u00a0 ]+/g, " ").trim())
+    .reduce<string[]>((lines, line) => {
+      if (line || lines.at(-1) !== "") lines.push(line);
+      return lines;
+    }, [])
+    .join("\n")
+    .trim();
+}
+
 export function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
