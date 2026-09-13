@@ -208,8 +208,8 @@
     --warning: 38 90% 58%;
     --warning-foreground: 255 34% 18%;
 
-    --border: 32 58% 82%;
-    --input: 32 58% 82%;
+    --border: 255 34% 28%;
+    --input: 255 34% 28%;
     --ring: 352 94% 67%;
 
     --rose: 352 94% 71%;
@@ -228,7 +228,7 @@
     --shadow-color: 279 40% 16%;
     --glass-bg: 0 0% 100%;
     --glass-highlight: 0 0% 100%;
-    --glass-border: 32 58% 82%;
+    --glass-border: 255 34% 28%;
   }
 
   :root[data-theme="growth"] {
@@ -501,6 +501,54 @@
       linear-gradient(145deg, hsl(var(--background)) 0%, hsl(95 58% 93%) 52%, hsl(48 90% 94%) 100%);
   }
 
+  :root[data-theme="comic-pop"] body {
+    background-image:
+      radial-gradient(hsl(352 94% 67% / 0.16) 1.2px, transparent 1.5px),
+      radial-gradient(hsl(269 88% 60% / 0.12) 1.2px, transparent 1.5px),
+      radial-gradient(circle at 6% 4%, hsl(var(--gold) / 0.48), transparent 23%),
+      radial-gradient(circle at 96% 12%, hsl(var(--lavender) / 0.36), transparent 25%),
+      hsl(var(--background));
+    background-position: 0 0, 6px 6px, 0 0, 0 0, 0 0;
+    background-size: 12px 12px, 12px 12px, auto, auto, auto;
+  }
+
+  :root[data-theme="floral"] body {
+    background-image:
+      radial-gradient(ellipse at 7% 5%, hsl(var(--rose) / 0.2), transparent 23%),
+      radial-gradient(ellipse at 92% 12%, hsl(var(--lavender) / 0.18), transparent 25%),
+      linear-gradient(145deg, hsl(var(--background)), hsl(var(--secondary) / 0.42));
+  }
+
+  :root[data-theme="sunrise"] body {
+    background-image:
+      radial-gradient(circle at 90% 0%, hsl(var(--gold) / 0.46), transparent 29%),
+      radial-gradient(circle at 4% 86%, hsl(var(--peach) / 0.34), transparent 25%),
+      linear-gradient(145deg, hsl(var(--background)), hsl(var(--accent) / 0.5));
+  }
+
+  :root[data-theme="meadow"] body {
+    background-image:
+      radial-gradient(ellipse at 0% 10%, hsl(var(--sage) / 0.23), transparent 28%),
+      radial-gradient(ellipse at 100% 92%, hsl(var(--gold) / 0.18), transparent 28%),
+      linear-gradient(150deg, hsl(var(--background)), hsl(var(--secondary) / 0.54));
+  }
+
+  :root[data-theme="candy"] body {
+    background-image:
+      radial-gradient(circle at 8% 4%, hsl(var(--sky) / 0.33), transparent 20%),
+      radial-gradient(circle at 94% 12%, hsl(var(--lavender) / 0.32), transparent 22%),
+      radial-gradient(circle at 74% 92%, hsl(var(--peach) / 0.34), transparent 25%),
+      hsl(var(--background));
+  }
+
+  :root[data-theme="midnight"] body,
+  .dark body {
+    background-image:
+      radial-gradient(circle at 18% 0%, hsl(var(--lavender) / 0.18), transparent 25%),
+      radial-gradient(circle at 88% 18%, hsl(var(--sky) / 0.13), transparent 28%),
+      linear-gradient(145deg, hsl(var(--background)), hsl(var(--card)));
+  }
+
   :root[data-theme="growth"] .glass,
   :root[data-theme="growth"] .glass-subtle,
   :root[data-theme="growth"] .glass-strong {
@@ -509,6 +557,83 @@
     box-shadow:
       0 18px 42px -30px hsl(var(--shadow-color) / 0.35),
       inset 0 1px 0 hsl(var(--glass-highlight) / 0.85);
+  }
+
+  /* Comic Pop uses printed halftones, confident ink lines, and deliberately
+     offset shadows so cards feel like panels rather than generic surfaces. */
+  :root[data-theme="comic-pop"] .font-display {
+    font-family: "Comic Neue", "Fredoka", sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+  }
+
+  :root[data-theme="comic-pop"] .glass,
+  :root[data-theme="comic-pop"] .glass-subtle,
+  :root[data-theme="comic-pop"] .glass-strong {
+    background: linear-gradient(135deg, hsl(0 0% 100% / 0.96), hsl(var(--secondary) / 0.44));
+    border: 2px solid hsl(var(--foreground));
+    border-radius: 1.15rem 1.35rem 1.05rem 1.3rem;
+    box-shadow: 5px 5px 0 hsl(var(--lavender)), 8px 9px 0 hsl(var(--foreground) / 0.15);
+  }
+
+  :root[data-theme="comic-pop"] .shadow-soft {
+    box-shadow: 3px 3px 0 hsl(var(--gold)), 5px 6px 0 hsl(var(--foreground) / 0.14);
+  }
+
+  :root[data-theme="comic-pop"] .shadow-lift {
+    box-shadow: 5px 5px 0 hsl(var(--rose)), 8px 9px 0 hsl(var(--foreground) / 0.16);
+  }
+
+  :root[data-theme="floral"] .glass,
+  :root[data-theme="floral"] .glass-subtle,
+  :root[data-theme="floral"] .glass-strong {
+    background: linear-gradient(145deg, hsl(0 0% 100% / 0.92), hsl(var(--accent) / 0.32));
+    border-color: hsl(var(--rose) / 0.24);
+    box-shadow: 0 18px 40px -30px hsl(var(--rose) / 0.42), inset 0 1px 0 hsl(0 0% 100% / 0.9);
+  }
+
+  :root[data-theme="sunrise"] .glass,
+  :root[data-theme="sunrise"] .glass-subtle,
+  :root[data-theme="sunrise"] .glass-strong {
+    background: linear-gradient(135deg, hsl(0 0% 100% / 0.92), hsl(var(--accent) / 0.45));
+    border-color: hsl(var(--peach) / 0.6);
+    box-shadow: 0 18px 42px -29px hsl(var(--primary) / 0.38);
+  }
+
+  :root[data-theme="meadow"] .glass,
+  :root[data-theme="meadow"] .glass-subtle,
+  :root[data-theme="meadow"] .glass-strong {
+    background: linear-gradient(145deg, hsl(0 0% 100% / 0.92), hsl(var(--secondary) / 0.42));
+    border-color: hsl(var(--sage) / 0.35);
+    box-shadow: 0 20px 44px -30px hsl(var(--sage) / 0.34);
+  }
+
+  :root[data-theme="candy"] .glass,
+  :root[data-theme="candy"] .glass-subtle,
+  :root[data-theme="candy"] .glass-strong {
+    background: linear-gradient(135deg, hsl(0 0% 100% / 0.94), hsl(var(--accent) / 0.38));
+    border-color: hsl(var(--primary) / 0.28);
+    border-radius: 1.5rem;
+    box-shadow: 0 18px 42px -29px hsl(var(--primary) / 0.34), inset 0 1px 0 hsl(0 0% 100% / 0.9);
+  }
+
+  :root[data-theme="midnight"] .glass,
+  :root[data-theme="midnight"] .glass-subtle,
+  :root[data-theme="midnight"] .glass-strong,
+  .dark .glass,
+  .dark .glass-subtle,
+  .dark .glass-strong {
+    background: linear-gradient(145deg, hsl(var(--glass-bg) / 0.95), hsl(var(--accent) / 0.58));
+    border-color: hsl(var(--lavender) / 0.26);
+    box-shadow: 0 22px 48px -30px hsl(var(--shadow-color) / 0.75), inset 0 1px 0 hsl(0 0% 100% / 0.08);
+  }
+
+  :root[data-theme="neutral"] .glass,
+  :root[data-theme="neutral"] .glass-subtle,
+  :root[data-theme="neutral"] .glass-strong {
+    background: hsl(0 0% 100% / 0.9);
+    border-color: hsl(var(--border));
+    box-shadow: 0 12px 30px -24px hsl(var(--shadow-color) / 0.25);
   }
 
   :root[data-theme="growth"] .shadow-soft {
@@ -621,6 +746,12 @@
   :root[data-theme="growth"] .hover-lift:hover {
     border-color: hsl(var(--primary) / 0.45);
     box-shadow: 0 20px 40px -24px hsl(var(--primary) / 0.4), 0 0 0 3px hsl(var(--accent) / 0.38);
+  }
+
+  :root[data-theme="comic-pop"] .hover-lift:hover {
+    transform: translate(-2px, -3px) rotate(-0.4deg);
+    border-color: hsl(var(--foreground));
+    box-shadow: 7px 7px 0 hsl(var(--primary)), 10px 11px 0 hsl(var(--foreground) / 0.16);
   }
 
   /* Gentle lift on hover — used on job cards, resume cards, friend cards. */

@@ -41,7 +41,7 @@ function getInitialTheme(): ThemeName {
 function applyTheme(theme: ThemeName) {
   const root = document.documentElement;
   root.classList.toggle("dark", theme === "dark");
-  if (theme === "dark" || theme === "floral") {
+  if (theme === "dark") {
     root.removeAttribute("data-theme");
     return;
   }
@@ -92,7 +92,10 @@ export function useThemeSync(settingsTheme: ThemeName | undefined) {
     // rows immediately undo the Growth migration in this browser. This also
     // corrects an already-open tab whose state was set before the migration.
     if (settingsTheme && LEGACY_THEMES.includes(settingsTheme)) {
-      if (theme !== "growth") setTheme("growth");
+      // If the UI already has that value, it was deliberately selected in
+      // Settings. Only replace a mismatched legacy value arriving from an
+      // older account record or another stale browser session.
+      if (settingsTheme !== theme && theme !== "growth") setTheme("growth");
       return;
     }
 
