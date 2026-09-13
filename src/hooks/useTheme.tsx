@@ -3,6 +3,13 @@ import type { ThemeName } from "@/types/database";
 
 const STORAGE_KEY = "bloom-theme";
 const THEME_MIGRATION_KEY = "bloom-theme-migrated";
+const THEME_MIGRATION_VERSION = "2";
+
+// These were the themes available before the playful theme refresh. They
+// remain valid choices in the picker, but an old persisted value should not
+// silently win over the new Arcade default on first load after the refresh.
+const LEGACY_THEMES: readonly ThemeName[] = ["floral", "neutral", "sunrise", "meadow", "dark", "midnight"];
+const THEMES: readonly ThemeName[] = [...LEGACY_THEMES, "comic-pop", "arcade", "candy"];
 
 interface ThemeContextValue {
   theme: ThemeName;
@@ -13,30 +20,21 @@ const ThemeContext = React.createContext<ThemeContextValue | null>(null);
 
 function getInitialTheme(): ThemeName {
   const stored = localStorage.getItem(STORAGE_KEY) as ThemeName | null;
+  const hasCurrentMigration = localStorage.getItem(THEME_MIGRATION_KEY) === THEME_MIGRATION_VERSION;
 
-  if (stored === "dark" && localStorage.getItem(THEME_MIGRATION_KEY) !== "1") {
+  if (!hasCurrentMigration && stored && LEGACY_THEMES.includes(stored)) {
     localStorage.setItem(STORAGE_KEY, "arcade");
-    localStorage.setItem(THEME_MIGRATION_KEY, "1");
+    localStorage.setItem(THEME_MIGRATION_KEY, THEME_MIGRATION_VERSION);
     return "arcade";
   }
 
-  if (
-    stored === "floral" ||
-    stored === "neutral" ||
-    stored === "sunrise" ||
-    stored === "meadow" ||
-    stored === "dark" ||
-    stored === "midnight" ||
-    stored === "comic-pop" ||
-    stored === "arcade" ||
-    stored === "candy"
-  ) {
-    localStorage.setItem(THEME_MIGRATION_KEY, "1");
+  if (stored && THEMES.includes(stored)) {
+    localStorage.setItem(THEME_MIGRATION_KEY, THEME_MIGRATION_VERSION);
     return stored;
   }
 
   localStorage.setItem(STORAGE_KEY, "arcade");
-  localStorage.setItem(THEME_MIGRATION_KEY, "1");
+  localStorage.setItem(THEME_MIGRATION_KEY, THEME_MIGRATION_VERSION);
   return "arcade";
 }
 

@@ -282,7 +282,8 @@
     --shadow-color: 225 54% 4%;
     --glass-bg: 222 34% 17%;
     --glass-highlight: 190 100% 92%;
-    --glass-border: 220 22% 30%;
+    --glass-border: 198 96% 64%;
+    --radius: 0.3rem;
   }
 
   :root[data-theme="candy"] {
@@ -502,61 +503,6 @@
     --glass-bg: 225 34% 15%;
     --glass-highlight: 214 33% 94%;
     --glass-border: 223 24% 28%;
-  }
-
-  :root[data-theme="arcade"] {
-    --background: 222 42% 10%;
-    --foreground: 190 100% 92%;
-
-    --card: 222 35% 15%;
-    --card-foreground: 190 100% 92%;
-
-    --popover: 222 35% 15%;
-    --popover-foreground: 190 100% 92%;
-
-    --primary: 189 96% 62%;
-    --primary-foreground: 222 42% 10%;
-
-    --secondary: 263 92% 67%;
-    --secondary-foreground: 222 42% 10%;
-
-    --muted: 220 30% 18%;
-    --muted-foreground: 190 35% 76%;
-
-    --accent: 173 90% 52%;
-    --accent-foreground: 222 42% 10%;
-
-    --destructive: 0 92% 66%;
-    --destructive-foreground: 0 0% 100%;
-
-    --success: 152 65% 48%;
-    --success-foreground: 222 42% 10%;
-
-    --warning: 38 96% 58%;
-    --warning-foreground: 222 42% 10%;
-
-    --border: 220 26% 24%;
-    --input: 220 26% 24%;
-    --ring: 189 96% 62%;
-
-    --rose: 327 81% 69%;
-    --rose-foreground: 222 42% 10%;
-    --sage: 165 62% 58%;
-    --sage-foreground: 222 42% 10%;
-    --lavender: 262 90% 74%;
-    --lavender-foreground: 222 42% 10%;
-    --gold: 42 96% 62%;
-    --gold-foreground: 222 42% 10%;
-    --peach: 24 88% 68%;
-    --peach-foreground: 222 42% 10%;
-    --sky: 198 96% 68%;
-    --sky-foreground: 222 42% 10%;
-
-    --shadow-color: 225 54% 4%;
-    --glass-bg: 222 34% 17%;
-    --glass-highlight: 190 100% 92%;
-    --glass-border: 198 96% 64%;
-    --radius: 0.3rem;
   }
 
   :root[data-theme="arcade"] .font-display {
