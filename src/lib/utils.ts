@@ -72,14 +72,41 @@ export function clamp(n: number, min: number, max: number): number {
 }
 
 export function compactJobDescription(value: string): string {
-  return value
+  const boilerplate = [
+    /^apply now$/i,
+    /^careers at$/i,
+    /^join .+ in .+ as .+$/i,
+    /^view all opportunities at .+$/i,
+    /^privacy policy$/i,
+    /^cookies$/i,
+    /^powered by\.?$/i,
+  ];
+  const sectionHeadings = new Set(["key responsibilities", "skills, knowledge and traits", "what you’ll get", "what you'll get", "about spiralyze"]);
+  const seen = new Set<string>();
+  const normalizedLines = value
     .replace(/\r\n?/g, "\n")
     .split("\n")
     .map((line) => line.replace(/[\t\u00a0 ]+/g, " ").trim())
+    .filter((line) => !boilerplate.some((pattern) => pattern.test(line)))
+    .filter((line, index, lines) => {
+      if (!sectionHeadings.has(line.toLocaleLowerCase())) return true;
+      const nextLine = lines.slice(index + 1).find(Boolean);
+      return Boolean(nextLine && !sectionHeadings.has(nextLine.toLocaleLowerCase()));
+    });
+  const lines = normalizedLines
+    .filter((line) => {
+      if (!line) return true;
+      const key = line.toLocaleLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
     .reduce<string[]>((lines, line) => {
       if (line || lines.at(-1) !== "") lines.push(line);
       return lines;
-    }, [])
+    }, []);
+
+  return lines
     .join("\n")
     .trim();
 }
