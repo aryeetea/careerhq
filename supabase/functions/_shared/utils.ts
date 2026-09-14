@@ -1,7 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import webpush from "npm:web-push@3";
 import { ZodError } from "npm:zod";
-import { analysisResponseSchema, coverLetterResponseSchema, tailorResumeResponseSchema, type AnalysisResponse } from "./schemas.ts";
+import { analysisResponseSchema, companyProfileSchema, coverLetterResponseSchema, tailorResumeResponseSchema, type AnalysisResponse } from "./schemas.ts";
 import { buildAnalysisPrompt, buildCoverLetterPrompt, buildTailorResumePrompt, CAREER_COACH_PROMPT_VERSION } from "./prompts/careerCoach.ts";
 
 const ANALYSIS_MODEL = "gpt-5.6-terra";
@@ -283,6 +283,10 @@ function searchCompanyScamWeb(companyName: string): Promise<TavilySearchResult[]
   return tavilySearch(`"${companyName}" hiring scam OR "job scam" OR "fake job posting" OR careers reviews`, "company_scam_check");
 }
 
+function searchCompanyProfileWeb(companyName: string): Promise<TavilySearchResult[] | null> {
+  return tavilySearch(`"${companyName}" mission values culture careers work environment interview dress code`, "company_profile");
+}
+
 // Backs companyLegitimacy.locationConfidence — see LOCATION VERIFICATION
 // below. Exact title + company (rather than company alone) is the point:
 // the goal is finding this SAME listing mirrored elsewhere, not general
@@ -296,6 +300,58 @@ function safeHostname(url: string): string {
     return new URL(url).hostname.toLowerCase().replace(/^www\./, "");
   } catch {
     return "";
+  }
+}
+
+const companyProfileJsonSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["summary", "mission", "values", "culture", "workStyle", "interviewTips", "attire"],
+  properties: {
+    summary: { type: ["string", "null"] },
+    mission: { type: ["string", "null"] },
+    values: { type: "array", items: { type: "string" } },
+    culture: { type: "array", items: { type: "string" } },
+    workStyle: { type: "array", items: { type: "string" } },
+    interviewTips: { type: "array", items: { type: "string" } },
+    attire: { type: ["string", "null"] },
+  },
+} as const;
+
+async function buildCompanyProfile(
+  client: ReturnType<typeof getOpenAIClient>,
+  companyName: string,
+  results: TavilySearchResult[],
+): Promise<AnalysisResponse["jobExtraction"]["companyLegitimacy"]["companyProfile"]> {
+  if (results.length === 0) return null;
+  try {
+    const response = await createOpenAIResponse(
+      client,
+      {
+        model: EXTRACTION_MODEL,
+        reasoning: { effort: "low" },
+        text: { format: { type: "json_schema", name: "company_profile", strict: true, schema: companyProfileJsonSchema } },
+        input: [
+          {
+            role: "developer",
+            content: [{ type: "input_text", text: "Summarize only facts explicitly supported by the supplied web-search snippets. Do not infer culture, interview practices, attire, or values. Use null or an empty array when a field is not supported. Keep each item concise and useful to a job applicant." }],
+          },
+          {
+            role: "user",
+            content: [{ type: "input_text", text: JSON.stringify({ company: companyName, sources: results.map((result) => ({ title: result.title, url: result.url, snippet: result.content })).slice(0, 5) }) }],
+          },
+        ],
+      },
+      { timeoutMs: EXTRACTION_TIMEOUT_MS, action: "company_profile" },
+    );
+    const profile = companyProfileSchema.parse(JSON.parse(extractResponseText(response)));
+    return {
+      ...profile,
+      sources: results.slice(0, 3).map((result) => ({ title: result.title || safeHostname(result.url) || "Company source", url: result.url })),
+    };
+  } catch (error) {
+    console.error("Company profile research failed", error);
+    return null;
   }
 }
 
@@ -545,7 +601,10 @@ function applyLegitimacyAdjustments(analysis: AnalysisResponse): AnalysisRespons
 // part of the analysis exactly as the model produced it (webCheck/
 // locationConfidence stay "not_checked") rather than failing or blocking
 // the whole request.
-export async function enrichCompanyLegitimacyWithWebCheck(analysis: AnalysisResponse): Promise<AnalysisResponse> {
+export async function enrichCompanyLegitimacyWithWebCheck(
+  client: ReturnType<typeof getOpenAIClient>,
+  analysis: AnalysisResponse,
+): Promise<AnalysisResponse> {
   const companyName = analysis.jobExtraction.company?.trim();
   const jobTitle = analysis.jobExtraction.jobTitle?.trim();
   const base = analysis.jobExtraction.companyLegitimacy;
@@ -555,12 +614,15 @@ export async function enrichCompanyLegitimacyWithWebCheck(analysis: AnalysisResp
   let riskLevel = base.riskLevel;
   let redFlags = base.redFlags;
   let note = base.note;
+  let companyProfile: AnalysisResponse["jobExtraction"]["companyLegitimacy"]["companyProfile"] = null;
 
   if (companyName) {
-    const [presenceResults, scamResults] = await Promise.all([
+    const [presenceResults, scamResults, profileResults] = await Promise.all([
       searchCompanyPresenceWeb(companyName),
       searchCompanyScamWeb(companyName),
+      searchCompanyProfileWeb(companyName),
     ]);
+    if (profileResults) companyProfile = await buildCompanyProfile(client, companyName, profileResults);
     if (presenceResults || scamResults) {
       const combinedResults = [...(presenceResults ?? []), ...(scamResults ?? [])];
       const { presenceConfirmed, scamMentions, source: presenceSource } = evaluateCompanyPresence(companyName, combinedResults);
@@ -609,7 +671,7 @@ export async function enrichCompanyLegitimacyWithWebCheck(analysis: AnalysisResp
     ...analysis,
     jobExtraction: {
       ...analysis.jobExtraction,
-      companyLegitimacy: { riskLevel, redFlags, note, webCheck, source, locationConfidence },
+      companyLegitimacy: { riskLevel, redFlags, note, webCheck, source, locationConfidence, companyProfile },
     },
   };
 

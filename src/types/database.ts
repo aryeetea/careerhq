@@ -175,6 +175,16 @@ export interface JobAiCompanyLegitimacy {
   // analyses run before this field existed, when the job title/company
   // was unknown, or when the search itself failed.
   locationConfidence: "confirmed" | "mismatch_detected" | "not_checked";
+  companyProfile: {
+    summary: string | null;
+    mission: string | null;
+    values: string[];
+    culture: string[];
+    workStyle: string[];
+    interviewTips: string[];
+    attire: string | null;
+    sources: { title: string; url: string }[];
+  } | null;
 }
 
 export interface JobAiJobExtraction {

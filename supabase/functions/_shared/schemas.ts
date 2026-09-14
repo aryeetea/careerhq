@@ -124,6 +124,17 @@ export const logisticsConsiderationSchema = z.object({
 // model's raw output succeeds, then enrichCompanyLegitimacyWithWebCheck
 // (utils.ts) overwrites them with the real result of actual web searches
 // after the model call returns.
+export const companyProfileSchema = z.object({
+  summary: z.string().nullable(),
+  mission: z.string().nullable(),
+  values: z.array(z.string()),
+  culture: z.array(z.string()),
+  workStyle: z.array(z.string()),
+  interviewTips: z.array(z.string()),
+  attire: z.string().nullable(),
+  sources: z.array(z.object({ title: z.string(), url: z.string() })),
+});
+
 export const companyLegitimacySchema = z.object({
   riskLevel: z.enum(["none", "low", "medium", "high"]),
   redFlags: z.array(z.string()),
@@ -146,6 +157,7 @@ export const companyLegitimacySchema = z.object({
   // capVerdictForLocationMismatch — regardless of skills-fit score, since
   // it's an eligibility/trust concern, not a fit judgment.
   locationConfidence: z.enum(["confirmed", "mismatch_detected", "not_checked"]).optional().default("not_checked"),
+  companyProfile: companyProfileSchema.nullable().optional().default(null),
 });
 
 export const resumeRankingSchema = z.object({

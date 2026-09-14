@@ -1,5 +1,5 @@
 import * as React from "react";
-import { AlertCircle, ChevronLeft, ChevronRight, FileText, Search, ShieldAlert, ShieldCheck, Sparkles, Target } from "lucide-react";
+import { AlertCircle, Building2, ChevronLeft, ChevronRight, FileText, Search, ShieldAlert, ShieldCheck, Sparkles, Target } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -320,6 +320,7 @@ export function AnalysisSummary({
         const isClean = legitimacy.riskLevel === "none";
         const risk = COMPANY_LEGITIMACY_META[legitimacy.riskLevel];
         return (
+          <>
           <Card className={cn("border-2 bg-card/60", isClean ? "border-success/30" : legitimacy.riskLevel === "high" ? "border-destructive/40" : "border-gold/40")}>
             <CardContent className="p-4">
               <p className="flex items-center gap-1.5 text-sm font-semibold">
@@ -374,6 +375,42 @@ export function AnalysisSummary({
               )}
             </CardContent>
           </Card>
+          {legitimacy.companyProfile && (
+            <Card className="border-primary/20 bg-primary/5">
+              <CardContent className="p-4">
+                <p className="flex items-center gap-1.5 text-sm font-semibold">
+                  <Building2 className="h-4 w-4 shrink-0 text-primary" />
+                  Company intel
+                </p>
+                {legitimacy.companyProfile.summary && <p className="mt-2 text-sm leading-6 text-foreground/80">{legitimacy.companyProfile.summary}</p>}
+                {legitimacy.companyProfile.mission && (
+                  <div className="mt-3 rounded-lg bg-card/60 px-3 py-2.5">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Mission</p>
+                    <p className="mt-1 text-sm leading-6 text-foreground/80">{legitimacy.companyProfile.mission}</p>
+                  </div>
+                )}
+                <div className="mt-3 grid gap-3 lg:grid-cols-2">
+                  <ListBlock title="Values & culture" items={[...legitimacy.companyProfile.values, ...legitimacy.companyProfile.culture]} empty="No reliable values or culture details found." muted />
+                  <ListBlock title="How they work" items={legitimacy.companyProfile.workStyle} empty="No reliable work-style details found." muted />
+                  <ListBlock title="Interview signals" items={legitimacy.companyProfile.interviewTips} empty="No reliable interview guidance found." muted />
+                  <ListBlock title="Dress code" items={legitimacy.companyProfile.attire ? [legitimacy.companyProfile.attire] : []} empty="No reliable attire guidance found." muted />
+                </div>
+                {legitimacy.companyProfile.sources.length > 0 && (
+                  <div className="mt-3 border-t border-primary/15 pt-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Research sources</p>
+                    <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1.5 text-xs">
+                      {legitimacy.companyProfile.sources.map((source) => (
+                        <a key={source.url} href={source.url} target="_blank" rel="noreferrer noopener" className="font-medium text-primary underline-offset-2 hover:underline">
+                          {source.title} ↗
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+          </>
         );
       })()}
 

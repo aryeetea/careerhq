@@ -65,7 +65,7 @@ Deno.serve(async (request) => {
     // posting (see SCAM RED FLAGS in careerCoach.ts) — never throws, so a
     // search-API hiccup degrades to the text-only result instead of
     // failing the whole analysis.
-    const analysis = await enrichCompanyLegitimacyWithWebCheck(rawAnalysis);
+    const analysis = await enrichCompanyLegitimacyWithWebCheck(openai, rawAnalysis);
 
     if (savedJob) {
       const recommendedResumeId = analysis.recommendedResumeId;

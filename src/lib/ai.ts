@@ -116,6 +116,17 @@ export const logisticsConsiderationSchema = z.object({
 // (see enrichCompanyLegitimacyWithWebCheck in the edge function's shared
 // utils.ts) — "not_checked" when the company name was unknown or the
 // search API wasn't reachable, never a reason the whole analysis fails.
+export const companyProfileSchema = z.object({
+  summary: z.string().nullable(),
+  mission: z.string().nullable(),
+  values: z.array(z.string()),
+  culture: z.array(z.string()),
+  workStyle: z.array(z.string()),
+  interviewTips: z.array(z.string()),
+  attire: z.string().nullable(),
+  sources: z.array(z.object({ title: z.string(), url: z.string() })),
+});
+
 export const companyLegitimacySchema = z.object({
   riskLevel: z.enum(["none", "low", "medium", "high"]),
   redFlags: z.array(z.string()),
@@ -138,6 +149,7 @@ export const companyLegitimacySchema = z.object({
   // verdict server-side. Optional/defaulted for the same reason as source
   // above: analyses stored before this field existed must still parse.
   locationConfidence: z.enum(["confirmed", "mismatch_detected", "not_checked"]).optional().transform((v) => v ?? "not_checked"),
+  companyProfile: companyProfileSchema.nullable().optional().transform((value) => value ?? null),
 });
 
 export const aiJobExtractionSchema = z.object({
