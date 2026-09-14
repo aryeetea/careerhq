@@ -67,6 +67,7 @@ export function AddJobDialog({ open, onOpenChange, resumes }: AddJobDialogProps)
   const { push } = useToast();
   const [analysis, setAnalysis] = React.useState<JobAnalysisPayload | null>(null);
   const [openSections, setOpenSections] = React.useState<string[]>([]);
+  const [blockingImportHint, setBlockingImportHint] = React.useState<string | null>(null);
   const analyzingHint = useProgressHint(analyzeJob.isPending, ANALYSIS_PROGRESS_STEPS);
   // Set when onSubmit finds an existing job with the same company + title —
   // the form is held here rather than saved until the user explicitly
@@ -98,6 +99,7 @@ export function AddJobDialog({ open, onOpenChange, resumes }: AddJobDialogProps)
       reset(DEFAULT_VALUES);
       setAnalysis(null);
       setOpenSections([]);
+      setBlockingImportHint(null);
       setDuplicateMatch(null);
       pendingSaveRef.current = null;
     }
@@ -110,6 +112,7 @@ export function AddJobDialog({ open, onOpenChange, resumes }: AddJobDialogProps)
   }
 
   async function handleAnalyze() {
+    setBlockingImportHint(null);
     try {
       const result = await analyzeJob.mutateAsync({
         jobUrl: watch("jobUrl")?.trim() || undefined,
@@ -140,7 +143,14 @@ export function AddJobDialog({ open, onOpenChange, resumes }: AddJobDialogProps)
       }
       push("AI analysis is ready to review.", "success");
     } catch (err) {
-      push(err instanceof Error ? err.message : "Couldn't analyze that job yet.", "error");
+      const message = err instanceof Error ? err.message : "Couldn't analyze that job yet.";
+      if (message.includes("blocks automated imports") || message.includes("Paste the job description below")) {
+        setBlockingImportHint(message);
+        push("Paste the full job description below, then try again.", "info");
+        setTimeout(() => document.getElementById("jobDescription")?.focus(), 0);
+        return;
+      }
+      push(message, "error");
     }
   }
 
@@ -245,7 +255,7 @@ export function AddJobDialog({ open, onOpenChange, resumes }: AddJobDialogProps)
               </div>
               <Input id="jobUrl" placeholder="https://linkedin.com/jobs/view/…" {...register("jobUrl")} />
               <p className="text-xs text-muted-foreground" aria-live="polite">
-                {analyzingHint ??
+                {blockingImportHint ?? analyzingHint ??
                   "Indeed, LinkedIn, and Glassdoor block automated imports. You don't need a link at all — paste the full job description below and analyze that directly."}
               </p>
             </div>
