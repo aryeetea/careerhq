@@ -1,5 +1,5 @@
 import * as React from "react";
-import { AlertCircle, Building2, ChevronLeft, ChevronRight, FileText, Search, ShieldAlert, ShieldCheck, Sparkles, Target } from "lucide-react";
+import { AlertCircle, Building2, FileText, Search, ShieldAlert, ShieldCheck, Sparkles, Target } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -94,12 +94,6 @@ export function AnalysisSummary({
   const scoring = analysis.analysis.scoringDimensions as JobAnalysisPayload["analysis"]["scoringDimensions"] | undefined;
   const careerDirectionFit = scoring?.careerDirectionFit ?? null;
   const hasNewFields = Boolean(analysis.analysis.scoringDimensions && analysis.analysis.gapSeverity && analysis.analysis.recommendationPriority);
-  const [breakdownSlide, setBreakdownSlide] = React.useState(0);
-  const [breakdownHeight, setBreakdownHeight] = React.useState<number | null>(null);
-  const breakdownTouchStartX = React.useRef<number | null>(null);
-  const breakdownTrackRef = React.useRef<HTMLDivElement | null>(null);
-  const breakdownSlideLabels = ["Fit details", "Assessment details", "Résumé comparison", "Résumé improvements"];
-  const breakdownSlideCount = 4;
   const jobDetails = [
     { label: "Location", value: analysis.jobExtraction.location },
     { label: "Work setup", value: analysis.jobExtraction.workArrangement?.replace(/_/g, " ") ?? null },
@@ -116,23 +110,6 @@ export function AnalysisSummary({
       ...analysis.jobExtraction.requiredSkills,
     ]),
   ).slice(0, 4);
-  const changeBreakdownSlide = (direction: -1 | 1) => {
-    setBreakdownSlide((current) => (current + direction + breakdownSlideCount) % breakdownSlideCount);
-  };
-  const handleBreakdownTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
-    const startX = breakdownTouchStartX.current;
-    breakdownTouchStartX.current = null;
-    if (startX === null) return;
-    const distance = event.changedTouches[0].clientX - startX;
-    if (Math.abs(distance) < 48) return;
-    changeBreakdownSlide(distance < 0 ? 1 : -1);
-  };
-
-  React.useLayoutEffect(() => {
-    const activeSlide = breakdownTrackRef.current?.querySelector<HTMLElement>(`[data-breakdown-slide="${breakdownSlide}"]`);
-    setBreakdownHeight(activeSlide?.offsetHeight ?? null);
-  }, [analysis, breakdownSlide]);
-
   return (
     <div className="grid gap-3">
       <Card className="border-border/60 bg-card/60">
@@ -518,92 +495,70 @@ export function AnalysisSummary({
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-sm font-semibold">Analysis breakdown</p>
-              <p className="mt-0.5 text-xs text-muted-foreground">{breakdownSlideLabels[breakdownSlide]}</p>
-            </div>
-            <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => changeBreakdownSlide(-1)} aria-label="Previous breakdown section">
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => changeBreakdownSlide(1)} aria-label="Next breakdown section">
-                <ChevronRight className="h-4 w-4" />
-              </Button>
+              <p className="mt-0.5 text-xs text-muted-foreground">All sections shown together.</p>
             </div>
           </div>
 
-          <div
-            className="mt-4 overflow-hidden transition-[height] duration-300 ease-out motion-reduce:transition-none"
-            style={breakdownHeight === null ? undefined : { height: breakdownHeight }}
-            role="region"
-            aria-live="polite"
-            aria-label="Analysis breakdown"
-          >
-            <div
-              ref={breakdownTrackRef}
-              className="flex touch-pan-y transition-transform duration-300 ease-out motion-reduce:transition-none"
-              style={{ transform: `translateX(-${breakdownSlide * 100}%)` }}
-              onTouchStart={(event) => { breakdownTouchStartX.current = event.touches[0].clientX; }}
-              onTouchEnd={handleBreakdownTouchEnd}
-            >
-              <section data-breakdown-slide="0" className="w-full shrink-0" aria-hidden={breakdownSlide !== 0}>
-                <p className="text-sm font-medium">Fit details</p>
-                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                  <ScoreTile label="Qualification" value={scoring?.qualificationFit ?? null} />
-                  <ScoreTile label="Transferable" value={scoring?.transferableSkillsFit ?? null} />
-                  <ScoreTile label="Career direction" value={scoring?.careerDirectionFit ?? null} />
-                  <ScoreTile label="Experience/seniority" value={scoring?.experienceSeniorityFit ?? null} />
-                  <ScoreTile label="Location/arrangement" value={scoring?.locationWorkArrangementFit ?? null} />
-                  <ScoreTile label="Posting legitimacy" value={scoring?.legitimacyConfidence ?? null} />
-                </div>
-              </section>
+          <div className="mt-4 grid gap-4" role="region" aria-live="polite" aria-label="Analysis breakdown">
+            <section>
+              <p className="text-sm font-medium">Fit details</p>
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                <ScoreTile label="Qualification" value={scoring?.qualificationFit ?? null} />
+                <ScoreTile label="Transferable" value={scoring?.transferableSkillsFit ?? null} />
+                <ScoreTile label="Career direction" value={scoring?.careerDirectionFit ?? null} />
+                <ScoreTile label="Experience/seniority" value={scoring?.experienceSeniorityFit ?? null} />
+                <ScoreTile label="Location/arrangement" value={scoring?.locationWorkArrangementFit ?? null} />
+                <ScoreTile label="Posting legitimacy" value={scoring?.legitimacyConfidence ?? null} />
+              </div>
+            </section>
 
-              <section data-breakdown-slide="1" className="w-full shrink-0" aria-hidden={breakdownSlide !== 1}>
-                <p className="text-sm font-medium">Assessment details</p>
-                <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                  <Badge className={cn("border-0", opportunityAssessment.className)}>{opportunityAssessment.label}</Badge>
-                  <span className={cn("font-medium", confidence.className)}>{confidence.label}</span>
-                  <span className={cn("font-medium", importStatus.className)}>{importStatus.label}</span>
-                </div>
-              </section>
+            <section>
+              <p className="text-sm font-medium">Assessment details</p>
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                <Badge className={cn("border-0", opportunityAssessment.className)}>{opportunityAssessment.label}</Badge>
+                <span className={cn("font-medium", confidence.className)}>{confidence.label}</span>
+                <span className={cn("font-medium", importStatus.className)}>{importStatus.label}</span>
+              </div>
+            </section>
 
-              <section data-breakdown-slide="2" className="w-full shrink-0" aria-hidden={breakdownSlide !== 2}>
-                <p className="text-sm font-medium">Résumé comparison</p>
-                {analysis.resumeRanking.length === 0 ? (
-                  <p className="mt-2 text-sm text-muted-foreground">No active resumes with extractable text were available to compare.</p>
-                ) : (
-                  <div className="mt-3 grid gap-2.5">
-                    {analysis.resumeRanking.map((resume, index) => (
-                      <div key={resume.resumeId} className={cn("rounded-xl border px-3 py-3", selectedResumeId === resume.resumeId ? "border-primary/40 bg-primary/5" : "border-border/60 bg-card/50")}>
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-medium">{resume.resumeName}</p>
-                            {index === 0 && <Badge className="border-0 bg-primary/10 text-primary">Best match</Badge>}
-                          </div>
-                          <Badge variant="outline">{resume.compatibilityScore}/100</Badge>
+            <section>
+              <p className="text-sm font-medium">Résumé comparison</p>
+              {analysis.resumeRanking.length === 0 ? (
+                <p className="mt-2 text-sm text-muted-foreground">No active resumes with extractable text were available to compare.</p>
+              ) : (
+                <div className="mt-3 grid gap-2.5">
+                  {analysis.resumeRanking.map((resume, index) => (
+                    <div key={resume.resumeId} className={cn("rounded-xl border px-3 py-3", selectedResumeId === resume.resumeId ? "border-primary/40 bg-primary/5" : "border-border/60 bg-card/50")}>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium">{resume.resumeName}</p>
+                          {index === 0 && <Badge className="border-0 bg-primary/10 text-primary">Best match</Badge>}
                         </div>
-                        <p className="mt-1 text-sm text-muted-foreground">{resume.recommendationReason}</p>
+                        <Badge variant="outline">{resume.compatibilityScore}/100</Badge>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </section>
+                      <p className="mt-1 text-sm text-muted-foreground">{resume.recommendationReason}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
 
-              <section data-breakdown-slide="3" className="w-full shrink-0" aria-hidden={breakdownSlide !== 3}>
-                <p className="text-sm font-medium">Résumé improvements</p>
-                {analysis.resumeSuggestions.length === 0 ? (
-                  <p className="mt-2 text-sm text-muted-foreground">No resume-improvement suggestions were needed from the available evidence.</p>
-                ) : (
-                  <div className="mt-3 grid gap-2.5">
-                    {analysis.resumeSuggestions.map((suggestion, index) => (
-                      <div key={`${suggestion.type}-${index}`} className="rounded-xl border border-border/60 bg-card/50 px-3 py-3">
-                        <Badge variant="outline">{RESUME_SUGGESTION_TYPE_META[suggestion.type]}</Badge>
-                        <p className="mt-2 text-sm text-foreground/90">{suggestion.suggestion}</p>
-                        <p className="mt-1 text-sm text-muted-foreground">{suggestion.reason}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </section>
-            </div>
+            <section>
+              <p className="text-sm font-medium">Résumé improvements</p>
+              {analysis.resumeSuggestions.length === 0 ? (
+                <p className="mt-2 text-sm text-muted-foreground">No resume-improvement suggestions were needed from the available evidence.</p>
+              ) : (
+                <div className="mt-3 grid gap-2.5">
+                  {analysis.resumeSuggestions.map((suggestion, index) => (
+                    <div key={`${suggestion.type}-${index}`} className="rounded-xl border border-border/60 bg-card/50 px-3 py-3">
+                      <Badge variant="outline">{RESUME_SUGGESTION_TYPE_META[suggestion.type]}</Badge>
+                      <p className="mt-2 text-sm text-foreground/90">{suggestion.suggestion}</p>
+                      <p className="mt-1 text-sm text-muted-foreground">{suggestion.reason}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
           </div>
         </CardContent>
       </Card>
