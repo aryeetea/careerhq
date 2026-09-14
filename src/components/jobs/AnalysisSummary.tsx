@@ -300,12 +300,7 @@ export function AnalysisSummary({
           <>
           <Card className={cn("border-2 bg-card/60", isClean ? "border-success/30" : legitimacy.riskLevel === "high" ? "border-destructive/40" : "border-gold/40")}>
             <CardContent className="p-4">
-              <p className="flex items-center gap-1.5 text-sm font-semibold">
-                {isClean ? (
-                  <ShieldCheck className="h-4 w-4 shrink-0 text-success" />
-                ) : (
-                  <ShieldAlert className="h-4 w-4 shrink-0 text-destructive" />
-                )}
+              <p className="text-sm font-semibold">
                 Company & posting check
               </p>
               <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -490,78 +485,6 @@ export function AnalysisSummary({
         );
       })()}
 
-      <Card className="border-border/60 bg-card/60">
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-semibold">Analysis breakdown</p>
-              <p className="mt-0.5 text-xs text-muted-foreground">All sections shown together.</p>
-            </div>
-          </div>
-
-          <div className="mt-4 grid gap-4" role="region" aria-live="polite" aria-label="Analysis breakdown">
-            <section>
-              <p className="text-sm font-medium">Fit details</p>
-              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                <ScoreTile label="Qualification" value={scoring?.qualificationFit ?? null} />
-                <ScoreTile label="Transferable" value={scoring?.transferableSkillsFit ?? null} />
-                <ScoreTile label="Career direction" value={scoring?.careerDirectionFit ?? null} />
-                <ScoreTile label="Experience/seniority" value={scoring?.experienceSeniorityFit ?? null} />
-                <ScoreTile label="Location/arrangement" value={scoring?.locationWorkArrangementFit ?? null} />
-                <ScoreTile label="Posting legitimacy" value={scoring?.legitimacyConfidence ?? null} />
-              </div>
-            </section>
-
-            <section>
-              <p className="text-sm font-medium">Assessment details</p>
-              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                <Badge className={cn("border-0", opportunityAssessment.className)}>{opportunityAssessment.label}</Badge>
-                <span className={cn("font-medium", confidence.className)}>{confidence.label}</span>
-                <span className={cn("font-medium", importStatus.className)}>{importStatus.label}</span>
-              </div>
-            </section>
-
-            <section>
-              <p className="text-sm font-medium">Résumé comparison</p>
-              {analysis.resumeRanking.length === 0 ? (
-                <p className="mt-2 text-sm text-muted-foreground">No active resumes with extractable text were available to compare.</p>
-              ) : (
-                <div className="mt-3 grid gap-2.5">
-                  {analysis.resumeRanking.map((resume, index) => (
-                    <div key={resume.resumeId} className={cn("rounded-xl border px-3 py-3", selectedResumeId === resume.resumeId ? "border-primary/40 bg-primary/5" : "border-border/60 bg-card/50")}>
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium">{resume.resumeName}</p>
-                          {index === 0 && <Badge className="border-0 bg-primary/10 text-primary">Best match</Badge>}
-                        </div>
-                        <Badge variant="outline">{resume.compatibilityScore}/100</Badge>
-                      </div>
-                      <p className="mt-1 text-sm text-muted-foreground">{resume.recommendationReason}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
-
-            <section>
-              <p className="text-sm font-medium">Résumé improvements</p>
-              {analysis.resumeSuggestions.length === 0 ? (
-                <p className="mt-2 text-sm text-muted-foreground">No resume-improvement suggestions were needed from the available evidence.</p>
-              ) : (
-                <div className="mt-3 grid gap-2.5">
-                  {analysis.resumeSuggestions.map((suggestion, index) => (
-                    <div key={`${suggestion.type}-${index}`} className="rounded-xl border border-border/60 bg-card/50 px-3 py-3">
-                      <Badge variant="outline">{RESUME_SUGGESTION_TYPE_META[suggestion.type]}</Badge>
-                      <p className="mt-2 text-sm text-foreground/90">{suggestion.suggestion}</p>
-                      <p className="mt-1 text-sm text-muted-foreground">{suggestion.reason}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }
