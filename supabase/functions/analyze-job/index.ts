@@ -2,7 +2,6 @@ import { corsHeaders, json } from "../_shared/cors.ts";
 import { analyzeJobRequestSchema } from "../_shared/schemas.ts";
 import {
   analyzeJobAndResumes,
-  enforceRateLimit,
   enrichCompanyLegitimacyWithWebCheck,
   errorResponse,
   extractResumeText,
@@ -24,8 +23,6 @@ Deno.serve(async (request) => {
 
   try {
     const { user, adminClient } = await requireUser(request.headers.get("Authorization"));
-    await enforceRateLimit(adminClient, user.id, "analyze_job", 60 * 60 * 1000, 8);
-
     const payload = analyzeJobRequestSchema.parse(await request.json());
     const openai = getOpenAIClient();
 
