@@ -1,6 +1,9 @@
-import { Check, Flower2, Leaf, Moon, Sparkles, Sprout, Square, Sunrise } from "lucide-react";
+import * as React from "react";
+import { Check, Flower2, Leaf, Moon, Save, Sparkles, Sprout, Square, Sunrise } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
-import { useUpdateSettings } from "@/hooks/queries/useProfile";
+import { useSettings, useUpdateSettings } from "@/hooks/queries/useProfile";
+import { useToast } from "@/components/shared/toast";
+import { Button } from "@/components/ui/button";
 import type { ThemeName } from "@/types/database";
 import { cn } from "@/lib/utils";
 
@@ -18,48 +21,66 @@ const THEMES: { id: ThemeName; label: string; description: string; icon: typeof 
 
 export function ThemePicker() {
   const { theme, setTheme } = useTheme();
-  // Persists the choice to settings.theme (in addition to the local/
-  // localStorage state useTheme already keeps) so it follows the account
-  // to another device or browser via useThemeSync, rather than resetting
-  // to the local default there. Settings-page-only, so a signed-in user is
-  // always present.
+  const { data: settings } = useSettings();
   const updateSettings = useUpdateSettings();
+  const { push } = useToast();
+  const [draftTheme, setDraftTheme] = React.useState(theme);
+
+  const savedTheme = settings?.theme ?? theme;
+  const hasChanges = draftTheme !== savedTheme;
 
   function choose(id: ThemeName) {
+    setDraftTheme(id);
     setTheme(id);
-    updateSettings.mutate({ theme: id });
+  }
+
+  async function saveTheme() {
+    try {
+      await updateSettings.mutateAsync({ theme: draftTheme });
+      push("Theme saved.", "success");
+    } catch (err) {
+      push(err instanceof Error ? err.message : "Couldn't save that theme.", "error");
+    }
   }
 
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-      {THEMES.map((t) => {
-        const active = theme === t.id;
-        return (
-          <button
-            key={t.id}
-            onClick={() => choose(t.id)}
-            className={cn(
-              "relative flex flex-col gap-2.5 rounded-2xl border p-4 text-left transition-all",
-              active ? "border-primary shadow-soft ring-1 ring-primary/30" : "border-border hover:border-primary/30"
-            )}
-          >
-            {active && (
-              <span className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                <Check className="h-3 w-3" />
-              </span>
-            )}
-            <div className="flex gap-1.5">
-              {t.preview.map((c, i) => (
-                <span key={i} className="h-8 w-8 rounded-lg border border-black/5" style={{ backgroundColor: c }} />
-              ))}
-            </div>
-            <div className="flex items-center gap-1.5 text-sm font-medium">
-              <t.icon className="h-3.5 w-3.5" /> {t.label}
-            </div>
-            <p className="text-xs text-muted-foreground">{t.description}</p>
-          </button>
-        );
-      })}
+    <div className="grid gap-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {THEMES.map((t) => {
+          const active = draftTheme === t.id;
+          return (
+            <button
+              key={t.id}
+              onClick={() => choose(t.id)}
+              className={cn(
+                "relative flex flex-col gap-2.5 rounded-2xl border p-4 text-left transition-all",
+                active ? "border-primary shadow-soft ring-1 ring-primary/30" : "border-border hover:border-primary/30"
+              )}
+            >
+              {active && (
+                <span className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                  <Check className="h-3 w-3" />
+                </span>
+              )}
+              <div className="flex gap-1.5">
+                {t.preview.map((c, i) => (
+                  <span key={i} className="h-8 w-8 rounded-lg border border-black/5" style={{ backgroundColor: c }} />
+                ))}
+              </div>
+              <div className="flex items-center gap-1.5 text-sm font-medium">
+                <t.icon className="h-3.5 w-3.5" /> {t.label}
+              </div>
+              <p className="text-xs text-muted-foreground">{t.description}</p>
+            </button>
+          );
+        })}
+      </div>
+      <div className="flex justify-end">
+        <Button type="button" onClick={saveTheme} disabled={!hasChanges || updateSettings.isPending}>
+          <Save />
+          {updateSettings.isPending ? "Saving..." : "Save theme"}
+        </Button>
+      </div>
     </div>
   );
 }
