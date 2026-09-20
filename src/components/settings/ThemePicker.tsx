@@ -25,9 +25,15 @@ export function ThemePicker() {
   const updateSettings = useUpdateSettings();
   const { push } = useToast();
   const [draftTheme, setDraftTheme] = React.useState(theme);
+  const [lastSavedTheme, setLastSavedTheme] = React.useState<ThemeName | null>(settings?.theme ?? null);
 
-  const savedTheme = settings?.theme ?? theme;
-  const hasChanges = draftTheme !== savedTheme;
+  React.useEffect(() => {
+    if (settings?.theme) {
+      setLastSavedTheme(settings.theme);
+    }
+  }, [settings?.theme]);
+
+  const hasChanges = draftTheme !== lastSavedTheme;
 
   function choose(id: ThemeName) {
     setDraftTheme(id);

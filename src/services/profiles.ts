@@ -74,7 +74,11 @@ export async function getSettings(userId: string): Promise<Settings | null> {
 }
 
 export async function updateSettings(userId: string, patch: Partial<Settings>): Promise<Settings> {
-  const { data, error } = await supabase.from("settings").update(patch).eq("user_id", userId).select("*").single();
+  const { data, error } = await supabase
+    .from("settings")
+    .upsert({ user_id: userId, ...patch }, { onConflict: "user_id" })
+    .select("*")
+    .single();
   if (error) throw error;
   return data as Settings;
 }
