@@ -42,6 +42,7 @@ import {
 import { compactJobDescription, dateInputToISO, deriveVerdictSource, formatDate, formatDateTime, toDateInputValue } from "@/lib/utils";
 import type { JobAnalysisPayload } from "@/lib/ai";
 import { ANALYSIS_PROGRESS_STEPS, COVER_LETTER_PROGRESS_STEPS, useProgressHint } from "@/hooks/useProgressHint";
+import { describeEdgeFunctionError } from "@/lib/edgeFunctions";
 
 interface JobDetailDialogProps {
   job: Job | null;
@@ -258,7 +259,7 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
       }
       push("Analysis refreshed.", "success");
     } catch (err) {
-      push(err instanceof Error ? err.message : "Couldn't re-run the analysis.", "error");
+      push(describeEdgeFunctionError(err), "error");
     }
   }
 

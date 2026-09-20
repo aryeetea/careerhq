@@ -27,6 +27,7 @@ import { AnalysisSummary } from "@/components/jobs/AnalysisSummary";
 import { compactJobDescription, deriveVerdictSource, formatDate, toDateInputValue } from "@/lib/utils";
 import type { JobAnalysisPayload } from "@/lib/ai";
 import { ANALYSIS_PROGRESS_STEPS, useProgressHint } from "@/hooks/useProgressHint";
+import { describeEdgeFunctionError } from "@/lib/edgeFunctions";
 
 interface AddJobDialogProps {
   open: boolean;
@@ -143,8 +144,12 @@ export function AddJobDialog({ open, onOpenChange, resumes }: AddJobDialogProps)
       }
       push("AI analysis is ready to review.", "success");
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Couldn't analyze that job yet.";
-      if (message.includes("blocks automated imports") || message.includes("Paste the job description below")) {
+      const message = describeEdgeFunctionError(err);
+      if (
+        message.includes("full job description") ||
+        message.includes("couldn't read that job details") ||
+        message.includes("more details")
+      ) {
         setBlockingImportHint(message);
         push("Paste the full job description below, then try again.", "info");
         setTimeout(() => document.getElementById("jobDescription")?.focus(), 0);

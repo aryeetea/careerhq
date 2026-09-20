@@ -47,6 +47,38 @@ export class EdgeFunctionError extends Error {
   }
 }
 
+export function describeEdgeFunctionError(err: unknown): string {
+  if (err instanceof EdgeFunctionError) {
+    switch (err.code) {
+      case "unauthenticated":
+        return "Your session expired. Please sign in again.";
+      case "rate_limited":
+        return "Bloom is busy with AI requests right now. Please wait a moment and try again.";
+      case "validation_error":
+        return "We couldn't read that job details. Try pasting the full job description or using a different link.";
+      case "insufficient_context":
+        return "We need more details to analyze that job. Paste the full description or try another listing.";
+      case "not_found":
+        return "We couldn't find that job. Try another link or paste the description instead.";
+      case "not_configured":
+        return "AI analysis isn't configured for this app yet. Please try again later.";
+      case "network_error":
+        return "Bloom couldn't reach the AI service. Please check your connection and try again.";
+      case "upstream_error":
+      case "internal_error":
+        return "The AI analysis service is temporarily busy. Please try again in a moment.";
+      default:
+        return "AI analysis isn't available right now. Please try again shortly.";
+    }
+  }
+
+  if (err instanceof Error) {
+    return err.message || "AI analysis isn't available right now. Please try again shortly.";
+  }
+
+  return "AI analysis isn't available right now. Please try again shortly.";
+}
+
 // supabase-js's functions.invoke() wraps ANY non-2xx response in a
 // FunctionsHttpError whose .message is always the generic string "Edge
 // Function returned a non-2xx status code" — the actual { error, code }
