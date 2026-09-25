@@ -215,9 +215,9 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
         push("Status updated.", "success");
       }
       if (newStatus === "offer" && !wasOffer) celebrate("An offer! Take a moment — this is worth celebrating. 🎉");
-      // Status saves immediately, but the dialog should stay open until the
-      // user explicitly closes it. That lets people keep reviewing the job,
-      // run analysis, or update other fields without the panel disappearing.
+      if (newStatus === "applied") {
+        onOpenChange(false);
+      }
     } catch (err) {
       setValue("status", previousStatus, { shouldDirty: false });
       push(err instanceof Error ? err.message : "Couldn't update the status.", "error");

@@ -2,8 +2,18 @@ import * as React from "react";
 import type { ThemeName } from "@/types/database";
 
 const STORAGE_KEY = "bloom-theme";
+const FONT_STORAGE_KEY = "bloom-font";
 const THEME_MIGRATION_KEY = "bloom-theme-migrated";
 const THEME_MIGRATION_VERSION = "4";
+
+export type FontName = "inter" | "space-grotesk" | "comic-neue" | "fredoka";
+
+const FONT_FAMILIES: Record<FontName, { sans: string; display: string }> = {
+  inter: { sans: '"Inter", "Segoe UI", sans-serif', display: '"Space Grotesk", "Inter", sans-serif' },
+  "space-grotesk": { sans: '"Space Grotesk", "Inter", sans-serif', display: '"Space Grotesk", "Inter", sans-serif' },
+  "comic-neue": { sans: '"Comic Neue", "Fredoka", sans-serif', display: '"Comic Neue", "Fredoka", sans-serif' },
+  fredoka: { sans: '"Fredoka", "Comic Neue", sans-serif', display: '"Fredoka", "Comic Neue", sans-serif' },
+};
 
 // These were the themes available before the playful theme refresh. They
 // remain valid choices in the picker, but an old persisted value should not
@@ -14,6 +24,8 @@ const THEMES: readonly ThemeName[] = [...LEGACY_THEMES, "comic-pop", "candy", "g
 interface ThemeContextValue {
   theme: ThemeName;
   setTheme: (theme: ThemeName) => void;
+  font: FontName;
+  setFont: (font: FontName) => void;
 }
 
 const ThemeContext = React.createContext<ThemeContextValue | null>(null);
@@ -48,17 +60,38 @@ function applyTheme(theme: ThemeName) {
   root.setAttribute("data-theme", theme);
 }
 
+function getInitialFont(): FontName {
+  const stored = localStorage.getItem(FONT_STORAGE_KEY) as FontName | null;
+  if (stored && stored in FONT_FAMILIES) return stored;
+  return "inter";
+}
+
+function applyFont(font: FontName) {
+  const root = document.documentElement;
+  const family = FONT_FAMILIES[font];
+  root.style.setProperty("--font-sans", family.sans);
+  root.style.setProperty("--font-display", family.display);
+  root.setAttribute("data-font", font);
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = React.useState<ThemeName>(getInitialTheme);
+  const [font, setFontState] = React.useState<FontName>(getInitialFont);
 
   React.useEffect(() => {
     applyTheme(theme);
     localStorage.setItem(STORAGE_KEY, theme);
   }, [theme]);
 
-  const setTheme = React.useCallback((next: ThemeName) => setThemeState(next), []);
+  React.useEffect(() => {
+    applyFont(font);
+    localStorage.setItem(FONT_STORAGE_KEY, font);
+  }, [font]);
 
-  const value = React.useMemo(() => ({ theme, setTheme }), [theme, setTheme]);
+  const setTheme = React.useCallback((next: ThemeName) => setThemeState(next), []);
+  const setFont = React.useCallback((next: FontName) => setFontState(next), []);
+
+  const value = React.useMemo(() => ({ theme, setTheme, font, setFont }), [theme, setTheme, font, setFont]);
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
@@ -67,6 +100,11 @@ export function useTheme() {
   const ctx = React.useContext(ThemeContext);
   if (!ctx) throw new Error("useTheme must be used within ThemeProvider");
   return ctx;
+}
+
+export function useFont() {
+  const { font, setFont } = useTheme();
+  return { font, setFont };
 }
 
 /**

@@ -9,6 +9,9 @@
   /* Theme 1 (default): "Floral" — warm ivory, rose, sage, lavender    */
   /* ---------------------------------------------------------------- */
   :root {
+    --font-sans: "Inter", "Segoe UI", sans-serif;
+    --font-display: "Space Grotesk", "Inter", sans-serif;
+
     --background: 36 42% 96%;
     --foreground: 20 18% 17%;
 
@@ -663,9 +666,18 @@
       radial-gradient(circle at top right, hsl(var(--sky) / 0.18), transparent 28%),
       linear-gradient(180deg, hsl(var(--background)) 0%, hsl(var(--background)) 100%);
     background-attachment: fixed;
+    font-family: var(--font-sans);
     font-feature-settings: "cv11", "ss01";
     letter-spacing: 0.01em;
     text-rendering: optimizeLegibility;
+  }
+
+  .font-display {
+    font-family: var(--font-display);
+  }
+
+  .font-sans {
+    font-family: var(--font-sans);
   }
 
   ::-webkit-scrollbar {
