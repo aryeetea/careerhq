@@ -69,14 +69,9 @@ export default function DashboardStatDetail() {
   async function handleQuickStatusChange(job: Job, nextStatus: JobStatus) {
     if (job.status === nextStatus) return;
     try {
-      const updated = await updateJob.mutateAsync({ id: job.id, patch: { status: nextStatus } });
-      if (nextStatus === "applied" && !job.date_applied && updated.follow_up_date) {
-        push(`Application recorded. We'll remind you to follow up on ${new Date(updated.follow_up_date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}.`, "success");
-      } else {
-        push(`Moved to ${STATUS_META[nextStatus].label}.`, "success");
-      }
+      await updateJob.mutateAsync({ id: job.id, patch: { status: nextStatus } });
     } catch {
-      push("Couldn't update the status. Try again.", "error");
+      // Intentionally silent: a status change should just move the job without an interruption.
     }
   }
 

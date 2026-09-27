@@ -197,30 +197,18 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
   async function handleStatusChange(newStatus: JobFormValues["status"]) {
     if (!job) return;
     const previousStatus = watch("status");
-    const wasOffer = job.status === "offer";
     // Optimistic, and shouldDirty: false so this alone doesn't enable the
     // Save button for the rest of the (unrelated, still-unsaved) form —
     // same pattern already used for resumeId after a cover letter save.
     setValue("status", newStatus, { shouldDirty: false });
     try {
-      const updated = await updateJob.mutateAsync({ id: job.id, patch: { status: newStatus } });
-      if (newStatus === "applied" && !job.date_applied && updated.follow_up_date) {
-        push(`Application recorded. We'll remind you to follow up on ${formatDate(updated.follow_up_date)}.`, "success");
-      } else if (settings?.hidden_statuses.includes(newStatus)) {
-        // The status genuinely saved — but that board/list column is
-        // hidden by default, so the job is about to disappear from view
-        // with nothing else on screen explaining why. See Columns toggle.
-        push(`Status updated to ${STATUS_META[newStatus].label} — that column is hidden on your board. Unhide it from Columns to see this job there.`, "info");
-      } else {
-        push("Status updated.", "success");
-      }
-      if (newStatus === "offer" && !wasOffer) celebrate("An offer! Take a moment — this is worth celebrating. 🎉");
+      await updateJob.mutateAsync({ id: job.id, patch: { status: newStatus } });
       if (newStatus === "applied") {
         onOpenChange(false);
       }
     } catch (err) {
       setValue("status", previousStatus, { shouldDirty: false });
-      push(err instanceof Error ? err.message : "Couldn't update the status.", "error");
+      // Intentionally silent: a status change should just update the job without an interruption.
     }
   }
 
