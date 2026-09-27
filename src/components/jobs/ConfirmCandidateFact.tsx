@@ -1,9 +1,9 @@
 import * as React from "react";
-import { Check, LoaderCircle, Pencil } from "lucide-react";
+import { Check, Clock3, LoaderCircle, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea";
 import { cn } from "@/lib/utils";
-import { useCandidateFacts, useUpsertCandidateFact } from "@/hooks/queries/useCandidateFacts";
+import { useCandidateFacts, useDeleteCandidateFact, useUpsertCandidateFact } from "@/hooks/queries/useCandidateFacts";
 import { useToast } from "@/components/shared/toast";
 import type { CandidateFactAnswer } from "@/types/database";
 
@@ -40,6 +40,7 @@ export function ConfirmCandidateFact({
 }) {
   const { data: facts } = useCandidateFacts();
   const upsertFact = useUpsertCandidateFact();
+  const deleteFact = useDeleteCandidateFact();
   const { push } = useToast();
   const [editing, setEditing] = React.useState(false);
   const [detail, setDetail] = React.useState("");
@@ -64,6 +65,18 @@ export function ConfirmCandidateFact({
     }
   }
 
+  async function askAgainLater() {
+    if (!item.requirementKey) return;
+    try {
+      await deleteFact.mutateAsync(item.requirementKey);
+      push("This will be asked again later.", "info");
+      setEditing(false);
+      setDetail("");
+    } catch (err) {
+      push(err instanceof Error ? err.message : "Couldn't postpone this.", "error");
+    }
+  }
+
   if (existing && !editing) {
     return (
       <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-border/40 pt-2 text-xs">
@@ -77,6 +90,13 @@ export function ConfirmCandidateFact({
           className="inline-flex items-center gap-1 text-muted-foreground underline-offset-2 hover:text-primary hover:underline"
         >
           <Pencil className="h-3 w-3" /> Update
+        </button>
+        <button
+          type="button"
+          onClick={askAgainLater}
+          className="inline-flex items-center gap-1 text-muted-foreground underline-offset-2 hover:text-primary hover:underline"
+        >
+          <Clock3 className="h-3 w-3" /> Ask again later
         </button>
       </div>
     );
@@ -93,15 +113,26 @@ export function ConfirmCandidateFact({
             size="sm"
             variant="outline"
             className={cn("h-7 px-2.5 text-xs", pendingAnswer === answer && "opacity-70")}
-            disabled={upsertFact.isPending}
+            disabled={upsertFact.isPending || deleteFact.isPending}
             onClick={() => save(answer)}
           >
             {pendingAnswer === answer && upsertFact.isPending ? <LoaderCircle className="h-3 w-3 animate-spin" /> : null}
             {ANSWER_META[answer].label}
           </Button>
         ))}
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          className="h-7 px-2.5 text-xs"
+          onClick={askAgainLater}
+          disabled={upsertFact.isPending || deleteFact.isPending}
+        >
+          {deleteFact.isPending ? <LoaderCircle className="h-3 w-3 animate-spin" /> : <Clock3 className="h-3 w-3" />}
+          Ask again later
+        </Button>
         {existing && (
-          <Button type="button" size="sm" variant="ghost" className="h-7 px-2.5 text-xs" onClick={() => setEditing(false)} disabled={upsertFact.isPending}>
+          <Button type="button" size="sm" variant="ghost" className="h-7 px-2.5 text-xs" onClick={() => setEditing(false)} disabled={upsertFact.isPending || deleteFact.isPending}>
             Cancel
           </Button>
         )}

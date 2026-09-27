@@ -30,6 +30,18 @@ export function CandidateFactsList() {
   const { push } = useToast();
   const [pendingKey, setPendingKey] = React.useState<string | null>(null);
 
+  async function askAgainLater(requirementKey: string) {
+    setPendingKey(requirementKey);
+    try {
+      await deleteFact.mutateAsync(requirementKey);
+      push("Saved answer cleared. Bloom will ask about this again later.", "info");
+    } catch (err) {
+      push(err instanceof Error ? err.message : "Couldn't postpone that.", "error");
+    } finally {
+      setPendingKey(null);
+    }
+  }
+
   async function remove(requirementKey: string) {
     setPendingKey(requirementKey);
     try {
@@ -68,20 +80,37 @@ export function CandidateFactsList() {
                   {fact.detail && <span className="text-xs text-muted-foreground">{fact.detail}</span>}
                 </div>
               </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-8 px-2 text-muted-foreground hover:text-destructive"
-                disabled={deleteFact.isPending && pendingKey === fact.requirement_key}
-                onClick={() => remove(fact.requirement_key)}
-              >
-                {deleteFact.isPending && pendingKey === fact.requirement_key ? (
-                  <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Trash2 className="h-3.5 w-3.5" />
-                )}
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 text-muted-foreground hover:text-primary"
+                  disabled={deleteFact.isPending && pendingKey === fact.requirement_key}
+                  onClick={() => askAgainLater(fact.requirement_key)}
+                >
+                  {deleteFact.isPending && pendingKey === fact.requirement_key ? (
+                    <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <span className="text-xs">Ask again later</span>
+                  )}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 text-muted-foreground hover:text-destructive"
+                  disabled={deleteFact.isPending && pendingKey === fact.requirement_key}
+                  onClick={() => remove(fact.requirement_key)}
+                  aria-label={`Remove ${fact.label}`}
+                >
+                  {deleteFact.isPending && pendingKey === fact.requirement_key ? (
+                    <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-3.5 w-3.5" />
+                  )}
+                </Button>
+              </div>
             </div>
           ))}
         </div>
