@@ -19,14 +19,10 @@ import type {
 
 export const UNSET_SELECT_VALUE = "__unset__";
 
-// "applying", "ghosted", "closed", and "archived" stay in this map (and in
-// the JobStatus type) purely so any legacy row still renders a label
-// instead of crashing — none of the four is selectable anywhere in the app
-// anymore. New applications go straight from Saved to Applied (date_applied
-// is the meaningful signal, not a separate in-progress status); "ghosted"
-// was a guess dressed up as a fact, and Dashboard now shows a factual "no
-// response in 14 days" count instead; "closed" and "archived" were both
-// redundant with "Rejected" as a catch-all for "no longer active."
+// "applying", "closed", and "archived" remain in this map only so legacy
+// rows still render; they're not user-selectable anymore. "ghosted" was
+// reintroduced as the explicit "No response" stage users can choose when
+// a company goes quiet after an application.
 export const STATUS_META: Record<JobStatus, { label: string; dot: string; badge: string }> = {
   saved: { label: "Saved", dot: "bg-slate-400", badge: "bg-slate-400/15 text-slate-500" },
   applying: { label: "Applying", dot: "bg-sky", badge: "bg-sky/15 text-sky" },
@@ -37,7 +33,7 @@ export const STATUS_META: Record<JobStatus, { label: string; dot: string; badge:
   final_interview: { label: "Final interview", dot: "bg-lavender", badge: "bg-lavender/30 text-lavender-foreground" },
   offer: { label: "Offer", dot: "bg-success", badge: "bg-success/15 text-success" },
   rejected: { label: "Rejected", dot: "bg-destructive", badge: "bg-destructive/15 text-destructive" },
-  ghosted: { label: "Ghosted", dot: "bg-zinc-400", badge: "bg-zinc-400/15 text-zinc-500" },
+  ghosted: { label: "No response", dot: "bg-zinc-400", badge: "bg-zinc-400/15 text-zinc-500" },
   closed: { label: "Closed", dot: "bg-neutral-400", badge: "bg-neutral-400/15 text-neutral-500" },
   archived: { label: "Archived", dot: "bg-neutral-300", badge: "bg-neutral-300/15 text-neutral-400" },
 };
@@ -46,17 +42,19 @@ export const STATUS_META: Record<JobStatus, { label: string; dot: string; badge:
 export const DEFAULT_BOARD_COLUMNS: EditableJobStatus[] = [
   "saved",
   "applied",
+  "ghosted",
   "interview",
   "offer",
   "rejected",
 ];
 
 // The selectable status set everywhere in the app (board columns, status
-// pickers, filters). Deliberately excludes "applying", "ghosted", "closed",
-// and "archived" — see the note on STATUS_META above.
+// pickers, filters). "applying", "closed", and "archived" are still kept
+// out of the user-facing set because they're legacy-only buckets.
 export const ALL_BOARD_COLUMNS: EditableJobStatus[] = [
   "saved",
   "applied",
+  "ghosted",
   "assessment",
   "recruiter_contacted",
   "interview",
@@ -72,7 +70,7 @@ export const JOB_STATUSES: { value: EditableJobStatus; label: string }[] = ALL_B
 
 export function normalizeEditableJobStatus(status: JobStatus): EditableJobStatus {
   if (status === "applying") return "saved";
-  if (status === "ghosted" || status === "closed" || status === "archived") return "rejected";
+  if (status === "closed" || status === "archived") return "rejected";
   return status;
 }
 

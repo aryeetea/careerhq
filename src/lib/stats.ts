@@ -30,9 +30,8 @@ export interface DashboardStats {
   offers: number;
   rejections: number;
   /** Applications still sitting at "Applied" 14+ days after date_applied,
-   * with no interview/offer/rejection recorded. A factual, computed signal
-   * rather than a judgmental "Ghosted" label — nothing is ever auto-marked
-   * ghosted. */
+   * or explicitly marked "No response", whichever way the user opts to track it.
+   * This is a factual signal rather than a verdict. */
   noResponse: number;
   /** Trailing 7 calendar days (today inclusive), not a Monday-Sunday
    * calendar week. A calendar-week version of this was tried — it made the
@@ -66,7 +65,8 @@ export function computeDashboardStats(jobs: Job[]): DashboardStats {
   const offers = jobs.filter((j) => j.status === "offer").length;
   const rejections = jobs.filter((j) => j.status === "rejected").length;
   const noResponse = jobs.filter(
-    (j) => j.status === "applied" && j.date_applied && now.getTime() - new Date(j.date_applied).getTime() >= 14 * 86400000
+    (j) =>
+      (j.status === "ghosted" || (j.status === "applied" && j.date_applied && now.getTime() - new Date(j.date_applied).getTime() >= 14 * 86400000))
   ).length;
 
   const applicationsThisWeek = applied.filter((j) => isInLastSevenCalendarDays(j.date_applied!, now)).length;
@@ -213,7 +213,9 @@ export function getJobsForStatKind(
         .sort((a, b) => new Date(b.date_applied!).getTime() - new Date(a.date_applied!).getTime());
     case "no-response":
       return jobs.filter(
-        (j) => j.status === "applied" && j.date_applied && now.getTime() - new Date(j.date_applied).getTime() >= 14 * 86400000
+        (j) =>
+          j.status === "ghosted" ||
+          (j.status === "applied" && j.date_applied && now.getTime() - new Date(j.date_applied).getTime() >= 14 * 86400000)
       );
     case "requirements-to-confirm":
       return jobs.filter((j) => jobNeedsRequirementConfirmation(j, confirmedRequirementKeys));

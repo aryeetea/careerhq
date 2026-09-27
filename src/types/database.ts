@@ -9,6 +9,7 @@ export type EmploymentType = "full_time" | "part_time" | "contract" | "internshi
 export const EDITABLE_JOB_STATUSES = [
   "saved",
   "applied",
+  "ghosted",
   "assessment",
   "recruiter_contacted",
   "interview",
@@ -19,10 +20,10 @@ export const EDITABLE_JOB_STATUSES = [
 
 export type EditableJobStatus = (typeof EDITABLE_JOB_STATUSES)[number];
 
-// "closed" retired alongside "applying"/"ghosted" — see STATUS_META in
-// constants.tsx for why. "archived" retired the same way after it — an
-// extra bucket for "no longer active" wasn't pulling its weight next to
-// "Rejected," which already means that.
+// "applying" and the no-longer-active legacy buckets remain here for old
+// rows, while "ghosted" is re-enabled as the app's explicit "No response"
+// status. "closed" and "archived" stayed retired because "Rejected" already
+// covers the more useful active-outcome bucket.
 export type LegacyJobStatus = "applying" | "ghosted" | "closed" | "archived";
 
 export type JobStatus = EditableJobStatus | LegacyJobStatus;

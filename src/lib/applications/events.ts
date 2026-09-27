@@ -60,7 +60,7 @@ export const TIMELINE_EVENT_META: Record<TimelineEventType, { label: string; ico
   final_interview: { label: "Final interview", icon: Users, className: "bg-lavender/30 text-lavender-foreground" },
   offer: { label: "Offer received", icon: Trophy, className: "bg-success/15 text-success" },
   rejected: { label: "Not moving forward", icon: XCircle, className: "bg-destructive/15 text-destructive" },
-  ghosted: { label: "Went quiet", icon: Ghost, className: "bg-zinc-400/15 text-zinc-500" },
+  ghosted: { label: "No response", icon: Ghost, className: "bg-zinc-400/15 text-zinc-500" },
   closed: { label: "Closed", icon: Archive, className: "bg-neutral-400/15 text-neutral-500" },
   archived: { label: "Archived", icon: Archive, className: "bg-neutral-300/15 text-neutral-400" },
   follow_up: { label: "Follow-up", icon: CalendarClock, className: "bg-gold/15 text-gold" },
