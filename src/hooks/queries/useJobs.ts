@@ -234,6 +234,49 @@ export function useCompleteFollowUp() {
   });
 }
 
+/** Bulk completion for the dedicated Follow-ups due page — clears every job
+ * in the visible list with the same optimistic pattern as the single action. */
+export function useCompleteFollowUps() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  const key = queryKeys.jobs(user?.id ?? "");
+
+  return useMutation({
+    mutationFn: async ({ ids, nextRoundById }: { ids: string[]; nextRoundById: Record<string, number> }) => {
+      const results = await Promise.all(ids.map((id) => jobsService.completeFollowUp(id, nextRoundById[id] ?? 0)));
+      return results;
+    },
+    onMutate: async ({ ids, nextRoundById }) => {
+      await qc.cancelQueries({ queryKey: key });
+      const previous = qc.getQueryData<Job[]>(key);
+      qc.setQueryData<Job[]>(key, (prev) =>
+        prev?.map((j) =>
+          ids.includes(j.id)
+            ? {
+                ...j,
+                follow_up_date: null,
+                followed_up_at: new Date().toISOString(),
+                follow_up_round: nextRoundById[j.id] ?? j.follow_up_round + 1,
+              }
+            : j
+        )
+      );
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) qc.setQueryData(key, context.previous);
+    },
+    onSuccess: (updated) => {
+      qc.setQueryData<Job[]>(key, (prev) =>
+        prev?.map((j) => {
+          const match = updated.find((u) => u.id === j.id);
+          return match ? match : j;
+        })
+      );
+    },
+  });
+}
+
 /** The optional "schedule one final follow-up" offer after the first
  * completes — never invoked automatically past round 2. */
 export function useScheduleAnotherFollowUp() {

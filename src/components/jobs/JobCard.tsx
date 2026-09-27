@@ -17,10 +17,11 @@ interface JobCardProps {
   dragAttributes?: DraggableAttributes;
   dragListeners?: DraggableSyntheticListeners;
   style?: React.CSSProperties;
+  trailingAction?: React.ReactNode;
 }
 
 export const JobCard = React.forwardRef<HTMLDivElement, JobCardProps>(
-  ({ job, resume, onClick, isDragging, dragAttributes, dragListeners, style }, ref) => {
+  ({ job, resume, onClick, isDragging, dragAttributes, dragListeners, style, trailingAction }, ref) => {
     const { data: settings } = useSettings();
     const showAiFit = settings?.show_ai_fit_score ?? true;
     // Cheap even with many cards mounted at once (board, mobile list,
@@ -129,14 +130,17 @@ export const JobCard = React.forwardRef<HTMLDivElement, JobCardProps>(
           </div>
         )}
 
-        <div className="mt-2.5 flex items-center justify-between border-t border-border/70 pt-2 text-[11px] text-muted-foreground">
+        <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-border/70 pt-2 text-[11px] text-muted-foreground">
           <span>{job.date_applied ? `Applied ${formatDate(job.date_applied)}` : `Found ${formatDate(job.date_found)}`}</span>
-          {resume && (
-            <span className="flex max-w-[45%] items-center gap-1 truncate">
-              <FileText className="h-3 w-3 shrink-0" />
-              <span className="truncate">{resume.name}</span>
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            {resume && (
+              <span className="flex max-w-[45%] items-center gap-1 truncate">
+                <FileText className="h-3 w-3 shrink-0" />
+                <span className="truncate">{resume.name}</span>
+              </span>
+            )}
+            {trailingAction && <div className="shrink-0">{trailingAction}</div>}
+          </div>
         </div>
       </div>
     );

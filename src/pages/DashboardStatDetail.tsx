@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
-import { ArrowLeft, Inbox } from "lucide-react";
+import { ArrowLeft, Check, Inbox } from "lucide-react";
 import { TopBar } from "@/components/layout/TopBar";
 import { PageContent, PageContainer } from "@/components/layout/PageContent";
 import { Button } from "@/components/ui/button";
@@ -8,8 +8,9 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { ErrorState } from "@/components/shared/ErrorState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { JobCard } from "@/components/jobs/JobCard";
+import { FollowUpCheckmark } from "@/components/jobs/FollowUpCheckmark";
 import { JobDetailDialog } from "@/components/jobs/JobDetailDialog";
-import { useJobs } from "@/hooks/queries/useJobs";
+import { useCompleteFollowUps, useJobs } from "@/hooks/queries/useJobs";
 import { useResumes } from "@/hooks/queries/useResumes";
 import { useCandidateFacts } from "@/hooks/queries/useCandidateFacts";
 import { computeDashboardStats, getJobsForStatKind, DASHBOARD_STAT_META, type DashboardStatKind } from "@/lib/stats";
@@ -26,6 +27,7 @@ const VALID_KINDS = new Set<string>(Object.keys(DASHBOARD_STAT_META));
 export default function DashboardStatDetail() {
   const { kind: kindParam } = useParams<{ kind: string }>();
   const { data: jobs = [], isLoading, isError, refetch } = useJobs();
+  const completeFollowUps = useCompleteFollowUps();
   const { data: resumes = [] } = useResumes();
   const { data: candidateFacts } = useCandidateFacts();
   const resumeById = React.useMemo(() => new Map(resumes.map((r) => [r.id, r])), [resumes]);
@@ -49,6 +51,14 @@ export default function DashboardStatDetail() {
   );
   const stats = React.useMemo(() => computeDashboardStats(jobs), [jobs]);
 
+  async function handleClearAllFollowUps() {
+    if (list.length === 0) return;
+    await completeFollowUps.mutateAsync({
+      ids: list.map((job) => job.id),
+      nextRoundById: Object.fromEntries(list.map((job) => [job.id, job.follow_up_round + 1])),
+    });
+  }
+
   const backButton = (
     <Button variant="ghost" size="sm" className="gap-1.5" asChild>
       <Link to="/app">
@@ -57,9 +67,17 @@ export default function DashboardStatDetail() {
     </Button>
   );
 
+  const clearAllButton =
+    kind === "follow-ups-due" && list.length > 0 ? (
+      <Button variant="outline" size="sm" onClick={handleClearAllFollowUps} disabled={completeFollowUps.isPending} className="gap-1.5">
+        <Check className="h-4 w-4" />
+        {completeFollowUps.isPending ? "Clearing..." : `Clear all (${list.length})`}
+      </Button>
+    ) : null;
+
   return (
     <div className="flex flex-1 flex-col">
-      <TopBar title={meta.title} subtitle={meta.description} action={backButton} />
+      <TopBar title={meta.title} subtitle={meta.description} action={<div className="flex items-center gap-2">{clearAllButton}{backButton}</div>} />
       <PageContent>
         <PageContainer>
           {isError ? (
@@ -82,7 +100,13 @@ export default function DashboardStatDetail() {
               )}
               <div className="grid gap-2.5">
                 {list.map((job) => (
-                  <JobCard key={job.id} job={job} resume={job.resume_id ? resumeById.get(job.resume_id) : undefined} onClick={() => setSelectedJobId(job.id)} />
+                  <JobCard
+                    key={job.id}
+                    job={job}
+                    resume={job.resume_id ? resumeById.get(job.resume_id) : undefined}
+                    onClick={() => setSelectedJobId(job.id)}
+                    trailingAction={kind === "follow-ups-due" ? <FollowUpCheckmark job={job} className="h-8 w-8" /> : undefined}
+                  />
                 ))}
               </div>
             </>
