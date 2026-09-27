@@ -1,10 +1,13 @@
 import * as React from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Check, Flower2, Leaf, Moon, Save, Sparkles, Sprout, Square, Sunrise } from "lucide-react";
 import { useTheme, type FontName } from "@/hooks/useTheme";
+import { useAuth } from "@/hooks/useAuth";
 import { useSettings, useUpdateSettings } from "@/hooks/queries/useProfile";
 import { useToast } from "@/components/shared/toast";
 import { Button } from "@/components/ui/button";
-import type { ThemeName } from "@/types/database";
+import { queryKeys } from "@/lib/queryClient";
+import type { Settings, ThemeName } from "@/types/database";
 import { cn } from "@/lib/utils";
 
 const THEMES: { id: ThemeName; label: string; description: string; icon: typeof Flower2; preview: string[] }[] = [
@@ -27,6 +30,8 @@ const FONTS: { id: FontName; label: string; sample: string }[] = [
 ];
 
 export function ThemePicker() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const { theme, setTheme, font, setFont } = useTheme();
   const { data: settings } = useSettings();
   const updateSettings = useUpdateSettings();
@@ -39,6 +44,7 @@ export function ThemePicker() {
   React.useEffect(() => {
     if (settings?.theme) {
       setLastSavedTheme(settings.theme);
+      setDraftTheme(settings.theme);
     }
   }, [settings?.theme]);
 
@@ -55,14 +61,24 @@ export function ThemePicker() {
   }
 
   async function savePreferences() {
+    if (!user?.id) return;
+
     try {
+      const nextTheme = draftTheme;
+      const nextFont = draftFont;
+
+      queryClient.setQueryData<Settings | null>(queryKeys.settings(user.id), (current) =>
+        current ? { ...current, theme: nextTheme } : current
+      );
+
       if (draftTheme !== lastSavedTheme) {
-        await updateSettings.mutateAsync({ theme: draftTheme });
+        await updateSettings.mutateAsync({ theme: nextTheme });
       }
-      setLastSavedTheme(draftTheme);
-      setLastSavedFont(draftFont);
-      setTheme(draftTheme);
-      setFont(draftFont);
+
+      setLastSavedTheme(nextTheme);
+      setLastSavedFont(nextFont);
+      setTheme(nextTheme);
+      setFont(nextFont);
       push("Theme and font saved.", "success");
     } catch (err) {
       push(err instanceof Error ? err.message : "Couldn't save that theme.", "error");
