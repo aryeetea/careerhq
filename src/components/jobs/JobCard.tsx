@@ -161,6 +161,7 @@ export const JobCard = React.forwardRef<HTMLDivElement, JobCardProps>(
                       key={option.value}
                       onSelect={(event) => {
                         event.preventDefault();
+                        event.stopPropagation();
                         onStatusChange(job, option.value);
                       }}
                     >
