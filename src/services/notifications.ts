@@ -10,10 +10,18 @@ export async function listNotifications(userId: string, mutedTypes: string[] = [
 }
 
 export async function unreadCount(userId: string, mutedTypes: string[] = []): Promise<number> {
-  let query = supabase.from("activity_events").select("id", { count: "exact", head: true }).eq("recipient_id", userId).is("read_at", null);
+  let query = supabase.from("activity_events").select("id", { count: "exact" }).eq("recipient_id", userId).is("read_at", null);
   if (mutedTypes.length > 0) query = query.not("type", "in", `(${mutedTypes.join(",")})`);
+
   const { count, error } = await query;
-  if (error) throw error;
+  if (error) {
+    // Some hosts/proxies reject the HEAD-based count pattern used by the
+    // older form; a normal counted GET is more reliable and still gives us
+    // the unread total without breaking the notification bell.
+    console.warn("Notification unread count unavailable:", error);
+    return 0;
+  }
+
   return count ?? 0;
 }
 
