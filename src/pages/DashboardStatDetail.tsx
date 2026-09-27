@@ -51,11 +51,13 @@ export default function DashboardStatDetail() {
   );
   const stats = React.useMemo(() => computeDashboardStats(jobs), [jobs]);
 
+  const followUpsToClear = React.useMemo(() => list.filter((job) => job.follow_up_date), [list]);
+
   async function handleClearAllFollowUps() {
-    if (list.length === 0) return;
+    if (followUpsToClear.length === 0) return;
     await completeFollowUps.mutateAsync({
-      ids: list.map((job) => job.id),
-      nextRoundById: Object.fromEntries(list.map((job) => [job.id, job.follow_up_round + 1])),
+      ids: followUpsToClear.map((job) => job.id),
+      nextRoundById: Object.fromEntries(followUpsToClear.map((job) => [job.id, job.follow_up_round + 1])),
     });
   }
 
@@ -68,10 +70,10 @@ export default function DashboardStatDetail() {
   );
 
   const clearAllButton =
-    kind === "follow-ups-due" && list.length > 0 ? (
+    (kind === "follow-ups-due" || kind === "no-response") && followUpsToClear.length > 0 ? (
       <Button variant="outline" size="sm" onClick={handleClearAllFollowUps} disabled={completeFollowUps.isPending} className="gap-1.5">
         <Check className="h-4 w-4" />
-        {completeFollowUps.isPending ? "Clearing..." : `Clear all (${list.length})`}
+        {completeFollowUps.isPending ? "Clearing..." : `Clear all (${followUpsToClear.length})`}
       </Button>
     ) : null;
 
@@ -105,7 +107,11 @@ export default function DashboardStatDetail() {
                     job={job}
                     resume={job.resume_id ? resumeById.get(job.resume_id) : undefined}
                     onClick={() => setSelectedJobId(job.id)}
-                    trailingAction={kind === "follow-ups-due" ? <FollowUpCheckmark job={job} className="h-8 w-8" /> : undefined}
+                    trailingAction={
+                      (kind === "follow-ups-due" || kind === "no-response") && job.follow_up_date ? (
+                        <FollowUpCheckmark job={job} className="h-8 w-8" />
+                      ) : undefined
+                    }
                   />
                 ))}
               </div>
