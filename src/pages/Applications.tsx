@@ -19,7 +19,7 @@ import { JobDetailDialog } from "@/components/jobs/JobDetailDialog";
 import { useJobs, useMoveJob, useAllJobStatusHistory } from "@/hooks/queries/useJobs";
 import { useResumes } from "@/hooks/queries/useResumes";
 import { useSettings, useUpdateSettings } from "@/hooks/queries/useProfile";
-import { ALL_BOARD_COLUMNS, ENCOURAGING_EMPTY_MESSAGES } from "@/lib/constants";
+import { ALL_BOARD_COLUMNS, ENCOURAGING_EMPTY_MESSAGES, JOB_STATUSES, STATUS_META } from "@/lib/constants";
 import { DEFAULT_FILTERS, matchesFilters, type JobFilters } from "@/types/filters";
 import { deriveCalendarEvents, deriveTimelineEvents } from "@/lib/applications/events";
 import type { Job, JobStatus } from "@/types/database";
@@ -91,6 +91,23 @@ export default function Applications() {
     updateSettings.mutate({ hidden_statuses: Array.from(next) });
   }
 
+  async function handleQuickStatusChange(job: Job, nextStatus: JobStatus) {
+    if (job.status === nextStatus) return;
+    try {
+      const updated = await moveJob.mutateAsync({ id: job.id, status: nextStatus });
+      if (nextStatus === "offer") celebrate("An offer! Take a moment — this is worth celebrating. 🎉");
+      else if (nextStatus === "applied" && !job.date_applied && updated.follow_up_date) {
+        push(`Application recorded. We'll remind you to follow up on ${formatDate(updated.follow_up_date)}.`, "success");
+      } else if (nextStatus === "applied" && !job.date_applied) {
+        push(`Marked applied — nice work, ${job.company} is in motion.`, "success");
+      } else {
+        push(`Moved to ${STATUS_META[nextStatus].label}.`, "success");
+      }
+    } catch {
+      push("Couldn't move that job. Try again.", "error");
+    }
+  }
+
   async function handleDragEnd(event: DragEndEvent) {
     const jobId = event.active.id as string;
     const overId = event.over?.id as string | undefined;
@@ -99,17 +116,7 @@ export default function Applications() {
     const job = jobs.find((j) => j.id === jobId);
     if (!job || job.status === nextStatus) return;
 
-    try {
-      const updated = await moveJob.mutateAsync({ id: jobId, status: nextStatus });
-      if (nextStatus === "offer") celebrate("An offer! Take a moment — this is worth celebrating. 🎉");
-      else if (nextStatus === "applied" && !job.date_applied && updated.follow_up_date) {
-        push(`Application recorded. We'll remind you to follow up on ${formatDate(updated.follow_up_date)}.`, "success");
-      } else if (nextStatus === "applied" && !job.date_applied) {
-        push(`Marked applied — nice work, ${job.company} is in motion.`, "success");
-      }
-    } catch {
-      push("Couldn't move that job. Try again.", "error");
-    }
+    await handleQuickStatusChange(job, nextStatus);
   }
 
   const hasAnyJobs = jobs.length > 0;
@@ -180,7 +187,15 @@ export default function Applications() {
             <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
               <div className="flex h-full gap-3" style={{ minWidth: visibleColumns.length * 296 }}>
                 {visibleColumns.map((status) => (
-                  <KanbanColumn key={status} status={status} jobs={byStatus.get(status) ?? []} resumeById={resumeById} onOpenJob={openJob} />
+                  <KanbanColumn
+                    key={status}
+                    status={status}
+                    jobs={byStatus.get(status) ?? []}
+                    resumeById={resumeById}
+                    onOpenJob={openJob}
+                    statusOptions={JOB_STATUSES.filter((option) => option.value !== status).map((option) => ({ value: option.value, label: option.label }))}
+                    onStatusChange={handleQuickStatusChange}
+                  />
                 ))}
               </div>
             </DndContext>
@@ -188,7 +203,14 @@ export default function Applications() {
         </div>
       ) : view === "list" ? (
         <div className="flex-1 overflow-y-auto pt-6">
-          <MobileJobList columns={visibleColumns} byStatus={byStatus} resumeById={resumeById} onOpenJob={openJob} />
+          <MobileJobList
+            columns={visibleColumns}
+            byStatus={byStatus}
+            resumeById={resumeById}
+            onOpenJob={openJob}
+            statusOptions={JOB_STATUSES.map((option) => ({ value: option.value, label: option.label }))}
+            onStatusChange={handleQuickStatusChange}
+          />
         </div>
       ) : view === "calendar" ? (
         <CalendarView events={calendarEvents} onOpenJob={openJob} />

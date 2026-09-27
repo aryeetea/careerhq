@@ -10,10 +10,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { JobCard } from "@/components/jobs/JobCard";
 import { FollowUpCheckmark } from "@/components/jobs/FollowUpCheckmark";
 import { JobDetailDialog } from "@/components/jobs/JobDetailDialog";
-import { useCompleteFollowUps, useJobs } from "@/hooks/queries/useJobs";
+import { useCompleteFollowUps, useJobs, useUpdateJob } from "@/hooks/queries/useJobs";
 import { useResumes } from "@/hooks/queries/useResumes";
 import { useCandidateFacts } from "@/hooks/queries/useCandidateFacts";
+import { JOB_STATUSES, STATUS_META } from "@/lib/constants";
 import { computeDashboardStats, getJobsForStatKind, DASHBOARD_STAT_META, type DashboardStatKind } from "@/lib/stats";
+import { useToast } from "@/components/shared/toast";
+import type { Job, JobStatus } from "@/types/database";
 
 const VALID_KINDS = new Set<string>(Object.keys(DASHBOARD_STAT_META));
 
@@ -28,8 +31,10 @@ export default function DashboardStatDetail() {
   const { kind: kindParam } = useParams<{ kind: string }>();
   const { data: jobs = [], isLoading, isError, refetch } = useJobs();
   const completeFollowUps = useCompleteFollowUps();
+  const updateJob = useUpdateJob();
   const { data: resumes = [] } = useResumes();
   const { data: candidateFacts } = useCandidateFacts();
+  const { push } = useToast();
   const resumeById = React.useMemo(() => new Map(resumes.map((r) => [r.id, r])), [resumes]);
   const confirmedRequirementKeys = React.useMemo(
     () => new Set((candidateFacts ?? []).map((fact) => fact.requirement_key)),
@@ -59,6 +64,20 @@ export default function DashboardStatDetail() {
       ids: followUpsToClear.map((job) => job.id),
       nextRoundById: Object.fromEntries(followUpsToClear.map((job) => [job.id, job.follow_up_round + 1])),
     });
+  }
+
+  async function handleQuickStatusChange(job: Job, nextStatus: JobStatus) {
+    if (job.status === nextStatus) return;
+    try {
+      const updated = await updateJob.mutateAsync({ id: job.id, patch: { status: nextStatus } });
+      if (nextStatus === "applied" && !job.date_applied && updated.follow_up_date) {
+        push(`Application recorded. We'll remind you to follow up on ${new Date(updated.follow_up_date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}.`, "success");
+      } else {
+        push(`Moved to ${STATUS_META[nextStatus].label}.`, "success");
+      }
+    } catch {
+      push("Couldn't update the status. Try again.", "error");
+    }
   }
 
   const backButton = (
@@ -112,6 +131,11 @@ export default function DashboardStatDetail() {
                         <FollowUpCheckmark job={job} className="h-8 w-8" />
                       ) : undefined
                     }
+                    statusOptions={JOB_STATUSES.filter((option) => option.value !== job.status).map((option) => ({
+                      value: option.value,
+                      label: option.label,
+                    }))}
+                    onStatusChange={handleQuickStatusChange}
                   />
                 ))}
               </div>

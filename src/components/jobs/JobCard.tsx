@@ -1,8 +1,9 @@
 import * as React from "react";
-import { MapPin, FileText, GripVertical, CalendarClock, CheckCircle2, AlertTriangle } from "lucide-react";
+import { MapPin, FileText, GripVertical, CalendarClock, CheckCircle2, AlertTriangle, MoreHorizontal } from "lucide-react";
 import type { DraggableAttributes, DraggableSyntheticListeners } from "@dnd-kit/core";
-import type { Job, Resume } from "@/types/database";
+import type { Job, JobStatus, Resume } from "@/types/database";
 import { VerdictBadge } from "@/components/jobs/StatusBadge";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { WORK_ARRANGEMENT_META, PRIORITY_META } from "@/lib/constants";
 import { formatDate, initials, cn } from "@/lib/utils";
 import { useSettings } from "@/hooks/queries/useProfile";
@@ -18,10 +19,12 @@ interface JobCardProps {
   dragListeners?: DraggableSyntheticListeners;
   style?: React.CSSProperties;
   trailingAction?: React.ReactNode;
+  statusOptions?: { value: JobStatus; label: string }[];
+  onStatusChange?: (job: Job, status: JobStatus) => void | Promise<void>;
 }
 
 export const JobCard = React.forwardRef<HTMLDivElement, JobCardProps>(
-  ({ job, resume, onClick, isDragging, dragAttributes, dragListeners, style, trailingAction }, ref) => {
+  ({ job, resume, onClick, isDragging, dragAttributes, dragListeners, style, trailingAction, statusOptions, onStatusChange }, ref) => {
     const { data: settings } = useSettings();
     const showAiFit = settings?.show_ai_fit_score ?? true;
     // Cheap even with many cards mounted at once (board, mobile list,
@@ -140,6 +143,33 @@ export const JobCard = React.forwardRef<HTMLDivElement, JobCardProps>(
               </span>
             )}
             {trailingAction && <div className="shrink-0">{trailingAction}</div>}
+            {statusOptions && onStatusChange && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label={`Change status for ${job.company}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-background/80 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                  >
+                    <MoreHorizontal className="h-3.5 w-3.5" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-44">
+                  {statusOptions.map((option) => (
+                    <DropdownMenuItem
+                      key={option.value}
+                      onSelect={(event) => {
+                        event.preventDefault();
+                        onStatusChange(job, option.value);
+                      }}
+                    >
+                      {option.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         </div>
       </div>

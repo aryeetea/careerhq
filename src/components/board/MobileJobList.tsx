@@ -9,11 +9,15 @@ export function MobileJobList({
   byStatus,
   resumeById,
   onOpenJob,
+  statusOptions,
+  onStatusChange,
 }: {
   columns: JobStatus[];
   byStatus: Map<JobStatus, Job[]>;
   resumeById: Map<string, Resume>;
   onOpenJob: (job: Job) => void;
+  statusOptions?: { value: JobStatus; label: string }[];
+  onStatusChange?: (job: Job, status: JobStatus) => void | Promise<void>;
 }) {
   const nonEmpty = columns.filter((c) => (byStatus.get(c) ?? []).length > 0);
   const defaultOpen = nonEmpty.slice(0, 2);
@@ -38,7 +42,14 @@ export function MobileJobList({
               ) : (
                 <div className="flex flex-col gap-2">
                   {jobs.map((job) => (
-                    <JobCard key={job.id} job={job} resume={job.resume_id ? resumeById.get(job.resume_id) : undefined} onClick={() => onOpenJob(job)} />
+                    <JobCard
+                      key={job.id}
+                      job={job}
+                      resume={job.resume_id ? resumeById.get(job.resume_id) : undefined}
+                      onClick={() => onOpenJob(job)}
+                      statusOptions={statusOptions?.filter((option) => option.value !== job.status)}
+                      onStatusChange={onStatusChange}
+                    />
                   ))}
                 </div>
               )}

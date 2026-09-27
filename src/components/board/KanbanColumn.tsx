@@ -9,11 +9,15 @@ export function KanbanColumn({
   jobs,
   resumeById,
   onOpenJob,
+  statusOptions,
+  onStatusChange,
 }: {
   status: JobStatus;
   jobs: Job[];
   resumeById: Map<string, Resume>;
   onOpenJob: (job: Job) => void;
+  statusOptions?: { value: JobStatus; label: string }[];
+  onStatusChange?: (job: Job, status: JobStatus) => void | Promise<void>;
 }) {
   const meta = STATUS_META[status];
   const { setNodeRef, isOver } = useDroppable({ id: `column-${status}`, data: { status } });
@@ -33,7 +37,14 @@ export function KanbanColumn({
       </div>
       <div className="mt-2 flex flex-1 flex-col gap-2.5 overflow-y-auto pb-1">
         {jobs.map((job) => (
-          <DraggableJobCard key={job.id} job={job} resume={job.resume_id ? resumeById.get(job.resume_id) : undefined} onClick={() => onOpenJob(job)} />
+          <DraggableJobCard
+            key={job.id}
+            job={job}
+            resume={job.resume_id ? resumeById.get(job.resume_id) : undefined}
+            onClick={() => onOpenJob(job)}
+            statusOptions={statusOptions}
+            onStatusChange={onStatusChange}
+          />
         ))}
         {jobs.length === 0 && (
           <div className="rounded-xl border border-dashed border-border/70 px-3 py-6 text-center text-xs text-muted-foreground/70">
