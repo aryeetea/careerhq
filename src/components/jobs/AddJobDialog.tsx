@@ -171,12 +171,7 @@ export function AddJobDialog({ open, onOpenChange, resumes }: AddJobDialogProps)
 
   async function saveJob(input: NewJob, title: string, company: string) {
     try {
-      const created = await createJob.mutateAsync(input);
-      if (created.status === "applied" && created.follow_up_date) {
-        push(`Application recorded. We'll remind you to follow up on ${formatDate(created.follow_up_date)}.`, "success");
-      } else {
-        push(`Saved ${title} at ${company}.`, "success");
-      }
+      await createJob.mutateAsync(input);
       close(false);
     } catch (err) {
       push(err instanceof Error ? err.message : "Couldn't save that job. Try again.", "error");

@@ -175,12 +175,9 @@ export function JobDetailDialog({ job, resumes, open, onOpenChange }: JobDetailD
           notes: values.notes?.trim() || null,
         },
       });
-      if (values.status === "applied" && !job.date_applied && updated.follow_up_date) {
-        push(`Application recorded. We'll remind you to follow up on ${formatDate(updated.follow_up_date)}.`, "success");
-      } else {
-        push("Your changes have been saved.", "success");
+      if (values.status === "offer" && !wasOffer) {
+        // Intentionally silent: status changes should feel instant without an interruption.
       }
-      if (values.status === "offer" && !wasOffer) celebrate("An offer! Take a moment — this is worth celebrating. 🎉");
       onOpenChange(false);
     } catch (err) {
       push(err instanceof Error ? err.message : "Couldn't save your changes.", "error");
