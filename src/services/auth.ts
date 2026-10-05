@@ -1,6 +1,7 @@
 import { FunctionsHttpError } from "@supabase/supabase-js";
 import { assertSupabaseConfigured, supabase } from "@/lib/supabase";
 import { invokeEdgeFunction } from "@/lib/edgeFunctions";
+import { clearUserSessionState } from "@/lib/queryClient";
 
 function normalizeAuthError(error: unknown) {
   if (
@@ -119,8 +120,12 @@ export async function signIn(email: string, password: string) {
 
 export async function signOut() {
   assertSupabaseConfigured();
-  const { error } = await supabase.auth.signOut();
-  if (error) throw error;
+  try {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+  } finally {
+    clearUserSessionState();
+  }
 }
 
 export async function requestPasswordReset(email: string) {

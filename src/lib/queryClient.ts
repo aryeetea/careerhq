@@ -13,6 +13,29 @@ export const queryClient = new QueryClient({
   },
 });
 
+/**
+ * Clears React Query state and browser-side app caches so a signed-out user
+ * cannot keep seeing stale data on a shared device or in a reused browser tab.
+ */
+export function clearUserSessionState(): void {
+  queryClient.clear();
+
+  if (typeof window === "undefined") return;
+
+  try {
+    window.sessionStorage.clear();
+  } catch {
+    // Session storage is best-effort; don't block sign-out flow.
+  }
+
+  try {
+    window.localStorage.clear();
+  } catch {
+    // Local drafts and persisted UI state are intentionally cleared to avoid
+    // cross-user leakage after sign-out.
+  }
+}
+
 export const queryKeys = {
   jobs: (userId: string) => ["jobs", userId] as const,
   job: (id: string) => ["job", id] as const,

@@ -45,6 +45,18 @@ interface BloomPushPayload {
   tag: string;
 }
 
+function sanitizeNotificationUrl(value: string): string {
+  if (!value || value.startsWith("javascript:") || value.startsWith("data:")) return "/";
+
+  try {
+    const nextUrl = new URL(value, self.location.origin);
+    if (nextUrl.origin !== self.location.origin) return "/";
+    return `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}` || "/";
+  } catch {
+    return "/";
+  }
+}
+
 function isBloomPushPayload(value: unknown): value is BloomPushPayload {
   if (!value || typeof value !== "object") return false;
   const v = value as Record<string, unknown>;
@@ -87,7 +99,8 @@ self.addEventListener("push", (event) => {
 // right page if one exists, rather than always opening a new one.
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const targetUrl = (event.notification.data as { url?: string } | undefined)?.url ?? "/";
+  const rawTargetUrl = (event.notification.data as { url?: string } | undefined)?.url ?? "/";
+  const targetUrl = sanitizeNotificationUrl(rawTargetUrl);
 
   event.waitUntil(
     (async () => {
